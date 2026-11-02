@@ -1,0 +1,119 @@
+{
+  "backend": "crux",
+  "cancel_transfer": {
+    "destination_endpoint_id": "00000000-0000-0000-0000-000000000002",
+    "source_endpoint_id": "00000000-0000-0000-0000-000000000001",
+    "transfer_items": [
+      {
+        "destination_path": "/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/control/cancel.request",
+        "recursive": false,
+        "source_path": "/LauePortal/analysis/wire_1/cancel.request"
+      }
+    ]
+  },
+  "control_directory": "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/control",
+  "execution": {
+    "indexing_ranks_per_node": 1,
+    "indexing_threads_per_worker": 1,
+    "max_in_flight": 2,
+    "memory_limit_mb": 256,
+    "reconstruction_workers": 1,
+    "threads_per_worker": 1,
+    "workers": 1
+  },
+  "incoming_directory": "<BASE>/aps/LauePortal/analysis/wire_1/incoming/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b",
+  "input_transfer": {
+    "destination_endpoint_id": "00000000-0000-0000-0000-000000000002",
+    "source_endpoint_id": "00000000-0000-0000-0000-000000000001",
+    "transfer_items": [
+      {
+        "destination_path": "/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml",
+        "recursive": false,
+        "source_path": "/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml"
+      },
+      {
+        "destination_path": "/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/wire/wire_1.h5",
+        "recursive": false,
+        "source_path": "/LauePortal/data/wire/wire_1.h5"
+      },
+      {
+        "destination_path": "/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/wire/wire_2.h5",
+        "recursive": false,
+        "source_path": "/LauePortal/data/wire/wire_2.h5"
+      },
+      {
+        "destination_path": "/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/wire/wire_3.h5",
+        "recursive": false,
+        "source_path": "/LauePortal/data/wire/wire_3.h5"
+      },
+      {
+        "destination_path": "/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/control/request.json",
+        "recursive": false,
+        "source_path": "/LauePortal/analysis/wire_1/request.json"
+      },
+      {
+        "destination_path": "/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/control/inputs.jsonl",
+        "recursive": false,
+        "source_path": "/LauePortal/analysis/wire_1/inputs.jsonl"
+      },
+      {
+        "destination_path": "/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/control/bdp.json",
+        "recursive": false,
+        "source_path": "/LauePortal/analysis/wire_1/bdp.json"
+      }
+    ]
+  },
+  "job_id": 1,
+  "kind": "wire_reconstruction",
+  "manifest_sha256": "<inputs.jsonl sha256>",
+  "n_inputs": 3,
+  "output_directory": "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/results",
+  "path_map": {
+    "<BASE>/aps": "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs",
+    "<BASE>/aps/LauePortal/analysis/wire_1": "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/results"
+  },
+  "pbs": {
+    "account": "TEST_ACCOUNT",
+    "nodes": 2,
+    "queue": "debug",
+    "walltime": "00:10:00"
+  },
+  "request_sha256": "<request.json sha256>",
+  "result_transfer": {
+    "destination_endpoint_id": "00000000-0000-0000-0000-000000000001",
+    "source_endpoint_id": "00000000-0000-0000-0000-000000000002",
+    "transfer_items": [
+      {
+        "destination_path": "/LauePortal/analysis/wire_1/incoming/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b",
+        "recursive": true,
+        "source_path": "/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/results"
+      }
+    ]
+  },
+  "run_directory": "<BASE>/aps/LauePortal/analysis/wire_1",
+  "submission_id": "6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b",
+  "target": {
+    "analysis_python": "/compute/envs/analysis/bin/python",
+    "code_directory": "/compute/src",
+    "compute_endpoint": "00000000-0000-0000-0000-000000000003",
+    "enabled": true,
+    "execution": {
+      "indexing_ranks_per_node": 1,
+      "indexing_threads_per_worker": 1,
+      "max_in_flight": 2,
+      "memory_limit_mb": 256,
+      "reconstruction_workers": 1,
+      "threads_per_worker": 1,
+      "workers": 1
+    },
+    "module_commands": [],
+    "pbs": {
+      "account": "TEST_ACCOUNT",
+      "nodes": 2,
+      "queue": "debug",
+      "walltime": "00:10:00"
+    },
+    "workspace": "<BASE>/eagle/workspace"
+  },
+  "version": 1
+}

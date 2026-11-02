@@ -1,0 +1,11 @@
+# Generated code (Orval, TanStack Router) is not formatted; it still typechecks.
+src/api/generated/
+src/routeTree.gen.ts
+# Vendored verbatim from shadcn (see its header), kept diffable against upstream.
+src/styles/shadcn-tailwind.css
+openapi.json
+pnpm-lock.yaml
+dist/
+test-results/
+playwright-report/
+blob-report/

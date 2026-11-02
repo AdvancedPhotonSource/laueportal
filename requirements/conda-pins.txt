@@ -1,0 +1,5 @@
+# conda-forge versions in the env (environment.yml); constraints only, never installed by pip
+numpy==2.5.4
+h5py==3.16.0
+cffi==2.1.1
+pycparser==3.11

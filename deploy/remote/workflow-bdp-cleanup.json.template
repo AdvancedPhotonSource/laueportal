@@ -1,0 +1,11 @@
+{
+  "name": "{{WORKFLOW_NAME}}",
+  "description": "Remove a published Laue run's Eagle folder and launcher state from the DM VM",
+  "owner": "{{OWNER}}",
+  "userAccount": "{{USER_ACCOUNT}}",
+  "stages": {
+    "01-CLEANUP": {
+      "command": "{{STAGE_COMMAND}} cleanup $cleanupSubmissionId"
+    }
+  }
+}

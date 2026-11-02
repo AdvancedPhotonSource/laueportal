@@ -1,0 +1,3 @@
+# Orval's output ends some files with a blank line, so `git diff --check` (`make check-hygiene`) does not check the
+# generated API client.
+frontend/src/api/generated/** -whitespace

@@ -1,0 +1,38 @@
+{
+  "control": [
+    "bdp.json",
+    "inputs.jsonl",
+    "request.json"
+  ],
+  "output": [
+    ".runner.lock",
+    "progress.json",
+    "ranks.json",
+    "reconstruction/",
+    "reconstruction/points/",
+    "reconstruction/points/wire_1.h5",
+    "reconstruction/points/wire_2.h5",
+    "reconstruction/points/wire_3.h5",
+    "reconstruction/scan.h5",
+    "run.json"
+  ],
+  "shards": [
+    "rank-0000/",
+    "rank-0000/.runner.lock",
+    "rank-0000/progress.json",
+    "rank-0000/reconstruction/",
+    "rank-0000/reconstruction/points/",
+    "rank-0000/reconstruction/points/wire_1.h5",
+    "rank-0000/reconstruction/points/wire_3.h5",
+    "rank-0000/reconstruction/scan.h5",
+    "rank-0000/run.json",
+    "rank-0001/",
+    "rank-0001/.runner.lock",
+    "rank-0001/progress.json",
+    "rank-0001/reconstruction/",
+    "rank-0001/reconstruction/points/",
+    "rank-0001/reconstruction/points/wire_2.h5",
+    "rank-0001/reconstruction/scan.h5",
+    "rank-0001/run.json"
+  ]
+}

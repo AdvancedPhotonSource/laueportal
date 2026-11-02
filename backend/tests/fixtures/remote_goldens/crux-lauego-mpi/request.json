@@ -1,0 +1,72 @@
+{
+  "format": "laue-portal-run-request",
+  "kind": "lauego_indexing",
+  "manifest": {
+    "n_inputs": 3,
+    "path": "inputs.jsonl",
+    "sha256": "<inputs.jsonl sha256>"
+  },
+  "output": {
+    "directory": "<BASE>/aps/LauePortal/analysis/index_1",
+    "results": "output.h5",
+    "xml": "output.xml"
+  },
+  "request": {
+    "algorithm_version": null,
+    "author": null,
+    "backend": "crux",
+    "beamline": "34ID-E",
+    "box_size": 18,
+    "computer_name": "test-host",
+    "cosmic_filter": false,
+    "crystal_file": "<BASE>/aps/LauePortal/data/config/Ni.xml",
+    "depth": null,
+    "depth_range": null,
+    "detector_crop_x1": 0,
+    "detector_crop_x2": 2047,
+    "detector_crop_y1": 0,
+    "detector_crop_y2": 2047,
+    "energy_unit": "keV",
+    "exposure_unit": "sec",
+    "filename_prefixes": [
+      "frame_%d.h5"
+    ],
+    "geometry_file": "<BASE>/aps/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml",
+    "index_angle_tolerance": 0.1,
+    "index_cone": 72.0,
+    "index_h": 0,
+    "index_k": 0,
+    "index_kev_max_calc": 17.2,
+    "index_kev_max_test": 35.0,
+    "index_l": 1,
+    "input_path": "<BASE>/aps/LauePortal/data/frames",
+    "lattice_parameters_unit": "nm",
+    "mask_file": null,
+    "max_number": 300,
+    "max_peaks": 200,
+    "max_rfactor": 0.5,
+    "min_separation": 20,
+    "min_size": 3.0,
+    "notes": null,
+    "output_path_template": "<BASE>/aps/LauePortal/analysis/index_%d",
+    "output_xml": "output.xml",
+    "peak_shape": "Lorentzian",
+    "priority": 0,
+    "reciprocal_lattice_unit": "1/nm",
+    "reconstruction_id": null,
+    "scan_number": 1,
+    "scan_points": "1-3",
+    "smooth": false,
+    "submitted_at": "2026-10-16T09:00:00+00:00",
+    "threshold": null,
+    "threshold_ratio": null
+  },
+  "run": {
+    "indexing_id": 1,
+    "job_id": 1,
+    "method": "lauego",
+    "reconstruction_id": null,
+    "scan_number": 1
+  },
+  "version": 1
+}

@@ -1,0 +1,37 @@
+{
+  "control": [
+    "bdp.json",
+    "inputs.jsonl",
+    "request.json"
+  ],
+  "output": [
+    ".runner.lock",
+    "output.h5",
+    "output.xml",
+    "progress.json",
+    "ranks.json",
+    "run.json"
+  ],
+  "shards": [
+    "rank-0000/",
+    "rank-0000/.runner.lock",
+    "rank-0000/output.h5",
+    "rank-0000/output.xml",
+    "rank-0000/progress.json",
+    "rank-0000/run.json",
+    "rank-0001/",
+    "rank-0001/.runner.lock",
+    "rank-0001/progress.json",
+    "rank-0001/run.json",
+    "rank-0002/",
+    "rank-0002/.runner.lock",
+    "rank-0002/progress.json",
+    "rank-0002/run.json",
+    "rank-0003/",
+    "rank-0003/.runner.lock",
+    "rank-0003/output.h5",
+    "rank-0003/output.xml",
+    "rank-0003/progress.json",
+    "rank-0003/run.json"
+  ]
+}

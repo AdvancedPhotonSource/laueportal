@@ -1,0 +1,21 @@
+# Runtime dependencies.
+# numpy, h5py and cffi come from conda-forge (environment.yml), and so does pycparser (conda's cffi
+# brings it); they are pinned through conda-pins.txt at compile time and left out of the locks.
+fastapi
+uvicorn[standard]
+pydantic>=2
+pydantic-settings
+sqlalchemy>=2
+alembic
+# Held below 26 since 2026-10-17: 26.0.0 is a major update, and the routine dependency updates take patch and minor
+# updates only. Lift the bound in a reviewed dependency change.
+pyarrow<26
+psutil
+python-multipart
+# The remote-execution settings are a YAML file that the DM-host launcher reads too.
+pyyaml
+
+# lauelab's own runtime dependencies. lauelab is installed separately from GitHub with
+# --no-deps (VCS installs can't be hash-locked), so its dependencies are locked here.
+pandas>=2.0
+plotly>=6.0

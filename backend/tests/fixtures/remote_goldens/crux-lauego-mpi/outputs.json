@@ -1,0 +1,1004 @@
+{
+ "output.h5": {
+  "/": {
+   "attrs": {
+    "created": "<volatile>",
+    "format": "lauelab-indexing-results",
+    "lauelab_version": "<volatile>",
+    "merged_sources": [
+     "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/shards/rank-0000/output.h5",
+     "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/shards/rank-0003/output.h5"
+    ],
+    "version": 1
+   }
+  },
+  "assignments": {
+   "attrs": {}
+  },
+  "assignments/energy_kev": {
+   "attrs": {
+    "units": "keV"
+   },
+   "dtype": "float32",
+   "shape": [
+    71
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "98bce101419fc8f5bb91743776a655714467c543ba4a34daf5cf8d46a65d1611",
+    "shape": [
+     71
+    ]
+   }
+  },
+  "assignments/error_deg": {
+   "attrs": {
+    "units": "deg"
+   },
+   "dtype": "float32",
+   "shape": [
+    71
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "734e8a2096d8bab81050615a4910d4b49d3de15b5aba6d327df5bf7f7146d083",
+    "shape": [
+     71
+    ]
+   }
+  },
+  "assignments/hkl": {
+   "attrs": {},
+   "dtype": "int16",
+   "shape": [
+    71,
+    3
+   ],
+   "value": {
+    "dtype": "<i2",
+    "sha256": "63ef1188903af53fc8295cfad3f904e70d330c831292791928abc93dd8078166",
+    "shape": [
+     71,
+     3
+    ]
+   }
+  },
+  "assignments/peak_index": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    71
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "6fada1227c3dd95d068d49c2fbd9a013959059260a4c3245416aa8b16220b5fd",
+    "shape": [
+     71
+    ]
+   }
+  },
+  "assignments/pred_intens": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    71
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "7410da326b7c4609574d5bba6aa5226bea2bc29617f4c35ea56db54eecad8f58",
+    "shape": [
+     71
+    ]
+   }
+  },
+  "crystal": {
+   "attrs": {
+    "name": "Ni",
+    "setting": "",
+    "source": "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/Ni.xml",
+    "space_group": 225
+   }
+  },
+  "crystal/atom_labels": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    1
+   ],
+   "value": [
+    "Ni001"
+   ]
+  },
+  "crystal/atom_occupancies": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "e00e5eb9444182f352323374ef4e08ebcb784725fdd4fd612d7730540b3e0c8c",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "crystal/atom_positions": {
+   "attrs": {
+    "units": "fractional"
+   },
+   "dtype": "float64",
+   "shape": [
+    1,
+    3
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+    "shape": [
+     1,
+     3
+    ]
+   }
+  },
+  "crystal/atom_symbols": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    1
+   ],
+   "value": [
+    "Ni"
+   ]
+  },
+  "crystal/lattice_parameters": {
+   "attrs": {
+    "angle_units": "deg",
+    "units": "nm"
+   },
+   "dtype": "float64",
+   "shape": [
+    6
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "d4198a44b32d78fbf1a4b0119f2a53e4f8656c78eb2f316420e5668e7160c0f7",
+    "shape": [
+     6
+    ]
+   }
+  },
+  "frames": {
+   "attrs": {}
+  },
+  "frames/beam_bad": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "8688d249e9d047b4fc2fb89ce05afe9ec89252ffccdd969de6eef260dd7ffb21",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/beamlines": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "",
+    "",
+    ""
+   ]
+  },
+  "frames/ccd_shutters": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "out",
+    "out",
+    "out"
+   ]
+  },
+  "frames/dates_exposed": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "2026-08-28T12:00:00-05:00",
+    "2026-08-28T12:00:00-05:00",
+    "2026-08-28T12:00:00-05:00"
+   ]
+  },
+  "frames/depths": {
+   "attrs": {
+    "units": "um"
+   },
+   "dtype": "float64",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "38942dc703543c2a5d23412f7713dab1eb9a3fecdd6f11a5ba15240df007de5c",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/detector_ids": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "PE1621 723-3335",
+    "PE1621 723-3335",
+    "PE1621 723-3335"
+   ]
+  },
+  "frames/energies_kev": {
+   "attrs": {
+    "units": "keV"
+   },
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "79a48569b1efb0d9bf9bacd0c802a2d672630bdb412759ea5d35e15042b7116f",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/exposure_seconds": {
+   "attrs": {
+    "units": "s"
+   },
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "8a31a40ecac0ceb4d87b30bd156ca7a547e8e33dc071454b765fbc777d1c34a1",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/frame_ids": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "frame_1",
+    "frame_3",
+    "frame_2"
+   ]
+  },
+  "frames/hutch_temperature": {
+   "attrs": {
+    "units": "unspecified"
+   },
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "79a48569b1efb0d9bf9bacd0c802a2d672630bdb412759ea5d35e15042b7116f",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/image_shapes": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3,
+    2
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "0692564ead176226bb20396c581e5a751f96e96024c8037f2dfd2900b3e4d0e2",
+    "shape": [
+     3,
+     2
+    ]
+   }
+  },
+  "frames/indexing_seconds": {
+   "attrs": {
+    "units": "s"
+   },
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": "<volatile>"
+  },
+  "frames/input_images": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/frames/frame_1.h5",
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/frames/frame_3.h5",
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/frames/frame_2.h5"
+   ]
+  },
+  "frames/light_on": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "8688d249e9d047b4fc2fb89ce05afe9ec89252ffccdd969de6eef260dd7ffb21",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/mono_modes": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "",
+    "",
+    ""
+   ]
+  },
+  "frames/n_patterns": {
+   "attrs": {},
+   "dtype": "int16",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<i2",
+    "sha256": "263d99957c7b574c63a265b32da7fff8b8ad831828946bfbff650d7074dd9198",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/n_peaks": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "f3a083b43702bbdaee75bc931fd867c60e3392681c4213d4bbaef740a04cf6a2",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/num_above_threshold": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "e868145b586241dedae3b3d465689e1c62ab05dcdc3d603617d536b165bb4371",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/pattern_offsets": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    4
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "d54d5689ac14b4c4af7cc3fc75ad3a018f1d039cb06154f787c5d44a8ab26fb9",
+    "shape": [
+     4
+    ]
+   }
+  },
+  "frames/peak_boxsize": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "2aba03868b868f052f48551c34c8d6c8b0a94a5bab97fe47f2eff1b6238fde29",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/peak_max_cent_to_fit": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "cf0fbfcc067f6b29b8c9527e04ddc460eabd27eed907510a7d21f341d17485fe",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/peak_maxwidth": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "482eaf8f1bfb557cd6db1ba35a6a092c5ffec9b13c9f10ec1d3807b458988a98",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/peak_minwidth": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "46c18fad40d712139a1a5d606db557098a53821d1bec70df509854f1a8081b0e",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/peak_offsets": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    4
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "447734a5bc5a95ceb71addcdd15eebcc37f32046675489a5c6c7299bf766752d",
+    "shape": [
+     4
+    ]
+   }
+  },
+  "frames/peaksearch_seconds": {
+   "attrs": {
+    "units": "s"
+   },
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": "<volatile>"
+  },
+  "frames/roi_groups": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3,
+    2
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "9638834d1f629557d9b80fa7eeb64409e238c0ef2e3149a55a39c3796f66e19a",
+    "shape": [
+     3,
+     2
+    ]
+   }
+  },
+  "frames/roi_starts": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3,
+    2
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "33eeb6d671ff851a500a62fe78efe7c4e3b747a09e771235fd987ea4a1938ee8",
+    "shape": [
+     3,
+     2
+    ]
+   }
+  },
+  "frames/sample_distance": {
+   "attrs": {
+    "units": "unspecified"
+   },
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "79a48569b1efb0d9bf9bacd0c802a2d672630bdb412759ea5d35e15042b7116f",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/sample_names": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "synthetic Ni",
+    "synthetic Ni",
+    "synthetic Ni"
+   ]
+  },
+  "frames/sample_positions": {
+   "attrs": {
+    "units": "um"
+   },
+   "dtype": "float64",
+   "shape": [
+    3,
+    3
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "d83475c443ac887100a9f7164978dabc06d0666c9093cf541d53f6388c185da0",
+    "shape": [
+     3,
+     3
+    ]
+   }
+  },
+  "frames/scan_numbers": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "4ddbad5de2f6f1f267228c5e5a7e5c556b2b1fc285876eb0d1927ec204d3e79b",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/source_depth_indices": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "8688d249e9d047b4fc2fb89ce05afe9ec89252ffccdd969de6eef260dd7ffb21",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/source_point_ids": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "",
+    "",
+    ""
+   ]
+  },
+  "frames/sum_above_threshold": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "8f30a69ea0acf29539c026c1ec2678457c89b384ae004af453c8706e5571c473",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/threshold_ratio": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "befaa5f89179e2968ea6aae7bec010c7cb70f4a7ce23f9c7654be53a12b318e7",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/threshold_used": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "f5b6813485de786c726693924d5ce8d53280b28602c8647745c4d866857aa6a1",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/titles": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "synthetic Laue frame",
+    "synthetic Laue frame",
+    "synthetic Laue frame"
+   ]
+  },
+  "frames/total_sum": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "c62b0894eeb6ef09751847549140590e6a40c5e859c3d9d15366bd722b123fe2",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "frames/user_names": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "synthetic",
+    "synthetic",
+    "synthetic"
+   ]
+  },
+  "geometry": {
+   "attrs": {
+    "path": "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml"
+   }
+  },
+  "geometry/xml": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [],
+   "value": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n\n<geoN xmlns=\"http:example.com/geoN\">\n\t<dateWritten>Maon, Jan 1, 2020</dateWritten>\n\t<timeWritten>12:00:00 (-5)</timeWritten>\n\t<EPOCH start=\"midnight Jan 1, 1904\" unit=\"sec\">0</EPOCH>\n\n\t<Sample>\n\t\t<Origin unit=\"micron\">0 0 0</Origin>\t<!-- sample origin in raw positioner units (micron) -->\n\t\t<R unit=\"radian\">-0.006 0.006 -1.8e-05</R>\n\t</Sample>\n\n\t<Detectors Ndetectors=\"3\">\t\t\t<!-- Ndetectors, number of detectors in use, must be <= MAX_Ndetectors -->\n\t\t<Detector N=\"0\">\n\t\t\t<Npixels>2048 2048</Npixels>\t\t<!-- Nx,Ny is number of un-binned pixels in full detector -->\n\t\t\t<size unit=\"mm\">409.6 409.6</size>\t<!-- sizeX,sizeY otuside size of full detector -->\n\t\t\t<R unit=\"radian\">-1.20127231 -1.21381742 -1.21879073</R>\t\t<!-- Rotation and translation vector -->\n\t\t\t<P unit=\"mm\">28.720 3.010 513.097</P>\n\t\t\t<timeMeasured>Tue, Mar 29, 2022, 14:15:05 (-5)</timeMeasured>\t<!-- when this geometry was calculated -->\n\t\t\t<note>Optimized using CalibrationListOrange0</note>\n\t\t\t<ID>PE1621 723-3335</ID>\t\t\t\t<!-- unique detector ID -->\n\t\t</Detector>\n\t\t<Detector N=\"1\">\n\t\t\t<Npixels>1024 1024</Npixels>\n\t\t\t<size unit=\"mm\">204.8 204.8</size>\n\t\t\t<R unit=\"radian\">-1.74964147 -0.72538764 -1.7707796</R>\n\t\t\t<P unit=\"mm\">-144.183 26.808 402.341</P>\n\t\t\t<timeMeasured>Tue, Feb 26, 2019, 12:29:06 (-6)</timeMeasured>\n\t\t\t<note>Optimized using CalibrationListYellow1</note>\n\t\t\t<ID>PE0822 883-4841</ID>\n\t\t</Detector>\n\t\t<Detector N=\"2\">\n\t\t\t<Npixels>1024 1024</Npixels>\n\t\t\t<size unit=\"mm\">204.8 204.8</size>\n\t\t\t<R unit=\"radian\">-0.60682911 -1.49103705 -0.61968032</R>\n\t\t\t<P unit=\"mm\">-143.358 31.515 399.770</P>\n\t\t\t<timeMeasured>Tue, Oct 29, 2019, 14:10:51 (-5)</timeMeasured>\n\t\t\t<note>Optimized using CalibrationListPurple2</note>\n\t\t\t<ID>PE0822 883-4843</ID>\n\t\t</Detector>\n\t</Detectors>\n\n\t<Wire>\n\t\t<dia unit=\"micron\">101.5</dia>\n\t\t<Knife>0</Knife>\t\t\t\t<!-- true if wire on a knife edge, false for free-standing wire -->\n\t\t<Origin unit=\"micron\">0 0 0</Origin>\t\t<!-- wire origin in raw positioner frame (micron) -->\n\t\t<R unit=\"radian\">0.0045 -0.00684 -3.375e-05</R>\n\t\t<Axis>0.99999608 0 0.0028000002</Axis>\t\t<!-- unit vector along wire axis, usually close to (1,0,0) -->\n\t\t<F unit=\"micron\">0</F>\t\t<!-- F of wire for a constant F wire scan (raw positioner units) -->\n\t</Wire>\n</geoN>\n"
+  },
+  "patterns": {
+   "attrs": {}
+  },
+  "patterns/assignment_offsets": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    4
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "e2a311bd5ae0fb9d9454a835c3171fd0ac713c41188d1324e2375c2efb103aae",
+    "shape": [
+     4
+    ]
+   }
+  },
+  "patterns/goodness": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "253f251df252114a35a5b270ba5674515e9bcf004b5fd26f762455d60f3ba7db",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "patterns/n_indexed": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "54c89cda4c12cdef178db2a06069f71bfa193e2ac758386ddc8e3f9d66a0087b",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "patterns/rank": {
+   "attrs": {},
+   "dtype": "int16",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<i2",
+    "sha256": "588611f65741c171a3d92c1d5343f5dd67f4fc472fc56f01c9bc568f5ac2a623",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "patterns/reciprocal": {
+   "attrs": {
+    "includes_two_pi": true,
+    "rows": "a*,b*,c*",
+    "units": "1/nm"
+   },
+   "dtype": "float64",
+   "shape": [
+    3,
+    3,
+    3
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "089f7140e145ba358435c3932c873e5c50734d937c90425d2e80f8fcd27727cf",
+    "shape": [
+     3,
+     3,
+     3
+    ]
+   }
+  },
+  "patterns/rms_error_deg": {
+   "attrs": {
+    "units": "deg"
+   },
+   "dtype": "float32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "2f6b65dac1bf435356a3d6d83c2174a38a7f2a763351e2031d2d027b47fc8a07",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "peaks": {
+   "attrs": {}
+  },
+  "peaks/background": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    73
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "ff072f0fecbbc310834011e52a762eeb2ecbb41b79d25f60d97b4b043b93d651",
+    "shape": [
+     73
+    ]
+   }
+  },
+  "peaks/chisq": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    73
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "af0f730c741afc83129ae180c637bd6bae560cc5fa107af92477b01cf43cd8a2",
+    "shape": [
+     73
+    ]
+   }
+  },
+  "peaks/fit_x": {
+   "attrs": {
+    "units": "pixel"
+   },
+   "dtype": "float32",
+   "shape": [
+    73
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "ec3fd2c2bca1fa0fb8ac0a2a2767ada315a19221e23e2f9ee4ac88420bf45279",
+    "shape": [
+     73
+    ]
+   }
+  },
+  "peaks/fit_y": {
+   "attrs": {
+    "units": "pixel"
+   },
+   "dtype": "float32",
+   "shape": [
+    73
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "efb32c109c3af72532a6a96b7d567a35194ba08c851fd736b2cb48e2fa85fb29",
+    "shape": [
+     73
+    ]
+   }
+  },
+  "peaks/hwhm_x": {
+   "attrs": {
+    "units": "pixel"
+   },
+   "dtype": "float32",
+   "shape": [
+    73
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "885a81b91cd9540c55c5094bd564de9b39f21d46d998f7c1a6df336a584eb02b",
+    "shape": [
+     73
+    ]
+   }
+  },
+  "peaks/hwhm_y": {
+   "attrs": {
+    "units": "pixel"
+   },
+   "dtype": "float32",
+   "shape": [
+    73
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "caaf07b93a4513664c7babac4ba5ba8aab191eda73baddd23942d3f2449c9604",
+    "shape": [
+     73
+    ]
+   }
+  },
+  "peaks/integral": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    73
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "88b8ae8b65ddca4b75a05a32938c8f91310e7c1899a066d13e00f90e999ef942",
+    "shape": [
+     73
+    ]
+   }
+  },
+  "peaks/intens": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    73
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "f1ae75f6c03c3d5b421618ac52a4de6f13b6502660f9abf6164237988579bc4b",
+    "shape": [
+     73
+    ]
+   }
+  },
+  "peaks/qhat": {
+   "attrs": {},
+   "dtype": "float32",
+   "shape": [
+    73,
+    3
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "af65b72ccf12c35bb1461723bbfc3f6ab400d51a6e8c3afab7058c33305b7ebd",
+    "shape": [
+     73,
+     3
+    ]
+   }
+  },
+  "peaks/tilt": {
+   "attrs": {
+    "units": "deg"
+   },
+   "dtype": "float32",
+   "shape": [
+    73
+   ],
+   "value": {
+    "dtype": "<f4",
+    "sha256": "b083b7d36e7f9b747eae8b99de2dfb1c65b6d4e495d046fcce804e0aa323f92f",
+    "shape": [
+     73
+    ]
+   }
+  },
+  "run": {
+   "attrs": {
+    "angle_tolerance_deg": 0.1,
+    "boxsize": 18,
+    "cone_deg": 72.0,
+    "cosmic_filter": false,
+    "detector_id": "PE1621 723-3335",
+    "detector_index": 0,
+    "hkl_prefer": {
+     "dtype": "<i8",
+     "sha256": "85526ba79728a470972be92942ef4de212630c9368703cb4ab3cb42dece95912",
+     "shape": [
+      3
+     ]
+    },
+    "kev_max_calc": 17.2,
+    "kev_max_test": 35.0,
+    "max_data": 200,
+    "max_peaks": 300,
+    "max_rfactor": 0.5,
+    "min_separation": 20,
+    "min_size": 3.0,
+    "peak_shape": "Lorentzian",
+    "program": "liblaue",
+    "smooth": false,
+    "threshold": NaN,
+    "threshold_ratio": NaN
+   }
+  }
+ },
+ "output.xml": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<AllSteps>\n    <step original_xmlns=\"http://sector34.xray.aps.anl.gov/34ide:indexResult\">\n        <title>synthetic Laue frame</title>\n        <sampleName>synthetic Ni</sampleName>\n        <userName>synthetic</userName>\n        <beamline>34ID-E</beamline>\n        <scanNum>1</scanNum>\n        <date>2026-08-28T12:00:00-05:00</date>\n        <CCDshutter>out</CCDshutter>\n        <monoMode></monoMode>\n        <detector>\n            <inputImage><BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/frames/frame_1.h5</inputImage>\n            <detectorID>PE1621 723-3335</detectorID>\n            <exposure unit=\"sec\">1.0</exposure>\n            <Nx>2048</Nx>\n            <Ny>2048</Ny>\n            <totalSum>85441653.0</totalSum>\n            <sumAboveThreshold>1542224.0</sumAboveThreshold>\n            <numAboveThreshold>1670</numAboveThreshold>\n            <cosmicFilter>False</cosmicFilter>\n            <geoFile><BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml</geoFile>\n            <ROI startx=\"0\" endx=\"2047\" groupx=\"1\" starty=\"0\" endy=\"2047\" groupy=\"1\"> </ROI>\n            <peaksXY peakProgram=\"liblaue\" minwidth=\"0.75\" threshold=\"120.20791123287387\" thresholdRatio=\"4.0\" maxRfactor=\"0.5\" maxwidth=\"27.0\" maxCentToFit=\"18.0\" boxsize=\"18\" max_number=\"300\" min_separation=\"20\" peakShape=\"Lorentzian\" Npeaks=\"24\" executionTime=\"<seconds>\">\n                <Xpixel>50.7192661473412 1473.09086020189 859.4489342807747 1468.530816099954 616.4392360547304 1059.8603631900673 1700.9936289037012 380.08275757761766 485.8948047544635 1081.4022070547444 837.0812250613145 1298.5565039615708 1958.9491494275508 2015.0658053342297 404.3816900825931 695.7899577108783 280.2003051664414 1059.8210982824187 842.3796583748165 1567.3103798189293 348.5909814055826 1899.3982044975512 716.3903196194653 220.55574596485505</Xpixel>\n                <Ypixel>402.15219646882457 1778.692233771827 1341.3821671980634 4.456546404264095 1115.0201357105814 96.78669159107379 779.4791107044965 1835.7991177495107 976.5906292543251 1518.6818157542114 154.43477381451382 708.8329087967746 2031.9806101537724 1234.5711635730486 883.2068122090221 193.7766895970723 1598.5450681862203 660.5992551940194 2046.5925231240965 1106.6095711660423 815.9167227101582 458.31727425374146 1212.67278326117 1428.647356824334</Ypixel>\n                <Intens>4922.0 4754.0 3902.0 3624.0 3486.0 3417.0 3284.0 3141.0 3132.0 3031.0 3029.0 3021.0 2919.0 2887.0 2856.0 2827.0 2807.0 2804.0 2779.0 2715.0 2647.0 2613.0 2611.0 2582.0</Intens>\n                <Integral>101.23 97.784 83.255 78.27 72.643 69.758 68.819 63.931 65.039 63.718 63.076 63.172 59.033 60.028 59.341 57.886 58.869 58.286 35.306 56.898 54.886 54.843 54.789 54.713</Integral>\n                <hwhmX unit=\"pixel\">1.4517510525847273 1.4600733587239079 1.4364112414583354 1.4620787574639968 1.4432021555207006 1.460419307134182 1.4585920740655542 1.4632677951845698 1.4570003793394595 1.4394895690324776 1.4576883249617445 1.4414351258885456 1.4768490564577665 1.4581317240812373 1.4433398509099944 1.4557503134247556 1.4510127065614284 1.4531200551313088 1.4889708439389542 1.4438700412606162 1.4442419931413946 1.439784582000056 1.4398294563806835 1.4369588884852755</hwhmX>\n                <hwhmY unit=\"pixel\">1.457879362643645 1.4505527821058182 1.438283963942982 1.4978531403051307 1.4587647441499059 1.4571142462409692 1.4423808809597543 1.458969173916511 1.4436336932423655 1.4431002539075946 1.443023840426452 1.4533406294218953 1.4735006516527 1.4433257763346439 1.4518115782050764 1.454773570193235 1.4403594320808684 1.4428766924071836 1.1893814350737046 1.440281604979601 1.4579610005129502 1.4433025814299427 1.4425765767326466 1.4400484170489691</hwhmY>\n                <tilt unit=\"degree\">2.492933387259036 178.7681708325308 178.01210333347137 0.5174256352889753 179.7913039105459 4.500474225919264 0.1128013073579745 178.4652263462308 0.36925720159076253 3.974686552681756 0.33641941217492377 179.49527450258302 0.1557162670405295 179.9193216418787 178.23027521477613 20.518290519657132 179.32731496042086 1.3006384173666752 179.60744734242422 177.01225965152352 179.5109846967788 177.1260077150576 5.165033203318967 179.02198695302909</tilt>\n                <chisq>0.06411010555504437 0.06407467862628151 0.0628026638462428 0.05405992214441108 0.06334925857186316 0.0637332361564686 0.06322707881246346 0.06369459253344961 0.06310059212233558 0.06252697665179638 0.06302580774268779 0.06286942472567768 0.062437110689737015 0.06294073283829124 0.06271350163655645 0.06310115760002113 0.06259572255578127 0.0627258757638159 0.044551345603883165 0.06229951659302986 0.06273087387925394 0.06219337855600667 0.06215608147329761 0.06200969766512839</chisq>\n                <background>-69.0411601569976 -66.03643771797333 -52.243496404924606 -61.46495218139395 -43.700495119615695 -41.55367736989224 -40.32126195521227 -36.517058914697 -37.01240112277676 -35.464407054210874 -35.28532357778706 -35.24861745368586 -36.02832012292614 -32.634544019341384 -31.900944147969145 -30.93429368005545 -31.418505009968126 -31.004034893527113 -22.793687162957806 -29.55740746978995 -28.133847615873872 -27.749897463737117 -27.690729129278118 -27.52830419876769</background>\n                <Qx>-0.1341999217566954 0.22339143873414208 0.09093682423583506 -0.28505122489990337 0.028580933372768774 -0.24499001700287062 -0.07460373509932333 0.19805756204709113 -0.00705934577415272 0.1430008559510051 -0.22149972339941199 -0.08977023799969323 0.30434173735630965 0.06997237946683035 -0.029996258189513927 -0.2061572897703125 0.14162392295147533 -0.09890774515860329 0.26452831682278505 0.028204559876441247 -0.04596903163482457 -0.17659026252203325 0.05487817676407197 0.10109296167743251</Qx>\n                <Qy>0.5768306678530584 0.7493780765966631 0.7003385017649344 0.7233419143908971 0.6711168221481454 0.6878526830210708 0.8048531059931036 0.6108217816829958 0.6527003300372815 0.7217765629238064 0.6658231918400769 0.7571955931026639 0.7699775353357837 0.8360834615765076 0.6401917743249844 0.6509664927722209 0.6098923428434694 0.7253992288793898 0.6535215867866675 0.7941544627033318 0.6311766233025842 0.8066854839105828 0.683909933317387 0.6079770667583425</Qy>\n                <Qz>-0.8057647061175437 -0.6233207548418196 -0.707994687087091 -0.6289056161844769 -0.7408004733241711 -0.6832558657118485 -0.5887663037933508 -0.7665963430238715 -0.7575832923226758 -0.6771922536556192 -0.712472701050276 -0.6469900603219367 -0.5608125372895788 -0.5441215961437244 -0.7676292833010321 -0.7305763458820669 -0.779726871788281 -0.6811851559516161 -0.709178613046629 -0.607061110738086 -0.7742757379169932 -0.5639808589219572 -0.7274995455839532 -0.7874922852925017</Qz>\n            </peaksXY>\n        </detector>\n        <indexing indexProgram=\"liblaue\" Nindexed=\"24\" Npeaks=\"24\" Npatterns=\"1\" keVmaxCalc=\"17.2\" keVmaxTest=\"35.0\" angleTolerance=\"0.1\" cone=\"72.0\" hklPrefer=\"0 0 1\" executionTime=\"<seconds>\">\n            <!--Result of indexing.-->\n            <pattern num=\"0\" rms_error=\"0.0010419683154046038\" goodness=\"660.3660367104864\" Nindexed=\"24\">\n                <recip_lattice unit=\"1/nm\">\n                    <astar>17.41766339634983 -1.0655562747789609 -3.6638479961915307</astar>\n                    <bstar>-2.9720095036536054 -14.52621803888104 -9.904056719321732</bstar>\n                    <cstar>-2.392979695716235 10.285318167885155 -14.367326434090778</cstar>\n                </recip_lattice>\n                <hkl_s>\n                    <h>0 1 -1 1 0 1 3 -1 1 0 2 -1 1 -1 1 3 0 4 -1 1 3 2 1 3</h>\n                    <k>0 -1 -1 -1 -2 -3 -3 -1 -1 -2 -2 -3 -3 -1 -1 -1 -2 -2 -1 -1 -1 -2 -1 -1</k>\n                    <l>2 3 5 5 6 7 7 7 7 8 8 9 9 9 9 9 10 10 11 11 11 12 13 13</l>\n                    <PkIndex>0 1 3 2 6 13 12 5 4 11 9 21 19 10 8 7 17 18 15 14 16 22 20 23</PkIndex>\n                    <err_deg>0.0003400763808285324 0.00015136133016343316 0.0001600592204913436 0.00039376647754266176 0.00035853614104145473 0.0002579173737399103 0.0003592023693475687 0.00015840434993987532 0.0002665333098685388 0.0001743747763292529 0.0001268708787419306 0.0005181611273125013 0.00019000636109482293 0.000319833681618473 0.0001952231434024052 0.00011611007697410965 0.00023143408387761767 0.004947843027400866 0.0001681565663273879 0.00037293395791765724 0.00018352360518478778 9.824334431526718e-05 0.00019601497578375485 0.00016877098909381046</err_deg>\n                    <energy_kev>4.366640313272325 9.36074273750838 14.535208263295297 12.911515774245101 18.897850099037 24.83450066300782 25.67713658452122 18.38769092401441 16.95933968800298 22.422419622050384 22.043446360516878 29.756402823178565 27.64475793534287 22.495476619907127 21.156044713729493 21.891699888951877 26.337681919161955 27.174461056331797 26.706231192781303 25.417084658950152 25.823683628307766 29.813572738573395 29.71174013522202 29.888633749676664</energy_kev>\n                    <pred_intens>1.0 0.07913006577199852 0.013370527739716202 0.01694480622086441 0.005339124404480518 0.0020960032659241893 0.001726580556699257 0.00442313571215393 0.005199562190620638 0.0022309044341593544 0.0021800343920814276 0.0009465696603617316 0.0010967000311978953 0.0018158766344898156 0.0020530890479335167 0.0017488576745761958 0.0010572224946272927 0.0008606998076141902 0.000869409759567516 0.0009598386831264708 0.0008730661505434835 0.0005645250224347643 0.0005052456054467 0.00047696847286530765</pred_intens>\n                </hkl_s>\n            </pattern>\n            <xtl>\n                <structureDesc>Ni</structureDesc>\n                <xtlFile><BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/Ni.xml</xtlFile>\n                <SpaceGroup>225</SpaceGroup>\n                <latticeParameters unit=\"nm\">0.35238 0.35238 0.35238 90.0 90.0 90.0</latticeParameters>\n                <atom n=\"1\" symbol=\"Ni\" label=\"Ni001\" occupancy=\"1.0\">0.0 0.0 0.0</atom>\n            </xtl>\n        </indexing>\n    </step>\n    <step original_xmlns=\"http://sector34.xray.aps.anl.gov/34ide:indexResult\">\n        <title>synthetic Laue frame</title>\n        <sampleName>synthetic Ni</sampleName>\n        <userName>synthetic</userName>\n        <beamline>34ID-E</beamline>\n        <scanNum>4</scanNum>\n        <date>2026-08-28T12:00:00-05:00</date>\n        <CCDshutter>out</CCDshutter>\n        <monoMode></monoMode>\n        <detector>\n            <inputImage><BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/frames/frame_3.h5</inputImage>\n            <detectorID>PE1621 723-3335</detectorID>\n            <exposure unit=\"sec\">1.0</exposure>\n            <Nx>256</Nx>\n            <Ny>256</Ny>\n            <totalSum>1310720.0</totalSum>\n            <sumAboveThreshold>0.0</sumAboveThreshold>\n            <numAboveThreshold>0</numAboveThreshold>\n            <cosmicFilter>False</cosmicFilter>\n            <geoFile><BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml</geoFile>\n            <ROI startx=\"896\" endx=\"1151\" groupx=\"1\" starty=\"896\" endy=\"1151\" groupy=\"1\"> </ROI>\n            <peaksXY peakProgram=\"liblaue\" minwidth=\"0.75\" threshold=\"20.0\" thresholdRatio=\"4.0\" maxRfactor=\"0.5\" maxwidth=\"27.0\" maxCentToFit=\"18.0\" boxsize=\"18\" max_number=\"300\" min_separation=\"20\" peakShape=\"Lorentzian\" Npeaks=\"1\" executionTime=\"<seconds>\">\n                <Xpixel>128.0</Xpixel>\n                <Ypixel>128.0</Ypixel>\n                <Intens>20.0</Intens>\n                <Integral>0.0</Integral>\n                <hwhmX unit=\"pixel\">3.0</hwhmX>\n                <hwhmY unit=\"pixel\">3.0</hwhmY>\n                <tilt unit=\"degree\">0.0</tilt>\n                <chisq>0.0</chisq>\n                <background>20.0</background>\n                <Qx>0.003988904491989171</Qx>\n                <Qy>0.7280759535772974</Qy>\n                <Qz>-0.6854848608565057</Qz>\n            </peaksXY>\n        </detector>\n        <indexing indexProgram=\"liblaue\" Nindexed=\"0\" Npeaks=\"1\" Npatterns=\"0\" keVmaxCalc=\"17.2\" keVmaxTest=\"35.0\" angleTolerance=\"0.1\" cone=\"72.0\" hklPrefer=\"0 0 1\" executionTime=\"<seconds>\">\n            <!--Result of indexing.-->\n            <xtl>\n                <structureDesc>Ni</structureDesc>\n                <xtlFile><BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/Ni.xml</xtlFile>\n                <SpaceGroup>225</SpaceGroup>\n                <latticeParameters unit=\"nm\">0.35238 0.35238 0.35238 90.0 90.0 90.0</latticeParameters>\n                <atom n=\"1\" symbol=\"Ni\" label=\"Ni001\" occupancy=\"1.0\">0.0 0.0 0.0</atom>\n            </xtl>\n        </indexing>\n    </step>\n\n    <step original_xmlns=\"http://sector34.xray.aps.anl.gov/34ide:indexResult\">\n        <title>synthetic Laue frame</title>\n        <sampleName>synthetic Ni</sampleName>\n        <userName>synthetic</userName>\n        <beamline>34ID-E</beamline>\n        <scanNum>3</scanNum>\n        <date>2026-08-28T12:00:00-05:00</date>\n        <CCDshutter>out</CCDshutter>\n        <monoMode></monoMode>\n        <detector>\n            <inputImage><BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/frames/frame_2.h5</inputImage>\n            <detectorID>PE1621 723-3335</detectorID>\n            <exposure unit=\"sec\">1.0</exposure>\n            <Nx>2048</Nx>\n            <Ny>2048</Ny>\n            <totalSum>86401826.0</totalSum>\n            <sumAboveThreshold>2461050.0</sumAboveThreshold>\n            <numAboveThreshold>2949</numAboveThreshold>\n            <cosmicFilter>False</cosmicFilter>\n            <geoFile><BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml</geoFile>\n            <ROI startx=\"0\" endx=\"2047\" groupx=\"1\" starty=\"0\" endy=\"2047\" groupy=\"1\"> </ROI>\n            <peaksXY peakProgram=\"liblaue\" minwidth=\"0.75\" threshold=\"137.73202925278395\" thresholdRatio=\"4.0\" maxRfactor=\"0.5\" maxwidth=\"27.0\" maxCentToFit=\"18.0\" boxsize=\"18\" max_number=\"300\" min_separation=\"20\" peakShape=\"Lorentzian\" Npeaks=\"48\" executionTime=\"<seconds>\">\n                <Xpixel>50.7192661473412 1473.09086020189 859.4489342807747 1468.530816099954 616.4392360547304 1059.8603631900673 1700.9936289037012 1313.7978646942363 380.08275757761766 485.8948047544635 1081.4022070547444 837.0812250613145 1298.5565039615708 1958.9491494275508 2015.0658053342297 404.3816900825931 695.7899577108783 280.2003051664414 1059.8210982824187 842.3796583748165 378.3733962553722 1567.3103798189293 1761.108119301184 348.5909814055826 1899.3982052760591 716.3903196194653 220.55574596485505 87.49567228152961 1347.1864995854353 686.1362927806725 902.5359304238585 264.46679215366083 15.062895912805722 1924.1523887527335 1971.792609103638 200.79998175130623 1285.8683889845565 650.4646631623297 842.733489648205 1450.2302420672618 930.0480546801426 521.1965966884469 561.818713207858 1136.9634857241263 270.93980107617534 702.8026762491442 281.71624198841903 1741.7420165105502</Xpixel>\n                <Ypixel>402.15219646882457 1778.692233771827 1341.3821671980634 4.456546404264095 1115.0201357105814 96.78669159107379 779.4791107044965 151.73587909737452 1835.7991177495107 976.5906292543251 1518.6818157542114 154.43477381451382 708.8329087967746 2031.9806101537724 1234.5711635730486 883.2068122090221 193.7766895970723 1598.5450681862203 660.5992551940194 2046.5925231240965 1170.0472097580505 1106.6095711660423 2022.4920604840713 815.9167227101582 458.31727484282635 1212.67278326117 1428.647356824334 1742.8913987480612 1179.898695358699 743.4622541436004 1568.0412956807506 365.60797160122394 818.1106253521984 460.33263299326524 1186.2650135744836 1491.7360832344987 860.5676874393002 1855.6598765789063 568.6806765178928 1478.7806096942352 1175.6517298717858 305.0923242489741 900.2965280263835 1712.6187377712395 65.6341248373206 1429.6748879644692 648.7785387798895 379.561300524922</Ypixel>\n                <Intens>4922.0 4754.0 3902.0 3624.0 3486.0 3417.0 3284.0 3154.0 3141.0 3132.0 3031.0 3029.0 3021.0 2919.0 2887.0 2856.0 2827.0 2807.0 2804.0 2779.0 2722.0 2715.0 2710.0 2647.0 2613.0 2611.0 2582.0 2292.0 2192.0 2065.0 1964.0 1910.0 1878.0 1847.0 1794.0 1792.0 1784.0 1775.0 1750.0 1732.0 1717.0 1714.0 1675.0 1629.0 1619.0 1617.0 1616.0 1573.0</Intens>\n                <Integral>101.23 97.784 83.255 78.27 72.643 69.758 68.819 64.802 63.931 65.039 63.718 63.076 63.172 59.033 60.028 59.341 57.886 58.869 58.286 35.306 56.166 56.898 56.914 54.886 54.846 54.789 54.713 48.11 44.476 43.115 40.905 40.676 37.893 37.925 36.679 36.633 37.013 37.535 36.092 35.33 35.159 34.702 34.278 33.465 33.201 33.175 33.083 32.859</Integral>\n                <hwhmX unit=\"pixel\">1.4517510525847273 1.4600733587239076 1.4364112414583354 1.462078757463997 1.4432021555207004 1.460419307134182 1.4585920740655542 1.4550778764968628 1.4632677951845698 1.4570003793394595 1.4394895690324776 1.4576883249617447 1.4414351258885452 1.4768490564577663 1.458131724081237 1.4433398509099944 1.4557503134247556 1.4510127065614287 1.4531200551313088 1.488970843938954 1.446280538822519 1.443870041260616 1.4561373029721398 1.4442419931413946 1.4397818709533707 1.4398294563806833 1.4369588884852755 1.441514299009411 1.4597728661592353 1.4547803943227178 1.4425168112170994 1.4355687565809374 1.4717665755162317 1.4565382084309015 1.4545388876193877 1.455508406063274 1.455444158982352 1.4367497996801575 1.448600371633271 1.454701032043839 1.4601090842289863 1.4593266746852895 1.455843638747137 1.459638070888855 1.4595242365205003 1.453555834960022 1.4498021367892686 1.4471004593054817</hwhmX>\n                <hwhmY unit=\"pixel\">1.457879362643645 1.4505527821058182 1.438283963942982 1.4978531403051307 1.4587647441499056 1.4571142462409694 1.4423808809597545 1.4519277867146347 1.458969173916511 1.4436336932423655 1.4431002539075948 1.443023840426452 1.453340629421895 1.4735006516527 1.4433257763346439 1.4518115782050764 1.454773570193235 1.4403594320808686 1.4428766924071839 1.1893814350737044 1.4596507115823214 1.440281604979601 1.441374874204888 1.4579610005129502 1.443292786459117 1.4425765767326464 1.4400484170489691 1.4561684045733552 1.462990205479245 1.4413886322825546 1.4585155868135495 1.437365687355637 1.4743063445430153 1.4475841553591282 1.4515750835138816 1.451857497679752 1.4422885219549095 1.440682880852546 1.446004116886436 1.4539806842007168 1.448014866500831 1.4629951306799212 1.4499800146892399 1.4458487266580355 1.446746711475844 1.4471485416104881 1.4530826142162583 1.4396038708761087</hwhmY>\n                <tilt unit=\"degree\">2.4929333872592605 178.76817083253087 178.0121033334699 0.5174256352890597 179.79130391054593 4.500474225919568 0.1128013073578664 6.837911882817231 178.465226346231 0.36925720159078296 3.974686552682414 0.3364194121747733 179.4952745025831 0.15571626704201816 179.91932164187858 178.23027521477596 20.518290519657143 179.3273149604211 1.3006384173666412 179.60744734242422 179.85942313650975 177.01225965152375 179.80494788869083 179.51098469677868 177.13093834861567 5.165033203319426 179.02198695303002 179.48671880510096 2.44218724680873 0.2850417445626725 179.70394933597584 0.053403964612138664 177.6661066608994 2.199060261557285 174.01595132402704 7.160383208356906 0.9969445369426904 179.78434469163508 8.363480360576515 109.03151430156177 0.33923292981701164 176.93766065337957 176.0136984774804 179.9171786403607 0.026382294011800336 2.6781537952183285 174.00030685007994 1.8190137963599011</tilt>\n                <chisq>0.06411010555504437 0.06407467862628151 0.0628026638462428 0.054059922144411084 0.06334925857186313 0.06373323615646861 0.06322707881246348 0.06325355718461766 0.0636945925334496 0.06310059212233558 0.06252697665179639 0.0630258077426878 0.06286942472567772 0.062437110689737 0.06294073283829124 0.06271350163655647 0.06310115760002115 0.06259572255578127 0.06272587576381589 0.044551345603883165 0.0629021283282366 0.06229951659302985 0.0627030009691353 0.06273087387925391 0.06219527784484041 0.06215608147329764 0.06200969766512839 0.06223551575353649 0.0626468675822142 0.061803014113569275 0.06171944303645543 0.06093061465437471 0.06089896372823486 0.06153333704662572 0.061435522361066065 0.06145883059169898 0.061285416330661584 0.060729057301426574 0.06103503888097204 0.06132779329041868 0.06129854671953661 0.06161161106750249 0.06112838564433921 0.06091509145048175 0.06094298275414047 0.06082340159893858 0.06088398010186575 0.060391450029694045</chisq>\n                <background>-69.04116015699762 -66.03643771797333 -52.243496404924606 -61.464952181393954 -43.7004951196157 -41.55367736989224 -40.32126195521227 -36.935452914760255 -36.51705891469699 -37.01240112277676 -35.46440705421088 -35.28532357778707 -35.248617453685846 -36.02832012292613 -32.63454401934138 -31.900944147969152 -30.934293680055447 -31.41850500996813 -31.004034893527116 -22.793687162957795 -29.332773166022125 -29.55740746978995 -29.832349415278273 -28.133847615873872 -27.74717348663671 -27.69072912927812 -27.528304198767685 -22.1230321452837 -19.320195149096996 -17.730366996324125 -15.85623146555601 -15.28277811372678 -15.912916566782942 -13.269598796581105 -12.227815175998497 -12.197955782577228 -12.421086286042813 -12.611807367569952 -11.56995480598636 -11.071590205686821 -10.91336335266345 -10.673493739969365 -10.108806757942396 -9.383750170049703 -9.165751354589082 -9.091665804102869 -9.038150710243217 -8.653330746732614</background>\n                <Qx>-0.1341999217566954 0.22339143873414208 0.09093682423583506 -0.28505122489990337 0.028580933372768774 -0.24499001700287062 -0.07460373509932333 -0.242395877306315 0.19805756204709113 -0.00705934577415272 0.1430008559510051 -0.22149972339941199 -0.08977023799969323 0.30434173735630965 0.06997237946683035 -0.029996258189513927 -0.2061572897703125 0.14162392295147533 -0.09890774515860329 0.26452831682278505 0.04133717992426806 0.028204559876441247 0.29569609887104903 -0.04596903163482457 -0.1765902623642853 0.05487817676407197 0.10109296167743251 0.1668585867186854 0.04988243907905201 -0.06943816510263132 0.15174531104902927 -0.14971793614849155 -0.041193797215419325 -0.17656195425872384 0.05417475290940288 0.1151445705968696 -0.04508926335298709 0.21343154216253427 -0.11863474329550716 0.13920160593418202 0.0463987726554643 -0.1731822275215778 -0.0270824953087574 0.19592586481942412 -0.21433080096418963 0.11137905483790259 -0.0850176970692998 -0.19563331542457024</Qx>\n                <Qy>0.5768306678530584 0.7493780765966631 0.7003385017649344 0.7233419143908971 0.6711168221481454 0.6878526830210708 0.8048531059931036 0.7216143320876524 0.6108217816829958 0.6527003300372815 0.7217765629238064 0.6658231918400769 0.7571955931026639 0.7699775353357837 0.8360834615765076 0.6401917743249844 0.6509664927722209 0.6098923428434694 0.7253992288793898 0.6535215867866675 0.6362970630018151 0.7941544627033318 0.7538761445146553 0.6311766233025842 0.806685484024811 0.683909933317387 0.6079770667583425 0.577141820770692 0.767631783611624 0.6776564298578343 0.6959795447426458 0.6041300825115774 0.5835694943154877 0.8090611252369225 0.8334694484149462 0.6031155072736145 0.7600692734368082 0.6447470666916755 0.6927660987574059 0.7683127257022025 0.7141253818329929 0.6354432991447886 0.663033004929763 0.7162614273892115 0.5877587883237413 0.6756246127443724 0.6177015611820115 0.7858256542866174</Qy>\n                <Qz>-0.8057647061175437 -0.6233207548418196 -0.707994687087091 -0.6289056161844769 -0.7408004733241711 -0.6832558657118485 -0.5887663037933508 -0.6484728170020646 -0.7665963430238715 -0.7575832923226758 -0.6771922536556192 -0.712472701050276 -0.6469900603219367 -0.5608125372895788 -0.5441215961437244 -0.7676292833010321 -0.7305763458820669 -0.779726871788281 -0.6811851559516161 -0.709178613046629 -0.7703358262285176 -0.607061110738086 -0.5867150721126578 -0.7742757379169932 -0.5639808588079647 -0.7274995455839532 -0.7874922852925017 -0.7994157433749559 -0.6389469360289332 -0.7320929615148022 -0.7018445938200657 -0.7826949488785467 -0.8110177041072167 -0.560576463953585 -0.5499034230718068 -0.7892993175900719 -0.6482759118674144 -0.7339946844511903 -0.7113374235168941 -0.6247547266162912 -0.6984784126356008 -0.7524757335905599 -0.7481001088234516 -0.6697631097105378 -0.7801294216386511 -0.7287839795148028 -0.781803538299961 -0.586690418330656</Qz>\n            </peaksXY>\n        </detector>\n        <indexing indexProgram=\"liblaue\" Nindexed=\"47\" Npeaks=\"48\" Npatterns=\"2\" keVmaxCalc=\"17.2\" keVmaxTest=\"35.0\" angleTolerance=\"0.1\" cone=\"72.0\" hklPrefer=\"0 0 1\" executionTime=\"<seconds>\">\n            <!--Result of indexing.-->\n            <pattern num=\"0\" rms_error=\"0.00015336281689154232\" goodness=\"1129.6562961128252\" Nindexed=\"24\">\n                <recip_lattice unit=\"1/nm\">\n                    <astar>-8.078260844551119 -12.04003929725262 -10.378504032396345</astar>\n                    <bstar>-13.8727140926426 11.023623322808431 -1.9904077579962243</bstar>\n                    <cstar>7.760392769290086 7.172961247623531 -14.361724183011713</cstar>\n                </recip_lattice>\n                <hkl_s>\n                    <h>0 -1 0 -1 -1 0 -2 0 -1 -1 1 -1 -2 0 -1 -1 1 1 -2 0 0 2 -1 1</h>\n                    <k>2 1 2 3 5 2 4 4 3 5 5 7 4 6 3 5 5 7 4 4 6 8 5 7</k>\n                    <l>2 3 4 5 5 6 6 6 7 7 7 7 8 8 9 9 9 9 10 10 10 10 11 11</l>\n                    <PkIndex>7 22 20 28 33 27 34 29 30 36 31 47 39 38 37 40 32 41 43 35 42 44 45 46</PkIndex>\n                    <err_deg>0.00016118468620206374 9.674427113372382e-05 0.00013871128819509986 0.00013186864941143754 0.0002711507679112057 3.6302953402898905e-05 0.0003068339428533698 0.0001356130146661075 9.73376846270901e-05 8.673264558878421e-05 5.512628076817721e-05 0.00010910278520470777 0.0001802332142562143 0.00016057301179687197 8.248973459395511e-05 0.00011215674446688126 0.0001429376201239105 0.00018049994517195585 7.463564009973146e-05 0.0001552507031581643 0.00024812959545093003 6.820577453496068e-05 0.00015254381168139166 0.0001528707879728355</err_deg>\n                    <energy_kev>7.673259278936751 9.944729005620013 10.213141241593304 16.288954219374723 22.411696841882797 13.918170161212773 23.940532029309715 17.328463384898214 19.253518418773044 23.501563226133445 19.465397714744437 29.835640155772644 25.80796648627809 24.73150947031669 22.864007893722153 26.053354708182702 22.438119703848297 26.758871745342145 28.773607187928995 24.005617066784737 27.424306216970965 29.228979199905734 29.267498146922588 29.425671495896612</energy_kev>\n                    <pred_intens>1.0 0.4329832960543473 0.22578810666348692 0.05072187316235732 0.01838781302019732 0.06078906429908669 0.014675540709717601 0.030166594378363328 0.021536618364089887 0.011370903363849015 0.01657531943892821 0.005344952103099059 0.008419045860613076 0.00770102415139793 0.009901559883125187 0.0064854281334052535 0.00874365542996681 0.005021608396457325 0.004741108198371307 0.007046378959671885 0.004605104884093228 0.0032818078938286342 0.003740771663093355 0.0031812724065524716</pred_intens>\n                </hkl_s>\n            </pattern>\n            <pattern num=\"1\" rms_error=\"0.0010617165485210557\" goodness=\"979.1727292160417\" Nindexed=\"23\">\n                <recip_lattice unit=\"1/nm\">\n                    <astar>17.417650890775434 -1.0655982026851485 -3.663895252319068</astar>\n                    <bstar>-2.972071227158002 -14.52621137861544 -9.904047965702969</bstar>\n                    <cstar>-2.392994059798635 10.285323230539706 -14.367320417376057</cstar>\n                </recip_lattice>\n                <hkl_s>\n                    <h>1 -1 1 0 1 3 -1 1 0 2 -1 1 -1 1 3 0 4 -1 1 3 2 1 3</h>\n                    <k>-1 -1 -1 -2 -3 -3 -1 -1 -2 -2 -3 -3 -1 -1 -1 -2 -2 -1 -1 -1 -2 -1 -1</k>\n                    <l>3 5 5 6 7 7 7 7 8 8 9 9 9 9 9 10 10 11 11 11 12 13 13</l>\n                    <PkIndex>1 3 2 6 14 13 5 4 12 10 24 21 11 9 8 18 19 16 15 17 25 23 26</PkIndex>\n                    <err_deg>0.00013207853472447078 0.00017118108379484637 0.0004038340321676915 0.00034157455253798594 0.00022510499524429654 0.0003085030470944307 0.00019820056843623224 0.0002886386344637507 0.0001805039835182513 0.00012833612381155308 0.0004895586032122388 0.00017742681782519621 0.0003286174653518385 0.00021504251582502205 0.00012587588814496134 0.0002478944683295624 0.004942361650414936 0.0002144162042601976 0.00040399915794981603 0.00021994574592606406 0.00011785169295073284 0.00022690952145341026 0.00017323822575840493</err_deg>\n                    <energy_kev>9.36074273750838 14.535208263295297 12.911515774245101 18.897850099037 24.83450066300782 25.67713658452122 18.38769092401441 16.95933968800298 22.422419622050384 22.043446360516878 29.756402823178565 27.64475793534287 22.495476619907127 21.156044713729493 21.891699888951877 26.337681919161955 27.174461056331797 26.706231192781303 25.417084658950152 25.823683628307766 29.813572738573395 29.71174013522202 29.888633749676664</energy_kev>\n                    <pred_intens>1.0 0.16896899565635878 0.21413865963018838 0.06747276591257245 0.026488076882982884 0.02181952636908127 0.05589703065454964 0.06570905938082246 0.028192879816217677 0.02755001364920979 0.0119621998430929 0.013859460629767107 0.0229479985486426 0.02594575181890012 0.022101051699050377 0.013360566357590573 0.010877026313792892 0.010987097648479032 0.012129886077589053 0.011033305002666033 0.007134140695160786 0.006385001712275708 0.006027651667061937</pred_intens>\n                </hkl_s>\n            </pattern>\n            <xtl>\n                <structureDesc>Ni</structureDesc>\n                <xtlFile><BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/Ni.xml</xtlFile>\n                <SpaceGroup>225</SpaceGroup>\n                <latticeParameters unit=\"nm\">0.35238 0.35238 0.35238 90.0 90.0 90.0</latticeParameters>\n                <atom n=\"1\" symbol=\"Ni\" label=\"Ni001\" occupancy=\"1.0\">0.0 0.0 0.0</atom>\n            </xtl>\n        </indexing>\n    </step>\n\n</AllSteps>"
+}

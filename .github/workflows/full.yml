@@ -1,0 +1,136 @@
+# The slow tests, Vitest's slow set and the e2e suite, started by hand before a release (Actions, "Full tests", "Run
+# workflow"). Each job runs one make target, as on a development machine; the slow tests and the e2e suite keep their
+# reports as workflow artifacts. As in ci.yml, they start after the Environment job, which builds and saves the caches
+# that are missing, also when it failed.
+name: Full tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  environment:
+    name: Environment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          parts: backend frontend
+          build: "true"
+
+  test-slow:
+    name: Slow tests
+    needs: environment
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          parts: backend
+      - name: make test-slow
+        env:
+          PYTEST_ADDOPTS: --junitxml=${{ runner.temp }}/reports/test-slow.xml --durations=20
+        run: make test-slow
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-slow-report
+          path: ${{ runner.temp }}/reports/
+          if-no-files-found: warn
+
+  # The heaviest page tests, which make check-frontend leaves out (SLOW_TESTS in frontend/vite.config.ts).
+  test-frontend-slow:
+    name: Slow frontend tests
+    needs: environment
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          parts: frontend
+      - name: make test-frontend-slow
+        run: make test-frontend-slow
+
+  e2e:
+    name: E2E
+    needs: environment
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          parts: backend frontend
+      # The headless shell of the Chromium that the locked @playwright/test needs is cached under the image's OS and
+      # Playwright's version (each version needs its own Chromium build) and downloaded only when that key is missing;
+      # its system libraries are installed on every run (apt, outside the cache). This job alone uses the browser, so
+      # it saves the cache, right after the download.
+      - id: playwright
+        name: Playwright's version
+        run: |
+          . scripts/env.sh
+          version="$(pnpm -C frontend exec playwright --version | sed -n 's/^Version //p')"
+          [ -n "$version" ] || { echo "::error::playwright --version printed no version"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "os=${ImageOS:-$RUNNER_OS}" >> "$GITHUB_OUTPUT"
+      - id: browser-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright.outputs.os }}-${{ steps.playwright.outputs.version }}
+      - name: Install Playwright's Chromium
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: |
+          . scripts/env.sh
+          pnpm -C frontend exec playwright install --with-deps --only-shell chromium
+      - if: steps.browser-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.browser-cache.outputs.cache-primary-key }}
+      - name: Install Chromium's system libraries
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: |
+          . scripts/env.sh
+          pnpm -C frontend exec playwright install-deps chromium-headless-shell
+      - name: make e2e
+        run: make e2e
+      # The HTML report (with the traces of failed tests) and the failed tests' screenshots.
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          if-no-files-found: warn
+      # The e2e stack's logs (the API, the worker and supervisord), in the development workspace.
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-stack-logs
+          path: .workspace/logs/
+          # The workspace is a dot-folder, which upload-artifact skips unless hidden files are included.
+          include-hidden-files: true
+          if-no-files-found: warn

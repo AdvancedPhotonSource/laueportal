@@ -1,0 +1,22 @@
+{
+  "about": "The import page's quick select, shared by pytest (tests/scans/test_scan_import_api.py, service.quick_select) and the page's Vitest. rows: the index of test_log_2.xml once scan 274038 is imported (time in UTC). Each case: the criteria (a scan ID greater than N; a start at or after an instant) and the scan IDs selected, in row order. Only new rows are selected.",
+  "log": "test_log_2.xml",
+  "imported_first": [274038],
+  "rows": [
+    {"scan_number": 274036, "status": "new", "time": "2022-04-20T04:34:02Z"},
+    {"scan_number": 274037, "status": "new", "time": "2022-04-20T15:48:47Z"},
+    {"scan_number": 274038, "status": "exists", "time": "2022-04-20T20:33:09Z"},
+    {"scan_number": 274039, "status": "new", "time": "2022-04-20T20:38:21Z"},
+    {"scan_number": 276007, "status": "new", "time": "2022-11-18T22:34:42Z"},
+    {"scan_number": 276802, "status": "new", "time": "2023-02-18T08:17:16Z"}
+  ],
+  "cases": [
+    {"criteria": {"scan_id_greater_than": 274036}, "expected": [274037, 274039, 276007, 276802]},
+    {"criteria": {"scan_id_greater_than": 276802}, "expected": []},
+    {"criteria": {"created_at_or_after": "2022-11-18T22:34:42Z"}, "expected": [276007, 276802]},
+    {"criteria": {"created_at_or_after": "2022-11-18T22:34:43Z"}, "expected": [276802]},
+    {"criteria": {"created_at_or_after": "2022-04-20T11:00:00-05:00"}, "expected": [274039, 276007, 276802]},
+    {"criteria": {"scan_id_greater_than": 274036, "created_at_or_after": "2023-01-01T00:00:00Z"}, "expected": [276802]},
+    {"criteria": {}, "expected": [274036, 274037, 274039, 276007, 276802]}
+  ]
+}

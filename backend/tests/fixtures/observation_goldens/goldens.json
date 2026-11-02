@@ -1,0 +1,73 @@
+{
+  "intake": {
+    "another-submission": false,
+    "kept": true,
+    "kept-as-an-object": true,
+    "kept-at-the-bound": true,
+    "kept-at-the-depth-bound": true,
+    "kept-at-the-stored-time": true,
+    "kept-login-required": true,
+    "kept-with-another-offset": false,
+    "kept-without-a-stored-one": true,
+    "naive-observed-at": false,
+    "nested-too-deep": true,
+    "no-observed-at": false,
+    "none-absent": false,
+    "none-empty": false,
+    "none-for-aps": false,
+    "not-an-object": false,
+    "not-finite": true,
+    "not-finite-too-large": true,
+    "not-json": false,
+    "object-too-long": false,
+    "object-too-long-by-one": false,
+    "observed-at-not-a-time": false,
+    "observed-at-not-text": false,
+    "observed-at-out-of-range": true,
+    "older-than-the-stored-one": false,
+    "phase-not-text": false,
+    "text-too-long": false,
+    "unknown-phase": false
+  },
+  "observations": {
+    "at-alcf": "{\"phase\":\"queued\",\"detail\":\"Waiting for status\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"stale\":false,\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "at-alcf-late": "{\"phase\":\"queued\",\"detail\":\"Waiting for status\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"stale\":true,\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T11:58:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "downlink": "{\"phase\":\"downlink\",\"detail\":\"Returning results\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"flow_state\":\"ResultTransfer\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "finishing": "{\"phase\":\"running\",\"detail\":\"Finishing processing\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"observer_observed_at\":\"2026-10-25T11:59:50+00:00\",\"pbs\":{\"job_id\":\"123456.crux-pbs-01\",\"status\":\"E\"},\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T11:50:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "flow-succeeded": "{\"phase\":\"downlink\",\"detail\":\"Returning results\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"flow_state\":\"ResultTransfer\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "inactive-without-login": "{\"phase\":\"uplink\",\"detail\":\"Transferring inputs\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"flow_state\":\"InputTransfer\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "login-required": "{\"phase\":\"login_required\",\"detail\":\"Sign in to Globus and resume this run\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "login-required-on-the-run": "{\"phase\":\"login_required\",\"detail\":\"Sign in to Globus and resume this run\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"flow_state\":\"InputTransfer\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "login-resumed": "{\"phase\":\"queued\",\"detail\":\"Awaiting workflow\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"flow_state\":null,\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "observer-stale": "{\"phase\":\"running\",\"detail\":\"Processing\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"stale\":true,\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T11:50:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "pbs-finished": "{\"phase\":\"downlink\",\"detail\":\"Awaiting result return\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"observer_observed_at\":\"2026-10-25T11:59:50+00:00\",\"pbs\":{\"job_id\":\"123456.crux-pbs-01\",\"status\":\"F\"},\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "pbs-held": "{\"phase\":\"queued\",\"detail\":\"Held in PBS\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"observer_observed_at\":\"2026-10-25T11:59:50+00:00\",\"pbs\":{\"job_id\":\"123456.crux-pbs-01\",\"status\":\"H\"},\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "pbs-queued": "{\"phase\":\"queued\",\"detail\":\"Waiting for PBS allocation\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"observer_observed_at\":\"2026-10-25T11:59:50+00:00\",\"pbs\":{\"job_id\":\"123456.crux-pbs-01\",\"status\":\"Q\"},\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "running": "{\"phase\":\"running\",\"detail\":\"Processing\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"observer_observed_at\":\"2026-10-25T11:59:50+00:00\",\"pbs\":{\"job_id\":\"123456.crux-pbs-01\",\"status\":\"R\"},\"remote_progress\":{\"heartbeat_at\":\"2026-10-25T11:59:45+00:00\",\"n_succeeded\":3,\"n_failed\":0},\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "scheduler-unavailable": "{\"phase\":\"running\",\"detail\":\"PBS status unavailable\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"observer_observed_at\":\"2026-10-25T11:59:50+00:00\",\"pbs\":{\"job_id\":\"123456.crux-pbs-01\"},\"stale\":true,\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T11:50:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "submitting": "{\"phase\":\"queued\",\"detail\":\"Submitting to PBS\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"observer_observed_at\":\"2026-10-25T11:59:50+00:00\",\"pbs\":{\"job_id\":\"123456.crux-pbs-01\"},\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "uplink": "{\"phase\":\"uplink\",\"detail\":\"Transferring inputs\",\"observed_at\":\"2026-10-25T12:00:00+00:00\",\"flow_state\":\"InputTransfer\",\"phase_since\":\"2026-10-25T12:00:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"flow_run_id\":\"0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60\"}",
+    "workflow-unavailable": "{\"phase\":\"running\",\"detail\":\"Workflow status unavailable\",\"flow_state\":\"RunPbsJob\",\"phase_since\":\"2026-10-25T11:50:00+00:00\",\"observed_at\":\"2026-10-25T11:59:00+00:00\",\"submission_id\":\"6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14\",\"stale\":true}"
+  },
+  "publishing": {
+    "after": {
+      "detail": "Publishing results",
+      "flow_run_id": "0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60",
+      "flow_state": "ResultTransfer",
+      "observed_at": "2026-10-25T12:01:00+00:00",
+      "phase": "downlink",
+      "phase_since": "2026-10-25T12:00:00+00:00",
+      "stale": false,
+      "submission_id": "6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14"
+    },
+    "before": {
+      "detail": "Returning results",
+      "flow_run_id": "0c5e7a12-1d3b-4f6a-8e2c-9b7d5f3a1e60",
+      "flow_state": "ResultTransfer",
+      "observed_at": "2026-10-25T12:00:00+00:00",
+      "phase": "downlink",
+      "phase_since": "2026-10-25T12:00:00+00:00",
+      "submission_id": "6f1c2a9e-4b7d-4c1a-9e3f-2d8b5a7c0e14"
+    }
+  }
+}

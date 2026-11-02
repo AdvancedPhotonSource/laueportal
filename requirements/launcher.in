@@ -1,0 +1,22 @@
+# Launcher side: the DM-host launcher environment of remote runs, Python 3.12 (matching the configured Globus Compute
+# endpoint). DM's workflow stages call it to stage inputs, run the Globus flow, and submit and watch PBS
+# (laueportal.remote's launcher modules). No database, Redis or web server. `make lock` compiles launcher.lock. dev.in
+# includes this file, so the dev env has these packages and the launcher and workflow tests run there; base.lock and
+# launcher.lock share dev.lock's versions, so a host that runs the portal and the launcher can install both.
+#
+# Install it into a Python 3.12 conda-forge env with the native build prerequisites, as environment.yml provides:
+# cryptography (through globus-sdk) needs cffi, and cffi and its pycparser come from conda-forge; they are pinned
+# through conda-pins.txt at compile time and left out of the lock.
+
+# The deployed launcher environment's exact pins.
+# gladier 0.11.0 declares globus-sdk>=4,<5 and globus-compute-sdk>=4,<5, so the set resolves without overrides.
+gladier==0.11.0
+gladier-tools==0.5.4
+globus-compute-sdk==4.19.0
+globus-sdk==4.9.1
+PyYAML==6.0.2
+
+# laueportal.remote.settings (the bdp.yaml model the launcher reads) is a pydantic model. gladier and
+# globus-compute-common bring pydantic too, but the launcher's own import is declared here. Not pinned:
+# the version is dev.lock's (pydantic v2), like every package of this set but the exact pins above.
+pydantic

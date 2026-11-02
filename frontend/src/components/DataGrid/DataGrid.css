@@ -1,0 +1,40 @@
+/* The DataGrid's overlays (GridOverlay) fill the rows area: AG Grid's overlay wrapper only centres
+   its content, which then shrinks to fit (a full-width skeleton would have no width). */
+[data-slot="data-grid"] .ag-overlay-wrapper > .ag-react-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+/* A selected row's own mark beside its checkbox: a bar in the link blue, at least 3:1 against the
+   row in either theme (the row's tint is subtle, and must stay so for the text on it). */
+[data-slot="data-grid"]
+  .ag-row-selected
+  .ag-cell[col-id="ag-Grid-SelectionColumn"] {
+  box-shadow: inset 3px 0 0 var(--link);
+}
+
+/* Muted text in cells ("Unlinked", "Direct", "No inputs") keeps 4.5:1 on a selected row's tint. */
+[data-slot="data-grid"] .ag-row-selected .text-muted-foreground {
+  color: color-mix(in oklch, var(--muted-foreground), var(--foreground) 35%);
+}
+
+/* Typed filter values read as input text, not as the header's bold labels (they inherited its weight). */
+[data-slot="data-grid"] .ag-floating-filter input {
+  font-weight: normal;
+}
+
+/* The floating filters go without the search icon AG Grid puts in each input: their columns are
+   narrow, and the icon's padding took the room their values need (a picked date showed as "…5/2026"
+   in a 140 px column; a 64 px ID column's input had no room left for its text, and its filter button
+   was pushed out of the cell). The filter button beside each input marks it as a filter. With a
+   little less padding, a picked date and the empty "mm/dd/yyyy" show whole from 150 px (the date
+   columns' minimum, columns.ts). */
+[data-slot="data-grid"] .ag-floating-filter .ag-input-field-search-icon {
+  display: none;
+}
+[data-slot="data-grid"] .ag-floating-filter .ag-input-field-input {
+  padding-inline: 4px;
+}

@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+*.tsbuildinfo
+.vite/
+
+# The development workspace's default location and the file that names another (scripts/env.sh)
+/.workspace
+/scripts/env.local.sh
+# A machine's own rules for agents, beside AGENTS.md
+/AGENTS.local.md
+
+# Local config and secrets (live in the development workspace's config/, or the deployment's <root>/config)
+*.env
+.env*
+# The earlier portal's private configuration (YAML), ignored at any depth: the portal reads TOML, but such a file
+# copied into a checkout must not be committed.
+config.yaml
+# Private portal settings (TOML) copied into the checkout: the templates (*.toml.template) stay tracked.
+/config/
+/dev.toml
+/prod.toml
+*.local.toml
+/deploy/config/*.toml
+
+# Remote execution: the private settings, rendered site configuration and the
+# DM/Globus authentication and runtime state belong outside the checkout (docs/runbooks/remote-execution.md), but a
+# launcher installation's <root>/src is a checkout, so keep a stray copy from being committed.
+bdp.yaml
+/deploy/remote/workflow-bdp.json
+/deploy/remote/workflow-bdp-cancel.json
+/deploy/remote/globus/endpoint.env.sh
+/state/
+.globus/
+.globus_compute/
+.funcx/
+.globus_credentials.sh
+.globus_credentials.*
+gladier-*.cfg*
+
+# Databases and run data never belong in the repo
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Agent tooling
+.claude/

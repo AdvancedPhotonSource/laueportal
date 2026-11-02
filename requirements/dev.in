@@ -1,0 +1,10 @@
+-r base.in
+# The DM-host launcher's set, so the launcher and workflow tests run in the dev env.
+-r launcher.in
+pytest
+httpx
+# Held below 0.17 since 2026-10-17: ruff's minor releases are its breaking ones (its versioning policy), and the
+# routine dependency updates take patch and minor updates only.
+ruff<0.17
+pyright
+import-linter

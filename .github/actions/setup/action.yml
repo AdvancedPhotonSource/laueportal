@@ -1,0 +1,146 @@
+name: Development environment
+description: >-
+  Installs the parts of `make setup` (scripts/setup.sh) that a job uses into the default development workspace,
+  `.workspace` in the checkout (as on a fresh clone), from the caches that the Environment job builds. With `build`
+  (the Environment job), it only looks the parts' caches up, builds the parts whose cache is missing and saves them.
+inputs:
+  parts:
+    description: >-
+      The parts to install, separated by spaces: `backend` (`make setup-backend`: the conda env, the locked Python
+      packages, lauelab, the backend and the dev config) and `frontend` (`make setup-frontend`: pnpm and
+      node_modules).
+    required: true
+  node:
+    description: >-
+      `true` installs Node without the frontend part, for pyright (a backend tool), which runs on the Node on the
+      PATH.
+    default: "false"
+  build:
+    description: >-
+      `true` (the Environment job): look the parts' caches up without downloading them, build the parts whose cache is
+      missing and save their caches.
+    default: "false"
+runs:
+  using: composite
+  steps:
+    # Only the Environment job (`build: true`) saves these caches, and only under a key that is missing. The other jobs
+    # restore them and never save, so a check adds nothing to them and a failed check loses none. A pull
+    # request's run reads main's caches (and its own): a key is missing there only when the pull request changes a
+    # file that the key hashes (a lock, scripts/setup.sh, backend/pyproject.toml), so a pull request saves a cache only
+    # then, and a later run of the same pull request restores it.
+
+    # The runner image's OS (ImageOS, such as ubuntu24), for the backend cache's key: an env is not restored on another.
+    - id: image
+      shell: bash
+      run: echo "os=${ImageOS:-$RUNNER_OS}" >> "$GITHUB_OUTPUT"
+
+    # The backend part: the conda env with the locked Python packages, lauelab and the editable backend, and
+    # micromamba. scripts/setup.sh holds the lauelab and micromamba pins; it installs the backend once, so a change to
+    # backend/pyproject.toml (its entry points, its metadata) needs a new env.
+    - id: backend-cache
+      if: contains(inputs.parts, 'backend')
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          .workspace/env
+          .workspace/tools/micromamba
+        key: >-
+          backend-${{ steps.image.outputs.os }}-${{ hashFiles('environment.lock', 'requirements/*.lock',
+          'scripts/setup.sh', 'backend/pyproject.toml') }}
+        lookup-only: ${{ inputs.build }}
+
+    # The frontend part: pnpm's store and pnpm (scripts/setup.sh holds its pin). No restore-keys: the Environment job
+    # builds a missing store from the lock alone, so a saved store contains only that lock's packages (a store
+    # restored from an older key and saved again keeps every earlier lock's packages too).
+    - id: frontend-cache
+      if: contains(inputs.parts, 'frontend')
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          .workspace/pnpm-store
+          .workspace/tools/pnpm
+          .workspace/tools/pnpm-dist
+        key: frontend-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml', 'scripts/setup.sh') }}
+        lookup-only: ${{ inputs.build }}
+
+    # The parts to install here: in the Environment job, those whose cache is missing; in the other jobs, every part
+    # asked for (`make setup-<part>` after the restore, or a whole build when the cache is missing).
+    - id: install
+      shell: bash
+      env:
+        PARTS: ${{ inputs.parts }}
+        BUILD: ${{ inputs.build }}
+        BACKEND_CACHED: ${{ steps.backend-cache.outputs.cache-hit }}
+        FRONTEND_CACHED: ${{ steps.frontend-cache.outputs.cache-hit }}
+      run: |
+        targets=""
+        for part in $PARTS; do
+          case "$part" in
+            backend) cached="$BACKEND_CACHED" ;;
+            frontend) cached="$FRONTEND_CACHED" ;;
+            *) echo "::error::unknown part '$part' (backend, frontend)"; exit 1 ;;
+          esac
+          if [ "$BUILD" != true ] || [ "$cached" != true ]; then
+            targets="$targets setup-$part"
+            echo "$part=true" >> "$GITHUB_OUTPUT"
+          fi
+        done
+        echo "targets=${targets# }" >> "$GITHUB_OUTPUT"
+
+    # uv's cache keeps lauelab's wheel, built from source at the commit that scripts/setup.sh pins, so that a new env
+    # (after a lock changed) does not compile it again; the wheels from PyPI are pruned before the cache is saved. Only
+    # the Environment job builds an env, so only it restores and saves this cache.
+    - if: steps.install.outputs.backend == 'true'
+      uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      with:
+        version: "0.12.5"
+        download-from-astral-mirror: false
+        enable-cache: ${{ inputs.build }}
+        prune-cache: true
+        cache-dependency-glob: scripts/setup.sh
+
+    - if: steps.install.outputs.frontend == 'true' || inputs.node == 'true'
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: "26.7.0"
+        package-manager-cache: false
+
+    # With bytecode: the tests start many fresh interpreters, and scripts/env.sh sets PYTHONDONTWRITEBYTECODE, so that
+    # each would compile what it imports (about 1.5 s more for the worker's imports here). UV_COMPILE_BYTECODE
+    # compiles the locked packages and lauelab when the env is built, and the backend cache keeps their bytecode.
+    - name: make ${{ steps.install.outputs.targets }}
+      if: steps.install.outputs.targets != ''
+      shell: bash
+      env:
+        UV_COMPILE_BYTECODE: "1"
+        SETUP_TARGETS: ${{ steps.install.outputs.targets }}
+      run: |
+        read -ra targets <<< "$SETUP_TARGETS"
+        make "${targets[@]}"
+
+    # The backend's own bytecode, in the checkout (not in a cache), for the same reason.
+    - name: Bytecode of the backend
+      if: steps.install.outputs.backend == 'true' && inputs.build != 'true'
+      shell: bash
+      run: |
+        . scripts/env.sh
+        python -m compileall -q backend/src
+
+    # Saved right after the build, in a job that runs no check, so that a failed check does not lose them and the
+    # checks add nothing to them.
+    - if: inputs.build == 'true' && steps.install.outputs.backend == 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          .workspace/env
+          .workspace/tools/micromamba
+        key: ${{ steps.backend-cache.outputs.cache-primary-key }}
+
+    - if: inputs.build == 'true' && steps.install.outputs.frontend == 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          .workspace/pnpm-store
+          .workspace/tools/pnpm
+          .workspace/tools/pnpm-dist
+        key: ${{ steps.frontend-cache.outputs.cache-primary-key }}

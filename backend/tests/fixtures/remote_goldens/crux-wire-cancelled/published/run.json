@@ -1,0 +1,41 @@
+{
+  "artifacts": {},
+  "counters": {
+    "n_failed": 0,
+    "n_indexed": null,
+    "n_inputs": 2,
+    "n_not_run": 2,
+    "n_succeeded": 0
+  },
+  "display_id": "Reconstruction R1",
+  "failure_report": null,
+  "finished_at": "0000-00-00T00:00:00+00:00",
+  "format": "laue-portal-run-summary",
+  "host": "<host>",
+  "job_id": 1,
+  "kind": "wire_reconstruction",
+  "log": [],
+  "message": "Cancelled by request; completed results kept",
+  "phase": "cancelled",
+  "policy": {
+    "indexing_ranks_per_node": 1,
+    "indexing_threads_per_worker": 1,
+    "max_in_flight": 2,
+    "memory_limit_mb": 256,
+    "reconstruction_workers": 1,
+    "threads_per_worker": 1,
+    "workers": 1
+  },
+  "provenance": {
+    "path_map": {
+      "<BASE>/aps": "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs",
+      "<BASE>/aps/LauePortal/analysis/wire_1": "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/results"
+    },
+    "remote_output_directory": "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/results"
+  },
+  "started_at": "0000-00-00T00:00:00+00:00",
+  "status": "Cancelled",
+  "submission_id": "6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b",
+  "version": 1,
+  "warnings": []
+}

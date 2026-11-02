@@ -1,0 +1,148 @@
+# The fast gates: the parts of `make check`, each a job that runs one make target, so that a failed job is reproduced
+# locally with that target. The jobs that install anything start after the Environment job, which builds and saves the
+# caches that are missing, so that a missing cache is built once and not in each job; Hygiene installs nothing and
+# does not wait. They start also when Environment failed (`!cancelled()`): GitHub reports a skipped job as a success to
+# a required check, and their own setup builds what is missing or fails.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels the run of the commit it replaces. On main every push's run completes: the
+# hygiene job of a push checks only the commits that push added.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # On a warm run it checks out and looks the caches up (without downloading them), and installs nothing.
+  environment:
+    name: Environment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          parts: backend frontend
+          build: "true"
+
+  hygiene:
+    name: Hygiene
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # The whole history, so that the base of `git diff --check` is here.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # A pull request's checkout is the merge of its head into its base: the merge's first parent is that base.
+      - name: make check-hygiene
+        env:
+          DIFF_BASE: ${{ github.event_name == 'pull_request' && 'HEAD^1' || github.event.before }}
+        run: make check-hygiene
+
+  backend-lint:
+    name: Backend lint and types
+    needs: environment
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          parts: backend
+          node: "true"
+      - name: make check-backend
+        run: make check-backend
+
+  # The backend's fast tests (`make test`) in two halves of about equal time.
+  backend-tests:
+    name: Backend tests (${{ matrix.part }})
+    needs: environment
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: jobs, remote
+            target: test-jobs-remote
+          - part: others
+            target: test-others
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          parts: backend
+      - name: make ${{ matrix.target }}
+        env:
+          # The slowest tests, to keep this job within its time.
+          PYTEST_ADDOPTS: --durations=20
+        run: make ${{ matrix.target }}
+
+  frontend:
+    name: Frontend
+    needs: environment
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          parts: frontend
+      # tsc's build info and ESLint's results from an earlier run (make check-frontend keeps them in the workspace's
+      # cache/frontend/), under the state of frontend/ (scripts/frontend-digest.sh, the files, configs and lock). The
+      # same state restores its own entry; another restores the latest one, whose build info tsc checks again where
+      # files changed (a build info of another TypeScript version is not used), and whose ESLint results, kept under
+      # their own state's digest, make check-frontend deletes unread. Only a check makes these results, so this job
+      # saves them: after a passing check, under a key that is missing.
+      - id: digest
+        name: State of frontend/
+        run: echo "digest=$(scripts/frontend-digest.sh)" >> "$GITHUB_OUTPUT"
+      - id: check-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .workspace/cache/frontend
+          key: frontend-checks-${{ runner.os }}-${{ steps.digest.outputs.digest }}
+          restore-keys: frontend-checks-${{ runner.os }}-
+      - name: make check-frontend
+        run: make check-frontend
+      - if: steps.check-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .workspace/cache/frontend
+          key: ${{ steps.check-cache.outputs.cache-primary-key }}
+
+  contract:
+    name: API contract
+    needs: environment
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          parts: backend frontend
+      - name: make check-contract
+        run: make check-contract

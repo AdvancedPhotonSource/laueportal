@@ -1,0 +1,156 @@
+# Laue Portal ("3DMN Portal") development settings.
+#
+# `make setup` writes this file into the development workspace ($LAUE_DEV_WORKSPACE) as config/dev.toml (once;
+# edit the copy), its paths in that workspace and this checkout filled in (scripts/render-dev-config.py), and
+# scripts/env.sh points LAUEPORTAL_CONFIG at it. Any key can be overridden from the environment with
+# LAUEPORTAL_<SECTION>__<KEY>, e.g. LAUEPORTAL_INDEXING__DEFAULTS__BOX_SIZE.
+# Unknown keys are errors. "~" is expanded in paths. TOML has no null: "" means "not set" for optional
+# values. Check the result with `laueportal config show`.
+
+[app]
+title = "3DMN Portal"
+host = "127.0.0.1"
+port = 2100
+allowed_hosts = ["localhost", "127.0.0.1"]   # a request's Host (port aside) must be one of these, else 400 (DNS rebinding)
+static_dir = "{{CHECKOUT}}/frontend/dist"   # the built SPA (`make build`); missing = API only
+log_level = "info"                      # debug | info | warning | error
+
+[database]
+path = "{{WORKSPACE}}/db/dev.db"
+journal_mode = "wal"                    # "wal" | "delete"; WAL on a network file system (NFS, ...) is refused at startup
+legacy_timezone = "America/Chicago"     # zone of v1's naive timestamps, converted to UTC by migration
+protected = []                          # absolute paths `seed demo`, `seed slow-runs` and `db backup` never write:
+                                        # a database (its journal, WAL, shm and .sha256 files too) or a folder (all in it)
+
+[execution]                             # whole-run limits and compute knobs
+job_timeout_seconds = 86400
+heartbeat_seconds = 15
+progress_seconds = 5
+cancel_poll_seconds = 2
+stale_heartbeat_seconds = 300
+shutdown_grace_seconds = 600
+reconcile_seconds = 60                  # the reconciler's period (jobs/reconciler.py, in the worker)
+creation_timeout_seconds = 600          # a run still created/published this long is failed by the reconciler (>= 60)
+workers = 1                             # indexing processes per run (production: 4)
+max_in_flight = 2                       # outstanding inputs per indexing run; remove the key for automatic
+max_run_inputs = 1000000                # the most inputs a new run may read (the largest migrated run read 99,825)
+job_log = ""                            # the job processes' own log ("" = the worker's log; production:
+                                        # <ROOT>/logs/jobs.log, so a job process that outlives its worker logs on)
+reconstruction_workers = 1              # wire points reconstructed at once
+num_threads = 1                         # production: 35
+memory_limit_mb = 512                   # production: 50000
+verbose = 1
+
+[files]
+runs_root = "{{WORKSPACE}}/runs"   # run outputs go here
+uploads_dir = "{{WORKSPACE}}/runs/.uploads"   # staged scan-log uploads ("" = <runs_root>/.uploads)
+hdf_extensions = [".hdf", ".h5", ".hdf5", ".he5"]
+scan_log_extensions = [".xml", ".txt"]
+scan_log_dir = "{{WORKSPACE}}/runs/inputs/scan-logs"   # where the scan-log picker opens; the demo seed stages it
+max_scan_log_mb = 25                    # MiB (about 10 MiB of memory per MiB)
+listing_cap = 1000                      # file browser: entries per listing (truncation is reported)
+probe_timeout_seconds = 5               # the API's wait for a stat, listing or open of a path, then "not responding"
+hung_mount_seconds = 30                 # a mount that did not answer answers "not responding" at once this long (Retry-After)
+probe_threads = 8                       # the API's threads for those checks: the most stuck on hung mounts (2 a mount)
+
+[files.roots]                           # name = absolute path; every browser-supplied path must resolve inside one
+samples = "{{WORKSPACE}}/runs/inputs"   # the demo's synthetic inputs (`laueportal seed demo` makes them)
+runs = "{{WORKSPACE}}/runs"
+
+[beamline]
+name = "34ID-E"
+scan_log_namespace = "http://sector34.xray.aps.anl.gov/34ide/scanLog"
+detector_datasets = ["/entry1/data/data", "/entry/data/data", "/data"]   # tried in order, then the first 2-D dataset
+simulation_kev = [6.0, 30.0]            # energy window of simulated reflections
+
+[beamline.motor_groups]
+sample = ["34ide:mxv:c0:m1", "34ide:mxv:c0:m3", "34ide:mxv:c0:m2", "34ide:focusTHK:F", "34ide:focusTHK:H"]
+energy = ["34ide:monoE:keV"]
+depth = ["34ide:t80:c0:m1", "34ide:t80:c0:m3", "34ide:t80:c0:m2", "34ide:focusAlio:F", "34ide:focusAlio:H", "34ide:mxv:c0:m4"]
+other = ["34ide:m58:c0:m6", "34ide:m58:c0:m8", "34ide:m58:c1:m1", "34ide:m58:c1:m2", "34ide:m58:c1:m3", "34ide:m58:c1:m5", "34ide:m58:c1:m7", "34ide:540:c0:out2", "34ide:540:c0:out3", "34ide:float6"]
+
+[output_templates]                      # run output folders, under files.runs_root
+# Relative to files.runs_root. Placeholders: {scan}, {rec} (indexing only), {run}; the {scan} and
+# {rec} segments are omitted when the run has no scan or reconstruction.
+indexing = "analysis/scan_{scan}/rec_{rec}/index_{run}"
+reconstruction = "analysis/scan_{scan}/rec_{run}/data"
+
+[indexing]
+dataset_cache_size = 3                  # results viewer: datasets kept loaded (default: 6;
+                                        # kept low for a development machine)
+
+[indexing.defaults]                     # form defaults, by the request fields
+box_size = 18                           # boxsize
+max_rfactor = 0.5                       # maxRfactor
+threshold = ""                          # "" = automatic
+threshold_ratio = ""                    # thresholdRatio; "" = automatic
+min_size = 3
+min_separation = 20
+max_number = 300
+peak_shape = "Lorentzian"               # peakShape: "Lorentzian" or "Gaussian"
+mask_file = ""                          # maskFile; "" = no mask
+smooth = false
+index_kev_max_calc = 17.2               # indexKeVmaxCalc; the scan's source energy does not replace the cutoffs
+index_kev_max_test = 35.0               # indexKeVmaxTest; likewise
+index_angle_tolerance = 0.1             # indexAngleTolerance
+index_hkl = [0, 0, 1]                   # indexH, indexK, indexL
+index_cone = 72.0                       # indexCone
+max_peaks = 200
+output_xml = "output.xml"               # outputXML
+geometry_file = "{{WORKSPACE}}/runs/inputs/calibration/geoN_2022-03-29_14-15-05.xml"   # geoFile
+crystal_file = "{{WORKSPACE}}/runs/inputs/calibration/Ni.xml"   # crystFile
+scan_points = ""                        # scanPoints
+depth_range = ""                        # depthRange
+depth = ""                              # not set: automatic
+author = ""
+notes = ""
+
+[indexing.fixed]                        # written into every LaueGo request, never shown on forms
+detector_crop = [0, 2047, 0, 2047]      # detectorCropX1, X2, Y1, Y2
+energy_unit = "keV"                     # energyUnit
+exposure_unit = "sec"                   # exposureUnit
+reciprocal_lattice_unit = "1/nm"        # recipLatticeUnit
+lattice_parameters_unit = "nm"          # latticeParametersUnit
+beamline = "34ID-E"
+
+[reconstruction]
+product_cache_mib = 512                 # wire viewer: frames, traces and references kept (default: 1024;
+                                        # kept low for a development machine)
+
+[reconstruction.defaults]               # form defaults
+geometry_file = "{{WORKSPACE}}/runs/inputs/calibration/geoN_2022-03-29_14-15-05.xml"   # geoFile
+percent_brightest = 100
+wire_edges = "leading"                  # leading | trailing | both
+depth_start = -50
+depth_end = 150
+depth_resolution = 1
+frame_skip = 1
+wire_skip = 1
+author = ""
+notes = ""
+
+[remote]                                # remote execution through DM (off in development)
+enabled = false                         # true: remote targets (aps, crux) and the worker's remote poller thread
+settings_file = ""                      # the private bdp.yaml (deploy/remote/bdp.yaml.template), outside the checkout;
+                                        # its experiment_directory must be files.runs_root
+
+[live]                                  # live processing: read by the worker's job processes
+                                        # and the api (the DAQ list, the bind check)
+enabled = false                         # true: the Live page and its API (else they answer 404); restart the api after a
+                                        # change (docs/runbooks/deploy.md, step 6); the worker does not read it
+batch_stop_seconds = 60                 # a batch run stopped for a live run drains this long, then its job process is killed
+cpu_share = 0.75                        # the live runs share floor(cores × cpu_share), at least 1
+wire_share = 0.67                       # with a wire run and its follower: the wire run's part of that
+                                        # share (e.g. 16 of 24 cores)
+catalog_seconds = 5                     # the DAQ catalog thread: one DM call per cycle while files arrive ...
+catalog_idle_seconds = 30               # ... doubling up to this while none do (>= catalog_seconds)
+catalog_rescan_seconds = 300            # ... and the folder's whole catalog again this often
+catalog_page_size = 1000                # rows per DM catalog request (one at a time inside a cycle's call)
+catalog_max_rows = 5000                 # the most rows one cycle's call reads (the rest at the next cycle, at once)
+follow_seconds = 5                      # a follower's look at its wire run's completed.jsonl
+publish_seconds = 10                    # the most often a live run republishes its snapshot
+arrivals_seconds = 1                    # the most often a live run looks at its arrivals.jsonl (a stat, a read when it changed)
+dm_setup_file = ""                      # DM's setup file for the DAQ list and the catalog (no DAQ source without it)
+dm_ssh_host = ""                        # run the DM operations on this host over SSH; "" = on the portal host
+dm_timeout_seconds = 15                 # the bound of one DM operation
+daq_list_seconds = 30                   # the Live page's DAQ list: one shared answer, at most one DM call this often

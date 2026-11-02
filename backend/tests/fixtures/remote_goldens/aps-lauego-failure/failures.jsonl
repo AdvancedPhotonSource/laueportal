@@ -1,0 +1,1 @@
+{"index":1,"input_id":"frame_2","source":"<BASE>/aps/LauePortal/data/frames/frame_2.h5","category":"input","message":"cannot read HDF5 frame <BASE>/aps/LauePortal/data/frames/frame_2.h5: Unable to synchronously open file (file signature not found)","error_type":"InputError","context":{"seconds":"<seconds>"},"recorded_at":"0000-00-00T00:00:00"}

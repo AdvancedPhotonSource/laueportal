@@ -1,0 +1,113 @@
+{
+  "source": "a v1 database's schema as revision 0001 builds it: v1's models' create_all on an empty SQLite file, as sqlite_master rows",
+  "objects": [
+    {
+      "type": "index",
+      "name": "ix_indexing_run_method",
+      "tbl_name": "indexing_run",
+      "sql": "CREATE INDEX ix_indexing_run_method ON indexing_run (method)"
+    },
+    {
+      "type": "index",
+      "name": "ix_indexing_run_reconstruction_id",
+      "tbl_name": "indexing_run",
+      "sql": "CREATE INDEX ix_indexing_run_reconstruction_id ON indexing_run (reconstruction_id)"
+    },
+    {
+      "type": "index",
+      "name": "ix_indexing_run_scan_number",
+      "tbl_name": "indexing_run",
+      "sql": "CREATE INDEX ix_indexing_run_scan_number ON indexing_run (scan_number)"
+    },
+    {
+      "type": "index",
+      "name": "ix_reconstruction_run_method",
+      "tbl_name": "reconstruction_run",
+      "sql": "CREATE INDEX ix_reconstruction_run_method ON reconstruction_run (method)"
+    },
+    {
+      "type": "index",
+      "name": "ix_reconstruction_run_scan_number",
+      "tbl_name": "reconstruction_run",
+      "sql": "CREATE INDEX ix_reconstruction_run_scan_number ON reconstruction_run (scan_number)"
+    },
+    {
+      "type": "index",
+      "name": "sqlite_autoindex_calib_1",
+      "tbl_name": "calib",
+      "sql": null
+    },
+    {
+      "type": "index",
+      "name": "sqlite_autoindex_catalog_1",
+      "tbl_name": "catalog",
+      "sql": null
+    },
+    {
+      "type": "index",
+      "name": "sqlite_autoindex_indexing_run_1",
+      "tbl_name": "indexing_run",
+      "sql": null
+    },
+    {
+      "type": "index",
+      "name": "sqlite_autoindex_reconstruction_run_1",
+      "tbl_name": "reconstruction_run",
+      "sql": null
+    },
+    {
+      "type": "table",
+      "name": "calib",
+      "tbl_name": "calib",
+      "sql": "CREATE TABLE calib (\n\tcalib_id INTEGER NOT NULL, \n\t\"scanNumber\" INTEGER NOT NULL, \n\tjob_id INTEGER NOT NULL, \n\tfilefolder VARCHAR NOT NULL, \n\t\"filenamePrefix\" JSON NOT NULL, \n\tauthor VARCHAR, \n\tnotes VARCHAR, \n\tcalib_config VARCHAR NOT NULL, \n\tcenx FLOAT NOT NULL, \n\tdist FLOAT NOT NULL, \n\tanglez FLOAT NOT NULL, \n\tangley FLOAT NOT NULL, \n\tanglex FLOAT NOT NULL, \n\tcenz FLOAT NOT NULL, \n\tshift_parameter FLOAT NOT NULL, \n\tPRIMARY KEY (calib_id), \n\tFOREIGN KEY(\"scanNumber\") REFERENCES metadata (\"scanNumber\"), \n\tUNIQUE (job_id), \n\tFOREIGN KEY(job_id) REFERENCES job (job_id)\n)"
+    },
+    {
+      "type": "table",
+      "name": "catalog",
+      "tbl_name": "catalog",
+      "sql": "CREATE TABLE catalog (\n\tcatalog_id INTEGER NOT NULL, \n\t\"scanNumber\" INTEGER NOT NULL, \n\tfilefolder VARCHAR NOT NULL, \n\t\"filenamePrefix\" JSON NOT NULL, \n\taperture VARCHAR NOT NULL, \n\tsample_name VARCHAR, \n\tnotes VARCHAR, \n\tPRIMARY KEY (catalog_id), \n\tUNIQUE (\"scanNumber\"), \n\tFOREIGN KEY(\"scanNumber\") REFERENCES metadata (\"scanNumber\")\n)"
+    },
+    {
+      "type": "table",
+      "name": "indexing_run",
+      "tbl_name": "indexing_run",
+      "sql": "CREATE TABLE indexing_run (\n\tid INTEGER NOT NULL, \n\tscan_number INTEGER, \n\treconstruction_id INTEGER, \n\tjob_id INTEGER NOT NULL, \n\tmethod VARCHAR NOT NULL, \n\tinput_path VARCHAR NOT NULL, \n\toutput_path VARCHAR, \n\tauthor VARCHAR, \n\tnotes VARCHAR, \n\talgorithm_version VARCHAR, \n\tcreated_at DATETIME NOT NULL, \n\tn_frames_indexed INTEGER, \n\tresults_path VARCHAR, \n\tPRIMARY KEY (id), \n\tCONSTRAINT ck_indexing_run_method CHECK (method IN ('lauego', 'laue_matching')), \n\tFOREIGN KEY(scan_number) REFERENCES metadata (\"scanNumber\"), \n\tFOREIGN KEY(reconstruction_id) REFERENCES reconstruction_run (id), \n\tUNIQUE (job_id), \n\tFOREIGN KEY(job_id) REFERENCES job (job_id)\n)"
+    },
+    {
+      "type": "table",
+      "name": "job",
+      "tbl_name": "job",
+      "sql": "CREATE TABLE job (\n\tjob_id INTEGER NOT NULL, \n\tcomputer_name VARCHAR NOT NULL, \n\tstatus INTEGER NOT NULL, \n\tpriority INTEGER NOT NULL, \n\tsubmit_time DATETIME, \n\tstart_time DATETIME, \n\tfinish_time DATETIME, \n\tmessages VARCHAR, \n\tphase VARCHAR, \n\tupdated_at DATETIME, \n\theartbeat_at DATETIME, \n\tcancel_requested_at DATETIME, \n\tqueue_job_id VARCHAR, \n\tn_inputs INTEGER DEFAULT '0' NOT NULL, \n\tn_succeeded INTEGER DEFAULT '0' NOT NULL, \n\tn_failed INTEGER DEFAULT '0' NOT NULL, \n\tn_not_run INTEGER DEFAULT '0' NOT NULL, \n\trun_directory VARCHAR, \n\tmanifest_path VARCHAR, \n\tmanifest_digest VARCHAR, \n\trequest_path VARCHAR, \n\tfailure_report_path VARCHAR, \n\tPRIMARY KEY (job_id), \n\tCONSTRAINT ck_job_counters_non_negative CHECK (n_inputs >= 0 AND n_succeeded >= 0 AND n_failed >= 0 AND n_not_run >= 0), \n\tCONSTRAINT ck_job_counters_bounded CHECK (n_succeeded + n_failed + n_not_run <= n_inputs)\n)"
+    },
+    {
+      "type": "table",
+      "name": "lauego_indexing_parameters",
+      "tbl_name": "lauego_indexing_parameters",
+      "sql": "CREATE TABLE lauego_indexing_parameters (\n\tindexing_id INTEGER NOT NULL, \n\tfilename_prefixes JSON NOT NULL, \n\tthreshold INTEGER, \n\tthreshold_ratio INTEGER, \n\tmax_rfactor FLOAT NOT NULL, \n\tbox_size INTEGER NOT NULL, \n\tmax_number INTEGER, \n\tmin_separation INTEGER NOT NULL, \n\tpeak_shape VARCHAR NOT NULL, \n\tscan_points VARCHAR NOT NULL, \n\tscan_points_len INTEGER NOT NULL, \n\tdepth_range VARCHAR, \n\tdepth_range_len INTEGER, \n\tdetector_crop_x1 INTEGER NOT NULL, \n\tdetector_crop_x2 INTEGER NOT NULL, \n\tdetector_crop_y1 INTEGER NOT NULL, \n\tdetector_crop_y2 INTEGER NOT NULL, \n\tmin_size FLOAT NOT NULL, \n\tmax_peaks INTEGER NOT NULL, \n\tsmooth BOOLEAN NOT NULL, \n\tmask_file VARCHAR, \n\tindex_kev_max_calc FLOAT NOT NULL, \n\tindex_kev_max_test FLOAT NOT NULL, \n\tindex_angle_tolerance FLOAT NOT NULL, \n\tindex_h INTEGER NOT NULL, \n\tindex_k INTEGER NOT NULL, \n\tindex_l INTEGER NOT NULL, \n\tindex_cone FLOAT NOT NULL, \n\tenergy_unit VARCHAR NOT NULL, \n\texposure_unit VARCHAR NOT NULL, \n\tcosmic_filter BOOLEAN NOT NULL, \n\treciprocal_lattice_unit VARCHAR NOT NULL, \n\tlattice_parameters_unit VARCHAR NOT NULL, \n\toutput_xml VARCHAR, \n\tgeometry_file VARCHAR NOT NULL, \n\tcrystal_file VARCHAR NOT NULL, \n\tdepth VARCHAR, \n\tbeamline VARCHAR NOT NULL, \n\tPRIMARY KEY (indexing_id), \n\tFOREIGN KEY(indexing_id) REFERENCES indexing_run (id) ON DELETE CASCADE\n)"
+    },
+    {
+      "type": "table",
+      "name": "metadata",
+      "tbl_name": "metadata",
+      "sql": "CREATE TABLE metadata (\n\t\"scanNumber\" INTEGER NOT NULL, \n\ttime_epoch INTEGER, \n\ttime DATETIME NOT NULL, \n\tuser_name VARCHAR, \n\t\"source_beamBad\" VARCHAR, \n\t\"source_CCDshutter\" VARCHAR, \n\t\"source_monoTransStatus\" VARCHAR, \n\tsource_energy_unit VARCHAR, \n\tsource_energy FLOAT, \n\t\"source_IDgap_unit\" VARCHAR, \n\t\"source_IDgap\" FLOAT, \n\t\"source_IDtaper_unit\" VARCHAR, \n\t\"source_IDtaper\" FLOAT, \n\t\"source_ringCurrent_unit\" VARCHAR, \n\t\"source_ringCurrent\" FLOAT, \n\t\"sample_XYZ_unit\" VARCHAR, \n\t\"sample_XYZ_desc\" VARCHAR, \n\t\"sample_XYZ\" VARCHAR, \n\t\"knifeEdge_XYZ_unit\" VARCHAR, \n\t\"knifeEdge_XYZ_desc\" VARCHAR, \n\t\"knifeEdge_XYZ\" VARCHAR, \n\t\"knifeEdge_knifeScan_unit\" VARCHAR, \n\t\"knifeEdge_knifeScan\" FLOAT, \n\tmda_file VARCHAR, \n\t\"scanEnd_abort\" VARCHAR, \n\t\"scanEnd_time_epoch\" INTEGER, \n\t\"scanEnd_time\" VARCHAR, \n\t\"scanEnd_scanDuration_unit\" VARCHAR, \n\t\"scanEnd_scanDuration\" FLOAT, \n\t\"scanEnd_source_beamBad\" VARCHAR, \n\t\"scanEnd_source_ringCurrent_unit\" VARCHAR, \n\t\"scanEnd_source_ringCurrent\" FLOAT, \n\t\"motorGroup_sample_npts_total\" INTEGER, \n\t\"motorGroup_sample_cpt_total\" INTEGER, \n\t\"motorGroup_energy_npts_total\" INTEGER, \n\t\"motorGroup_energy_cpt_total\" INTEGER, \n\t\"motorGroup_depth_npts_total\" INTEGER, \n\t\"motorGroup_depth_cpt_total\" INTEGER, \n\t\"motorGroup_other_npts_total\" INTEGER, \n\t\"motorGroup_other_cpt_total\" INTEGER, \n\tPRIMARY KEY (\"scanNumber\")\n)"
+    },
+    {
+      "type": "table",
+      "name": "reconstruction_run",
+      "tbl_name": "reconstruction_run",
+      "sql": "CREATE TABLE reconstruction_run (\n\tid INTEGER NOT NULL, \n\tscan_number INTEGER, \n\tjob_id INTEGER NOT NULL, \n\tmethod VARCHAR NOT NULL, \n\tinput_path VARCHAR NOT NULL, \n\toutput_path VARCHAR, \n\tauthor VARCHAR, \n\tnotes VARCHAR, \n\talgorithm_version VARCHAR, \n\tcreated_at DATETIME NOT NULL, \n\tPRIMARY KEY (id), \n\tCONSTRAINT ck_reconstruction_run_method CHECK (method IN ('wire', 'ca')), \n\tFOREIGN KEY(scan_number) REFERENCES metadata (\"scanNumber\"), \n\tUNIQUE (job_id), \n\tFOREIGN KEY(job_id) REFERENCES job (job_id)\n)"
+    },
+    {
+      "type": "table",
+      "name": "scan",
+      "tbl_name": "scan",
+      "sql": "CREATE TABLE scan (\n\tid INTEGER NOT NULL, \n\t\"scanNumber\" INTEGER NOT NULL, \n\tscan_dim INTEGER, \n\tscan_npts INTEGER, \n\tscan_after VARCHAR NOT NULL, \n\t\"scan_positioner1_PV\" VARCHAR NOT NULL, \n\tscan_positioner1_ar VARCHAR NOT NULL, \n\tscan_positioner1_mode VARCHAR NOT NULL, \n\tscan_positioner1 VARCHAR NOT NULL, \n\t\"scan_positioner2_PV\" VARCHAR NOT NULL, \n\tscan_positioner2_ar VARCHAR NOT NULL, \n\tscan_positioner2_mode VARCHAR NOT NULL, \n\tscan_positioner2 VARCHAR NOT NULL, \n\t\"scan_positioner3_PV\" VARCHAR NOT NULL, \n\tscan_positioner3_ar VARCHAR NOT NULL, \n\tscan_positioner3_mode VARCHAR NOT NULL, \n\tscan_positioner3 VARCHAR NOT NULL, \n\t\"scan_positioner4_PV\" VARCHAR NOT NULL, \n\tscan_positioner4_ar VARCHAR NOT NULL, \n\tscan_positioner4_mode VARCHAR NOT NULL, \n\tscan_positioner4 VARCHAR NOT NULL, \n\t\"scan_detectorTrig1_PV\" VARCHAR NOT NULL, \n\t\"scan_detectorTrig1_VAL\" VARCHAR NOT NULL, \n\t\"scan_detectorTrig2_PV\" VARCHAR NOT NULL, \n\t\"scan_detectorTrig2_VAL\" VARCHAR NOT NULL, \n\t\"scan_detectorTrig3_PV\" VARCHAR NOT NULL, \n\t\"scan_detectorTrig3_VAL\" VARCHAR NOT NULL, \n\t\"scan_detectorTrig4_PV\" VARCHAR NOT NULL, \n\t\"scan_detectorTrig4_VAL\" VARCHAR NOT NULL, \n\tscan_cpt INTEGER NOT NULL, \n\tPRIMARY KEY (id), \n\tFOREIGN KEY(\"scanNumber\") REFERENCES metadata (\"scanNumber\")\n)"
+    },
+    {
+      "type": "table",
+      "name": "wire_reconstruction_parameters",
+      "tbl_name": "wire_reconstruction_parameters",
+      "sql": "CREATE TABLE wire_reconstruction_parameters (\n\treconstruction_id INTEGER NOT NULL, \n\tfilename_prefixes JSON NOT NULL, \n\tgeometry_file VARCHAR NOT NULL, \n\tpercent_brightest FLOAT NOT NULL, \n\twire_edges VARCHAR NOT NULL, \n\tdepth_start FLOAT NOT NULL, \n\tdepth_end FLOAT NOT NULL, \n\tdepth_resolution FLOAT NOT NULL, \n\tframe_skip INTEGER, \n\twire_skip INTEGER, \n\tnum_threads INTEGER NOT NULL, \n\tmemory_limit_mb INTEGER NOT NULL, \n\tscan_points VARCHAR NOT NULL, \n\tscan_points_len INTEGER NOT NULL, \n\tverbose INTEGER NOT NULL, \n\tPRIMARY KEY (reconstruction_id), \n\tFOREIGN KEY(reconstruction_id) REFERENCES reconstruction_run (id) ON DELETE CASCADE\n)"
+    }
+  ]
+}

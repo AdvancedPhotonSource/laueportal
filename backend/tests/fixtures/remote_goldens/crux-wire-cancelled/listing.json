@@ -1,0 +1,14 @@
+{
+  "control": [
+    "bdp.json",
+    "cancel.request",
+    "inputs.jsonl",
+    "request.json"
+  ],
+  "output": [
+    ".runner.lock",
+    "progress.json",
+    "run.json"
+  ],
+  "shards": []
+}

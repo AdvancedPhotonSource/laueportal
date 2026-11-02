@@ -1,0 +1,18 @@
+{
+  "control": [
+    "bdp.json",
+    "inputs.jsonl",
+    "request.json"
+  ],
+  "output": [
+    ".runner.lock",
+    "progress.json",
+    "reconstruction/",
+    "reconstruction/points/",
+    "reconstruction/points/wire_1.h5",
+    "reconstruction/points/wire_2.h5",
+    "reconstruction/scan.h5",
+    "run.json"
+  ],
+  "shards": []
+}

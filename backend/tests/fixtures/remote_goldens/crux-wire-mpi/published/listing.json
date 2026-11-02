@@ -1,0 +1,22 @@
+{
+  "run": [
+    ".bdp-publication.json",
+    ".bdp-submission.lock",
+    "bdp.json",
+    "incoming/",
+    "incoming/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/",
+    "incoming/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/.runner.lock",
+    "incoming/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/run.json",
+    "inputs.jsonl",
+    "progress.json",
+    "ranks.json",
+    "reconstruction/",
+    "reconstruction/points/",
+    "reconstruction/points/wire_1.h5",
+    "reconstruction/points/wire_2.h5",
+    "reconstruction/points/wire_3.h5",
+    "reconstruction/scan.h5",
+    "request.json",
+    "run.json"
+  ]
+}

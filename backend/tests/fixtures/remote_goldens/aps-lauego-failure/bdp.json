@@ -1,0 +1,50 @@
+{
+  "backend": "aps",
+  "control_directory": "<BASE>/aps/LauePortal/analysis/index_1",
+  "execution": {
+    "max_in_flight": 2,
+    "reconstruction_workers": 1,
+    "threads_per_worker": 1,
+    "workers": 1
+  },
+  "job_id": 1,
+  "kind": "lauego_indexing",
+  "manifest_sha256": "<inputs.jsonl sha256>",
+  "n_inputs": 3,
+  "output_directory": "<BASE>/aps/LauePortal/analysis/index_1/incoming/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b",
+  "path_map": {
+    "<BASE>/aps": "<BASE>/aps",
+    "<BASE>/aps/LauePortal/analysis/index_1": "<BASE>/aps/LauePortal/analysis/index_1/incoming/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b"
+  },
+  "pbs": {
+    "account": null,
+    "cpus": 4,
+    "nodes": 1,
+    "queue": "batch",
+    "walltime": "00:10:00"
+  },
+  "request_sha256": "<request.json sha256>",
+  "run_directory": "<BASE>/aps/LauePortal/analysis/index_1",
+  "submission_id": "6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b",
+  "target": {
+    "analysis_python": "/local-compute/envs/analysis/bin/python",
+    "code_directory": "/local-compute/src",
+    "enabled": true,
+    "execution": {
+      "max_in_flight": 2,
+      "reconstruction_workers": 1,
+      "threads_per_worker": 1,
+      "workers": 1
+    },
+    "module_commands": [],
+    "pbs": {
+      "account": null,
+      "cpus": 4,
+      "nodes": 1,
+      "queue": "batch",
+      "walltime": "00:10:00"
+    },
+    "submit_host": null
+  },
+  "version": 1
+}

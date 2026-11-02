@@ -1,0 +1,18 @@
+# Native toolchain, libraries and services for Laue Portal (conda-forge only).
+# Python packages are installed on top from requirements/*.lock (see Makefile `setup`).
+name: laueportal
+channels: [conda-forge, nodefaults]
+dependencies:
+  - python=3.12.*
+  - pip
+  - c-compiler
+  - cmake>=3.24
+  - ninja
+  - patchelf
+  - gsl=2.8.*        # lauelab links static GSL; conda-forge libgsl.a is already PIC
+  - hdf5=1.14.*
+  - zlib
+  - numpy>=2.0
+  - h5py
+  - cffi
+  - supervisor

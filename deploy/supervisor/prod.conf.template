@@ -1,0 +1,92 @@
+; The production stack: the API serving the built SPA (`laueportal serve`, one
+; uvicorn process, no reload) and the worker (with remote execution, its remote poller thread too), on the portal
+; host.
+; docs/runbooks/deploy.md has the procedure.
+;
+; A template: deploy/render-prod.py writes it, with deploy/config/prod.toml.template, into the installation's
+; config folder as supervisord.conf, filling in each
+; placeholder in double braces. ROOT: the installation root on the portal host's local disk, holding src/ (this
+; checkout), envs/laue-portal/ (the env), config/, db/, logs/ and state/. (REMOTE_ENABLED fills in prod.toml's
+; [remote] enabled alone.) The rendered file holds no secret.
+;
+; supervisord starts from a shell that sourced the production environment file, <ROOT>/config/prod.env
+; (LAUEPORTAL_CONFIG; never in this file or the repository), and every program
+; inherits that environment:
+;   . {{ROOT}}/config/prod.env && supervisord -c {{ROOT}}/config/supervisord.conf
+; supervisorctl needs no environment: supervisorctl -c {{ROOT}}/config/supervisord.conf status. After a change to
+; prod.env, restart supervisord itself (supervisorctl shutdown, then start it as above); a program restarted alone
+; keeps supervisord's old environment.
+
+[unix_http_server]
+file = {{ROOT}}/state/supervisor.sock
+chmod = 0700
+
+[supervisorctl]
+serverurl = unix://{{ROOT}}/state/supervisor.sock
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[supervisord]
+pidfile = {{ROOT}}/state/supervisord.pid
+logfile = {{ROOT}}/logs/supervisord.log
+logfile_maxbytes = 10MB
+logfile_backups = 5
+childlogdir = {{ROOT}}/logs
+directory = {{ROOT}}/src
+; The env's programs first (python), whatever the starting shell's PATH.
+environment = PATH="{{ROOT}}/envs/laue-portal/bin:%(ENV_PATH)s"
+; Run directories on the experiments' NFS folders are read by the beamline's users: files are
+; created 0644 and folders 0755 by default. A file published through a temporary file (mkstemp) stays 0600
+; whatever the umask: lauelab's converted output.h5 and merged indexing results. What is private lives
+; in folders of mode 0700 (config/, db/, logs/, state/).
+umask = 022
+
+[program:api]
+; One uvicorn process serving the API and app.static_dir (src/frontend/dist); it refuses to start without the
+; built SPA. Its caches, turns and file probe are the process's own: never more than one.
+command = {{ROOT}}/envs/laue-portal/bin/laueportal serve
+directory = {{ROOT}}/src
+priority = 20
+autostart = true
+autorestart = true
+startsecs = 5
+stopsignal = TERM
+stopwaitsecs = 20
+stopasgroup = true
+killasgroup = true
+stdout_logfile = {{ROOT}}/logs/api.log
+stdout_logfile_maxbytes = 20MB
+stdout_logfile_backups = 10
+redirect_stderr = true
+
+[program:worker]
+; The worker (jobs/worker.py): the job table is the queue. Its dispatcher starts each run or conversion in a job process
+; of its own session (python -m laueportal.jobs.process), which killasgroup does not reach: the worker stops them
+; itself. The first SIGTERM claims nothing more and asks the job processes to drain (a run ends Failed/interrupted) for
+; up to execution.shutdown_grace_seconds (600 s in prod.toml) from the SIGTERM, then kills their groups; a second
+; SIGTERM kills them at once. stopwaitsecs covers the grace plus the stop's tail (at most about 46 s): keep it 60 s
+; above the setting. A job process left running by a worker that was killed keeps its run; the restarted worker starts
+; nothing beside it. The job processes write to their own log, prod.toml's [execution] job_log ({{ROOT}}/logs/jobs.log),
+; not this program's, so one whose worker was killed still logs; the worker rotates that file (only when a job starts,
+; at 20 MB, 10 kept), never supervisor. A second worker on the same database exits 1 at the worker lock
+; (<database>.worker.lock, beside the database). With prod.toml's [remote] enabled, the worker also runs the remote
+; poller as a thread (docs/runbooks/remote-execution.md), under bdp.yaml's <submission_directory>/.poller.lock: one
+; poller per DM inbox, so while another portal's poller holds it the thread waits (its status is late) and the
+; dispatcher and reconciler carry on. The SIGTERM ends it after its current pass; a DM call it still runs at the
+; worker's end is killed with what it started, within the same stopwaitsecs.
+command = {{ROOT}}/envs/laue-portal/bin/laueportal worker
+directory = {{ROOT}}/src
+priority = 30
+autostart = true
+autorestart = true
+startsecs = 3
+startretries = 10
+stopsignal = TERM
+stopwaitsecs = 660
+killasgroup = true
+stdout_logfile = {{ROOT}}/logs/worker.log
+stdout_logfile_maxbytes = 20MB
+stdout_logfile_backups = 10
+redirect_stderr = true
+

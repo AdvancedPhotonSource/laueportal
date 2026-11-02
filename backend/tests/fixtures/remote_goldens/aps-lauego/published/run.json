@@ -1,0 +1,85 @@
+{
+  "artifacts": {
+    "results": "<BASE>/aps/LauePortal/analysis/index_1/output.h5",
+    "xml": "<BASE>/aps/LauePortal/analysis/index_1/output.xml"
+  },
+  "counters": {
+    "n_failed": 0,
+    "n_indexed": 2,
+    "n_inputs": 3,
+    "n_not_run": 0,
+    "n_succeeded": 3
+  },
+  "display_id": "Indexing I1",
+  "failure_report": null,
+  "finished_at": "0000-00-00T00:00:00+00:00",
+  "format": "laue-portal-run-summary",
+  "host": "<host>",
+  "job_id": 1,
+  "kind": "lauego_indexing",
+  "log": [],
+  "message": "3 frames, 3 patterns, 73 peaks in output.h5; 2 frames indexed",
+  "phase": "finished",
+  "policy": {
+    "max_in_flight": 2,
+    "reconstruction_workers": 1,
+    "threads_per_worker": 1,
+    "workers": 1
+  },
+  "provenance": {
+    "cosmic_filter": {
+      "applied": false,
+      "recorded": false
+    },
+    "crystal_file": "<BASE>/aps/LauePortal/data/config/Ni.xml",
+    "depth_override_um": null,
+    "detector_id": "PE1621 723-3335",
+    "detector_index": 0,
+    "engine": "lauelab liblaue (in-process)",
+    "geometry_file": "<BASE>/aps/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml",
+    "index_params": {
+      "angle_tolerance_deg": 0.1,
+      "cone_deg": 72.0,
+      "hkl_prefer": [
+        0,
+        0,
+        1
+      ],
+      "kev_max_calc": 17.2,
+      "kev_max_test": 35.0,
+      "max_data": 200
+    },
+    "lauelab_commit": "<lauelab_commit>",
+    "lauelab_source": "<lauelab_source>",
+    "lauelab_version": "<lauelab_version>",
+    "mask_file": null,
+    "path_map": {
+      "<BASE>/aps": "<BASE>/aps",
+      "<BASE>/aps/LauePortal/analysis/index_1": "<BASE>/aps/LauePortal/analysis/index_1/incoming/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b"
+    },
+    "peak_params": {
+      "boxsize": 18,
+      "max_peaks": 300,
+      "max_rfactor": 0.5,
+      "min_separation": 20,
+      "min_size": 3.0,
+      "peak_shape": "Lorentzian",
+      "smooth": false,
+      "threshold": null,
+      "threshold_ratio": null
+    },
+    "remote_output_directory": "<BASE>/aps/LauePortal/analysis/index_1/incoming/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b",
+    "results_summary": {
+      "n_assignments": 71,
+      "n_frames": 3,
+      "n_patterns": 3,
+      "n_peaks": 73
+    },
+    "workers": 1
+  },
+  "started_at": "0000-00-00T00:00:00+00:00",
+  "status": "Finished",
+  "submission_id": "6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b",
+  "version": 1,
+  "warnings": []
+}

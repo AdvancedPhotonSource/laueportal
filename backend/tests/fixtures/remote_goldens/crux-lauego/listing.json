@@ -1,0 +1,15 @@
+{
+  "control": [
+    "bdp.json",
+    "inputs.jsonl",
+    "request.json"
+  ],
+  "output": [
+    ".runner.lock",
+    "output.h5",
+    "output.xml",
+    "progress.json",
+    "run.json"
+  ],
+  "shards": []
+}

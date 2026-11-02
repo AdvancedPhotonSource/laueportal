@@ -1,0 +1,28 @@
+# pnpm settings for the frontend. .npmrc is only for auth and registry.
+
+# Resolve only releases that are at least 7 days old (minutes).
+minimumReleaseAge: 10080
+
+# `pnpm add` saves exact versions (no ^ or ~ ranges in package.json).
+savePrefix: ""
+
+# Dependency build scripts are blocked unless approved here; an unreviewed one fails the install.
+strictDepBuilds: true
+allowBuilds:
+  esbuild: true # postinstall verifies its native binary (pulled in by orval)
+
+# @kitware/vtk.js declares autoprefixer (for its webpack config helper) and wslink (its remote-rendering client) as
+# required peers. The 3D view uses neither, so they are optional here and not installed.
+packageExtensions:
+  "@kitware/vtk.js":
+    peerDependenciesMeta:
+      autoprefixer:
+        optional: true
+      wslink:
+        optional: true
+
+# apache-arrow declares @types/node as a runtime dependency, but only its Node-stream declarations reference it
+# (`/// <reference types="node" />`), and that would put Node's globals (process, Buffer) into the app's type-check.
+# The app has the browser's types only (src/test/node.d.ts, e2e/node.d.ts), so the dependency is dropped.
+overrides:
+  "apache-arrow>@types/node": "-"

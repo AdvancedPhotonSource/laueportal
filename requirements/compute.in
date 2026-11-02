@@ -1,0 +1,20 @@
+# Compute side: the runtime of the standalone runner and the MPI runner on the compute nodes (the APS cluster for `aps`,
+# ALCF Crux for `crux`). No database, Redis, web server or Globus.
+# `make lock` compiles compute.lock; the dev env does not install it (the MPI runner's tests use a fake communicator).
+#
+# Python 3.12 in a conda-forge env with lauelab's native build prerequisites (as environment.yml provides):
+# numpy, h5py and cffi (with its pycparser) come from conda-forge; they are pinned through conda-pins.txt at
+# compile time and left out of the lock. lauelab is not in the lock either: install it from GitHub with --no-deps
+# at the commit pinned in scripts/setup.sh (VCS installs can't be hash-locked), as `make setup` does.
+
+# The deployed compute environment's exact pins.
+PyYAML==6.0.3
+psutil==7.2.2
+# The lock has the hashes of its sdist as well as its wheels: a site may build it against its own MPI
+# (--no-binary mpi4py).
+mpi4py==4.1.1
+
+# lauelab's own runtime dependencies (it is installed with --no-deps), as in base.in. Only
+# lauelab.visualization imports them, but lauelab declares them.
+pandas>=2.0
+plotly>=6.0

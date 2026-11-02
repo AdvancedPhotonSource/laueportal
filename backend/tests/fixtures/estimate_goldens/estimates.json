@@ -1,0 +1,3497 @@
+{
+ "source": "the runtime estimates of a reference implementation, captured once (README.md)",
+ "cases": [
+  {
+   "name": "reconstruction-local-aps-825",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 8830.878941214178,
+    "runs": 1,
+    "profile": {
+     "backend": "aps",
+     "kind": "reconstruction",
+     "workers": 4,
+     "threads": 8,
+     "count": 32,
+     "seconds": 342.5310619622469
+    },
+    "notes": [
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 3530000000000.0,
+    "output_bytes": 999999999999.9999,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 771.0,
+    "output_seconds": 218.41359773371101,
+    "seconds": 989.413597733711
+   },
+   "duration": "2 h 27 min"
+  },
+  {
+   "name": "reconstruction-crux-825",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 1969.9179813074807,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "reconstruction",
+     "workers": 32,
+     "threads": 4,
+     "count": 32,
+     "seconds": 76.40893988101743
+    },
+    "notes": [
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 3530000000000.0,
+    "output_bytes": 999999999999.9999,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 771.0,
+    "output_seconds": 218.41359773371101,
+    "seconds": 989.413597733711
+   },
+   "duration": "33 min"
+  },
+  {
+   "name": "reconstruction-local-aps-400",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-400",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 400,
+     "frames": 48400,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 4281.638274528086,
+    "runs": 1,
+    "profile": {
+     "backend": "aps",
+     "kind": "reconstruction",
+     "workers": 4,
+     "threads": 8,
+     "count": 32,
+     "seconds": 342.5310619622469
+    },
+    "notes": [
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 400,
+     "frames": 48400,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 48400
+    }
+   },
+   "transfer": {
+    "input_bytes": 1711515151515.1516,
+    "output_bytes": 484848484848.4848,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 373.8181818181818,
+    "output_seconds": 105.89750193149625,
+    "seconds": 479.7156837496781
+   },
+   "duration": "1 h 11 min"
+  },
+  {
+   "name": "reconstruction-crux-one-point",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 1,
+     "frames": 121,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 76.40893988101743,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "reconstruction",
+     "workers": 32,
+     "threads": 4,
+     "count": 32,
+     "seconds": 76.40893988101743
+    },
+    "notes": [
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 1,
+     "frames": 121,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 121
+    }
+   },
+   "transfer": {
+    "input_bytes": 4278787878.787879,
+    "output_bytes": 1212121212.121212,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 0.9345454545454546,
+    "output_seconds": 0.26474375482874063,
+    "seconds": 1.1992892093741951
+   },
+   "duration": "1 min"
+  },
+  {
+   "name": "reconstruction-crux-four-nodes",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4,
+    "nodes": 4,
+    "indexing_ranks_per_node": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 469.9872094090024,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "reconstruction",
+     "workers": 32,
+     "threads": 4,
+     "nodes": 4,
+     "ranks_per_node": 1,
+     "max_in_flight": 256,
+     "count": 825,
+     "seconds": 469.9872094090024
+    },
+    "notes": [
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 3530000000000.0,
+    "output_bytes": 999999999999.9999,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 771.0,
+    "output_seconds": 218.41359773371101,
+    "seconds": 989.413597733711
+   },
+   "duration": "8 min"
+  },
+  {
+   "name": "reconstruction-crux-two-nodes",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4,
+    "nodes": 2,
+    "indexing_ranks_per_node": 2
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 469.9872094090024,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "reconstruction",
+     "workers": 32,
+     "threads": 4,
+     "nodes": 4,
+     "ranks_per_node": 1,
+     "max_in_flight": 256,
+     "count": 825,
+     "seconds": 469.9872094090024
+    },
+    "notes": [
+     "The current node/coordinator layout differs from this measured reference configuration.",
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 3530000000000.0,
+    "output_bytes": 999999999999.9999,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 771.0,
+    "output_seconds": 218.41359773371101,
+    "seconds": 989.413597733711
+   },
+   "duration": "8 min"
+  },
+  {
+   "name": "reconstruction-aps-prod-local-policy",
+   "kind": "reconstruction",
+   "backend": "aps",
+   "layout": {
+    "workers": 4,
+    "reconstruction_workers": 1,
+    "threads_per_worker": 35
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 21522.23032303155,
+    "runs": 1,
+    "profile": {
+     "backend": "aps",
+     "kind": "reconstruction",
+     "workers": 1,
+     "threads": 8,
+     "count": 1,
+     "seconds": 26.087551906704903
+    },
+    "notes": [
+     "The current worker settings differ from this measured reference configuration.",
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 3530000000000.0,
+    "output_bytes": 999999999999.9999,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 771.0,
+    "output_seconds": 218.41359773371101,
+    "seconds": 989.413597733711
+   },
+   "duration": "5 h 59 min"
+  },
+  {
+   "name": "reconstruction-local-dev",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 1,
+    "reconstruction_workers": 1,
+    "threads_per_worker": 1
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-10",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 10,
+     "frames": 1210,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 260.875519067049,
+    "runs": 1,
+    "profile": {
+     "backend": "aps",
+     "kind": "reconstruction",
+     "workers": 1,
+     "threads": 8,
+     "count": 1,
+     "seconds": 26.087551906704903
+    },
+    "notes": [
+     "The current worker settings differ from this measured reference configuration.",
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 10,
+     "frames": 1210,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 1210
+    }
+   },
+   "transfer": {
+    "input_bytes": 42787878787.878784,
+    "output_bytes": 12121212121.21212,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 9.345454545454544,
+    "output_seconds": 2.647437548287406,
+    "seconds": 11.99289209374195
+   },
+   "duration": "4 min"
+  },
+  {
+   "name": "reconstruction-crux-odd-layout",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 3,
+    "reconstruction_workers": 6,
+    "threads_per_worker": 6,
+    "max_in_flight": 10
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 4607.232150393975,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "reconstruction",
+     "workers": 8,
+     "threads": 8,
+     "count": 32,
+     "seconds": 178.70476219709963
+    },
+    "notes": [
+     "The current worker settings differ from this measured reference configuration.",
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 3530000000000.0,
+    "output_bytes": 999999999999.9999,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 771.0,
+    "output_seconds": 218.41359773371101,
+    "seconds": 989.413597733711
+   },
+   "duration": "1 h 17 min"
+  },
+  {
+   "name": "reconstruction-frame-skip",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 2,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 1969.9179813074807,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "reconstruction",
+     "workers": 32,
+     "threads": 4,
+     "count": 32,
+     "seconds": 76.40893988101743
+    },
+    "notes": [
+     "Skip settings differ from profiling; their speedup has not been measured.",
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 3530000000000.0,
+    "output_bytes": 999999999999.9999,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 771.0,
+    "output_seconds": 218.41359773371101,
+    "seconds": 989.413597733711
+   },
+   "duration": "33 min"
+  },
+  {
+   "name": "reconstruction-wire-skip",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 3
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 8830.878941214178,
+    "runs": 1,
+    "profile": {
+     "backend": "aps",
+     "kind": "reconstruction",
+     "workers": 4,
+     "threads": 8,
+     "count": 32,
+     "seconds": 342.5310619622469
+    },
+    "notes": [
+     "Skip settings differ from profiling; their speedup has not been measured.",
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 3530000000000.0,
+    "output_bytes": 999999999999.9999,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 771.0,
+    "output_seconds": 218.41359773371101,
+    "seconds": 989.413597733711
+   },
+   "duration": "2 h 27 min"
+  },
+  {
+   "name": "reconstruction-two-templates",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "a_%d.h5",
+      "b_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 1650,
+     "frames": 199650,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 3939.8359626149613,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "reconstruction",
+     "workers": 32,
+     "threads": 4,
+     "count": 32,
+     "seconds": 76.40893988101743
+    },
+    "notes": [
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 1650,
+     "frames": 199650,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 199650
+    }
+   },
+   "transfer": {
+    "input_bytes": 7060000000000.0,
+    "output_bytes": 1999999999999.9998,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 1542.0,
+    "output_seconds": 436.82719546742203,
+    "seconds": 1978.827195467422
+   },
+   "duration": "1 h 6 min"
+  },
+  {
+   "name": "reconstruction-duplicate-templates",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5",
+      " wire_%d.h5 ",
+      ""
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 1969.9179813074807,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "reconstruction",
+     "workers": 32,
+     "threads": 4,
+     "count": 32,
+     "seconds": 76.40893988101743
+    },
+    "notes": [
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 3530000000000.0,
+    "output_bytes": 999999999999.9999,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 771.0,
+    "output_seconds": 218.41359773371101,
+    "seconds": 989.413597733711
+   },
+   "duration": "33 min"
+  },
+  {
+   "name": "reconstruction-literal-template",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "single.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 1,
+     "frames": 121,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 42.81638274528086,
+    "runs": 1,
+    "profile": {
+     "backend": "aps",
+     "kind": "reconstruction",
+     "workers": 4,
+     "threads": 8,
+     "count": 32,
+     "seconds": 342.5310619622469
+    },
+    "notes": [
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 1,
+     "frames": 121,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 121
+    }
+   },
+   "transfer": {
+    "input_bytes": 4278787878.787879,
+    "output_bytes": 1212121212.121212,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 0.9345454545454546,
+    "output_seconds": 0.26474375482874063,
+    "seconds": 1.1992892093741951
+   },
+   "duration": "under 1 min"
+  },
+  {
+   "name": "reconstruction-fine-depths",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -50.5,
+     "depth_end": 150.25,
+     "depth_resolution": 0.5,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 331650,
+     "depths": 402,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 6544.686185831465,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "reconstruction",
+     "workers": 32,
+     "threads": 4,
+     "count": 32,
+     "seconds": 76.40893988101743
+    },
+    "notes": [
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 331650,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 331650
+    }
+   },
+   "transfer": {
+    "input_bytes": 3530000000000.0,
+    "output_bytes": 3322314049586.777,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 771.0,
+    "output_seconds": 725.6385643715028,
+    "seconds": 1496.6385643715028
+   },
+   "duration": "1 h 49 min"
+  },
+  {
+   "name": "reconstruction-uneven-depths",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": 0,
+     "depth_end": 10,
+     "depth_resolution": 3,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 3300,
+     "depths": 4,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 65.12125558041258,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "reconstruction",
+     "workers": 32,
+     "threads": 4,
+     "count": 32,
+     "seconds": 76.40893988101743
+    },
+    "notes": [
+     "File availability is checked during validation.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 3300,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 3300
+    }
+   },
+   "transfer": {
+    "input_bytes": 3530000000000.0,
+    "output_bytes": 33057851239.66942,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 771.0,
+    "output_seconds": 7.220284222602017,
+    "seconds": 778.220284222602
+   },
+   "duration": "1 min"
+  },
+  {
+   "name": "reconstruction-three-runs",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    },
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-40,100-120",
+     "depth_start": -10,
+     "depth_end": 10,
+     "depth_resolution": 0.25,
+     "frame_skip": 1,
+     "wire_skip": 1
+    },
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "a_%d.h5",
+      "b_%d.h5"
+     ],
+     "scan_points": "7",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 2,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    },
+    {
+     "points": 61,
+     "frames": 4941,
+     "depths": 81,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    },
+    {
+     "points": 2,
+     "frames": 242,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 2143.8312011348066,
+    "runs": 3,
+    "profile": {
+     "backend": "crux",
+     "kind": "reconstruction",
+     "workers": 32,
+     "threads": 4,
+     "count": 32,
+     "seconds": 76.40893988101743
+    },
+    "notes": [
+     "File availability is checked during validation.",
+     "Skip settings differ from profiling; their speedup has not been measured.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime.",
+     "Reference input: 510 raw frames per point. Depth scaling is approximate because input I/O also takes time."
+    ],
+    "selection": {
+     "points": 888,
+     "frames": 105008,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 105008
+    }
+   },
+   "transfer": {
+    "input_bytes": 3799563636363.636,
+    "output_bytes": 1051920861507.6383,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 829.8763636363635,
+    "output_seconds": 229.75381989302807,
+    "seconds": 1059.6301835293916
+   },
+   "duration": "36 min"
+  },
+  {
+   "name": "reconstruction-stride-zero",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-5:0",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Enter valid, nonnegative point and depth indices.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Enter valid, nonnegative point and depth indices.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-zero-resolution",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 0,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Enter a valid reconstruction depth range and positive resolution.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Enter a valid reconstruction depth range and positive resolution.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-nan-start",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": NaN,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Enter a valid reconstruction depth range and positive resolution.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Enter a valid reconstruction depth range and positive resolution.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-infinite-end",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": Infinity,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Enter a valid reconstruction depth range and positive resolution.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Enter a valid reconstruction depth range and positive resolution.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-end-before-start",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": 10,
+     "depth_end": -10,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Enter a valid reconstruction depth range and positive resolution.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Enter a valid reconstruction depth range and positive resolution.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-missing-start",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": null,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Enter a valid reconstruction depth range and positive resolution.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Enter a valid reconstruction depth range and positive resolution.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-wildcard",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "*.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Use an indexed filename pattern for a fast estimate; wildcard file counts need validation.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Use an indexed filename pattern for a fast estimate; wildcard file counts need validation.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-two-placeholders",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "a_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "The filename pattern has too many index placeholders.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "The filename pattern has too many index placeholders.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-no-points",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": null,
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Select scan points to calculate an estimate.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Select scan points to calculate an estimate.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-blank-points",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "  ",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Select scan points to calculate an estimate.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Select scan points to calculate an estimate.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-negative-points",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "-1",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Enter valid, nonnegative point and depth indices.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Enter valid, nonnegative point and depth indices.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-text-points",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "abc",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Enter valid, nonnegative point and depth indices.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Enter valid, nonnegative point and depth indices.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-no-template",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Choose a filename pattern to calculate an estimate.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Choose a filename pattern to calculate an estimate.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-blank-template",
+   "kind": "reconstruction",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      " "
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Choose a filename pattern to calculate an estimate.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Choose a filename pattern to calculate an estimate.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "reconstruction-one-bad-run",
+   "kind": "reconstruction",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    },
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": -1,
+     "frame_skip": 1,
+     "wire_skip": 1
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": 121,
+     "basis": "Selected indices",
+     "notes": [
+      "File availability is checked during validation."
+     ],
+     "staged_frames": null
+    },
+    {
+     "error": "Enter a valid reconstruction depth range and positive resolution.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Enter a valid reconstruction depth range and positive resolution.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "indexing-crux-full-scan",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 5299.818218783912,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "count": 968,
+     "seconds": 51.39217666699551
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 999999999999.9999,
+    "output_bytes": 123030600.0,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 218.41359773371101,
+    "output_seconds": 0.02687155597733711,
+    "seconds": 218.44046928968837
+   },
+   "duration": "1 h 28 min"
+  },
+  {
+   "name": "indexing-crux-two-runs",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    },
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    },
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 10599.636437567824,
+    "runs": 2,
+    "profile": {
+     "backend": "crux",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "count": 968,
+     "seconds": 51.39217666699551
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 1650,
+     "frames": 199650,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 199650
+    }
+   },
+   "transfer": {
+    "input_bytes": 1999999999999.9998,
+    "output_bytes": 246061200.0,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 436.82719546742203,
+    "output_seconds": 0.05374311195467422,
+    "seconds": 436.88093857937673
+   },
+   "duration": "2 h 57 min"
+  },
+  {
+   "name": "indexing-crux-four-nodes",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4,
+    "nodes": 4,
+    "indexing_ranks_per_node": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 301.7694371940015,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "nodes": 4,
+     "ranks_per_node": 4,
+     "max_in_flight": 256,
+     "count": 99825,
+     "seconds": 301.7694371940015
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 999999999999.9999,
+    "output_bytes": 123030600.0,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 218.41359773371101,
+    "output_seconds": 0.02687155597733711,
+    "seconds": 218.44046928968837
+   },
+   "duration": "5 min"
+  },
+  {
+   "name": "indexing-crux-two-nodes",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4,
+    "nodes": 2,
+    "indexing_ranks_per_node": 2
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 301.7694371940015,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "nodes": 4,
+     "ranks_per_node": 4,
+     "max_in_flight": 256,
+     "count": 99825,
+     "seconds": 301.7694371940015
+    },
+    "notes": [
+     "The current node/coordinator layout differs from this measured reference configuration.",
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 999999999999.9999,
+    "output_bytes": 123030600.0,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 218.41359773371101,
+    "output_seconds": 0.02687155597733711,
+    "seconds": 218.44046928968837
+   },
+   "duration": "5 min"
+  },
+  {
+   "name": "indexing-local-aps",
+   "kind": "indexing",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 5498.540742974728,
+    "runs": 1,
+    "profile": {
+     "backend": "aps",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "count": 968,
+     "seconds": 53.319182962179184,
+     "max_in_flight": 256
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 999999999999.9999,
+    "output_bytes": 123030600.0,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 218.41359773371101,
+    "output_seconds": 0.02687155597733711,
+    "seconds": 218.44046928968837
+   },
+   "duration": "1 h 32 min"
+  },
+  {
+   "name": "indexing-aps-odd-layout",
+   "kind": "indexing",
+   "backend": "aps",
+   "layout": {
+    "workers": 3,
+    "reconstruction_workers": 6,
+    "threads_per_worker": 6,
+    "max_in_flight": 10
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 34307.86942133883,
+    "runs": 1,
+    "profile": {
+     "backend": "aps",
+     "kind": "indexing",
+     "workers": 4,
+     "threads": 1,
+     "count": 248,
+     "seconds": 85.23267334327102
+    },
+    "notes": [
+     "The current worker settings differ from this measured reference configuration.",
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 999999999999.9999,
+    "output_bytes": 123030600.0,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 218.41359773371101,
+    "output_seconds": 0.02687155597733711,
+    "seconds": 218.44046928968837
+   },
+   "duration": "9 h 32 min"
+  },
+  {
+   "name": "indexing-local-prod-local-policy",
+   "kind": "indexing",
+   "backend": "local",
+   "layout": {
+    "workers": 4,
+    "reconstruction_workers": 1,
+    "threads_per_worker": 35
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-50",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "10-20"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 50,
+     "frames": 550,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 189.0240739467704,
+    "runs": 1,
+    "profile": {
+     "backend": "aps",
+     "kind": "indexing",
+     "workers": 4,
+     "threads": 1,
+     "count": 248,
+     "seconds": 85.23267334327102
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 50,
+     "frames": 550,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 550
+    }
+   },
+   "transfer": {
+    "input_bytes": 5509641873.278236,
+    "output_bytes": 677854.5454545454,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 1.2033807037670028,
+    "output_seconds": 0.0001480526500128766,
+    "seconds": 1.2035287564170156
+   },
+   "duration": "3 min"
+  },
+  {
+   "name": "indexing-local-dev",
+   "kind": "indexing",
+   "backend": "local",
+   "layout": {
+    "workers": 1,
+    "reconstruction_workers": 1,
+    "threads_per_worker": 1
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-3",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0,5,9"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 3,
+     "frames": 9,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 11.765884824487712,
+    "runs": 1,
+    "profile": {
+     "backend": "aps",
+     "kind": "indexing",
+     "workers": 1,
+     "threads": 1,
+     "count": 248,
+     "seconds": 324.21549294143915
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 3,
+     "frames": 9,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 9
+    }
+   },
+   "transfer": {
+    "input_bytes": 90157776.10818933,
+    "output_bytes": 11092.165289256198,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 0.019691684243460048,
+    "output_seconds": 2.4226797274834355e-06,
+    "seconds": 0.019694106923187533
+   },
+   "duration": "under 1 min"
+  },
+  {
+   "name": "indexing-one-frame-four-nodes",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4,
+    "nodes": 4,
+    "indexing_ranks_per_node": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 1,
+     "frames": 1,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 1.5477681126303908,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "nodes": 4,
+     "ranks_per_node": 4,
+     "max_in_flight": 256,
+     "count": 99825,
+     "seconds": 301.7694371940015
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 1,
+     "frames": 1,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 1
+    }
+   },
+   "transfer": {
+    "input_bytes": 10017530.678687703,
+    "output_bytes": 1232.4628099173553,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 0.0021879649159400054,
+    "output_seconds": 2.6918663638704844e-07,
+    "seconds": 0.0021882341025763925
+   },
+   "duration": "under 1 min"
+  },
+  {
+   "name": "indexing-one-placeholder",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "img_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": null
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 43.80015056846208,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "count": 968,
+     "seconds": 51.39217666699551
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 825
+    }
+   },
+   "transfer": {
+    "input_bytes": 8264462809.917355,
+    "output_bytes": 1016781.8181818182,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 1.8050710556505043,
+    "output_seconds": 0.00022207897501931497,
+    "seconds": 1.8052931346255237
+   },
+   "duration": "under 1 min"
+  },
+  {
+   "name": "indexing-literal-template",
+   "kind": "indexing",
+   "backend": "local",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 4,
+    "threads_per_worker": 8
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "single.h5"
+     ],
+     "scan_points": "1-5",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": null
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 1,
+     "frames": 1,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 1.7626176185844358,
+    "runs": 1,
+    "profile": {
+     "backend": "aps",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "count": 968,
+     "seconds": 53.319182962179184,
+     "max_in_flight": 256
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 1,
+     "frames": 1,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 1
+    }
+   },
+   "transfer": {
+    "input_bytes": 10017530.678687703,
+    "output_bytes": 1232.4628099173553,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 0.0021879649159400054,
+    "output_seconds": 2.6918663638704844e-07,
+    "seconds": 0.0021882341025763925
+   },
+   "duration": "under 1 min"
+  },
+  {
+   "name": "indexing-mixed-templates",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "a_%d_%d.h5",
+      "b.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-9"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 8251,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 438.05459677621894,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "count": 968,
+     "seconds": 51.39217666699551
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 8251,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 8251
+    }
+   },
+   "transfer": {
+    "input_bytes": 82654645629.85223,
+    "output_bytes": 10169050.6446281,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 18.052898521420982,
+    "output_seconds": 0.002221058936829537,
+    "seconds": 18.05511958035781
+   },
+   "duration": "7 min"
+  },
+  {
+   "name": "indexing-three-runs",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    },
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "img_%d.h5"
+     ],
+     "scan_points": "5-9",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": null
+    },
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825:2",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "3,7"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    },
+    {
+     "points": 5,
+     "frames": 5,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    },
+    {
+     "points": 413,
+     "frames": 826,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 5345.370375375112,
+    "runs": 3,
+    "profile": {
+     "backend": "crux",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "count": 968,
+     "seconds": 51.39217666699551
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 1243,
+     "frames": 100656,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 100656
+    }
+   },
+   "transfer": {
+    "input_bytes": 1008324567993.9894,
+    "output_bytes": 124054776.59504132,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 220.23179657885714,
+    "output_seconds": 0.027095250072174747,
+    "seconds": 220.2588918289293
+   },
+   "duration": "1 h 29 min"
+  },
+  {
+   "name": "indexing-hdf5-file-not-a-catalog",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw/data.h5",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [
+      "Assumes one file per index/template match; validation checks actual files."
+     ],
+     "staged_frames": null
+    }
+   ],
+   "estimate": {
+    "seconds": 5299.818218783912,
+    "runs": 1,
+    "profile": {
+     "backend": "crux",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "count": 968,
+     "seconds": 51.39217666699551
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 825,
+     "frames": 99825,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 99825
+    }
+   },
+   "transfer": {
+    "input_bytes": 999999999999.9999,
+    "output_bytes": 123030600.0,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 218.41359773371101,
+    "output_seconds": 0.02687155597733711,
+    "seconds": 218.44046928968837
+   },
+   "duration": "1 h 28 min"
+  },
+  {
+   "name": "indexing-missing-catalog",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw/scan.h5",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "The reconstruction catalog is unavailable; check the input path.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "The reconstruction catalog is unavailable; check the input path.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "indexing-no-points-for-a-folder",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": null,
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Select scan points to calculate an estimate.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Select scan points to calculate an estimate.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "indexing-second-placeholder-without-depths",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": null
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Select depth indices for the second filename placeholder.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Select depth indices for the second filename placeholder.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "indexing-depths-without-second-placeholder",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "img_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "For directory inputs, depth indices need a second filename placeholder.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "For directory inputs, depth indices need a second filename placeholder.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "indexing-three-placeholders",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "a_%d_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "The filename pattern has too many index placeholders.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "The filename pattern has too many index placeholders.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "indexing-wildcard",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "?x.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": null
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Use an indexed filename pattern for a fast estimate; wildcard file counts need validation.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Use an indexed filename pattern for a fast estimate; wildcard file counts need validation.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "indexing-bracket-wildcard",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "[ab].h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": null
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Use an indexed filename pattern for a fast estimate; wildcard file counts need validation.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Use an indexed filename pattern for a fast estimate; wildcard file counts need validation.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "indexing-bad-depths",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-825",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "1-5:0"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Enter valid, nonnegative point and depth indices.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Enter valid, nonnegative point and depth indices.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "indexing-negative-points",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "-3",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0-120"
+    }
+   ],
+   "repeat": 1,
+   "counts": [
+    {
+     "error": "Enter valid, nonnegative point and depth indices.",
+     "type": "ValueError"
+    }
+   ],
+   "estimate": {
+    "error": "Enter valid, nonnegative point and depth indices.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  },
+  {
+   "name": "indexing-one-hundred-runs",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-2",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0"
+    }
+   ],
+   "repeat": 100,
+   "counts": [],
+   "estimate": {
+    "seconds": 169.89149311403466,
+    "runs": 100,
+    "profile": {
+     "backend": "crux",
+     "kind": "indexing",
+     "workers": 32,
+     "threads": 1,
+     "count": 968,
+     "seconds": 51.39217666699551
+    },
+    "notes": [
+     "Assumes one file per index/template match; validation checks actual files.",
+     "Based on 2048 × 2048 reference images; image size, peak settings, and storage load can change runtime."
+    ],
+    "selection": {
+     "points": 200,
+     "frames": 200,
+     "depths": null,
+     "basis": "Selected indices",
+     "notes": [],
+     "staged_frames": 200
+    }
+   },
+   "transfer": {
+    "input_bytes": 2003506135.7375405,
+    "output_bytes": 246492.56198347107,
+    "bytes_per_second": 4578469520.103762,
+    "input_seconds": 0.437592983188001,
+    "output_seconds": 5.383732727740968e-05,
+    "seconds": 0.4376468205152784
+   },
+   "duration": "3 min"
+  },
+  {
+   "name": "indexing-too-many-runs",
+   "kind": "indexing",
+   "backend": "crux",
+   "layout": {
+    "workers": 32,
+    "max_in_flight": 256,
+    "reconstruction_workers": 32,
+    "threads_per_worker": 4
+   },
+   "rows": [
+    {
+     "input_path": "/not-mounted/raw",
+     "filename_prefixes": [
+      "wire_%d_%d.h5"
+     ],
+     "scan_points": "1-2",
+     "depth_start": -30,
+     "depth_end": 90,
+     "depth_resolution": 1,
+     "frame_skip": 1,
+     "wire_skip": 1,
+     "depth_range": "0"
+    }
+   ],
+   "repeat": 101,
+   "counts": [],
+   "estimate": {
+    "error": "Estimate at most 100 pooled runs at a time.",
+    "type": "ValueError"
+   },
+   "transfer": null,
+   "duration": null
+  }
+ ],
+ "durations": [
+  [
+   0,
+   "under 1 min"
+  ],
+  [
+   1,
+   "under 1 min"
+  ],
+  [
+   30,
+   "under 1 min"
+  ],
+  [
+   59.9,
+   "under 1 min"
+  ],
+  [
+   60,
+   "1 min"
+  ],
+  [
+   89,
+   "1 min"
+  ],
+  [
+   90,
+   "2 min"
+  ],
+  [
+   149.9,
+   "2 min"
+  ],
+  [
+   150,
+   "2 min"
+  ],
+  [
+   3569,
+   "59 min"
+  ],
+  [
+   3570,
+   "1 h"
+  ],
+  [
+   3599,
+   "1 h"
+  ],
+  [
+   3600,
+   "1 h"
+  ],
+  [
+   3629,
+   "1 h"
+  ],
+  [
+   3631,
+   "1 h 1 min"
+  ],
+  [
+   3660,
+   "1 h 1 min"
+  ],
+  [
+   7322,
+   "2 h 2 min"
+  ],
+  [
+   172800.4,
+   "48 h"
+  ]
+ ]
+}

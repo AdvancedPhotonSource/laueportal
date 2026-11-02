@@ -1,0 +1,213 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "laueportal"
+version = "2.0.0.dev0"
+description = "3DMN Portal: web portal for 34-ID-E Laue microdiffraction (Laue Portal)"
+license = "LicenseRef-UChicago-Argonne-BSD"  # see ../LICENSE
+requires-python = ">=3.12,<3.13"
+# Dependencies are installed from the hash-locked requirements/*.lock files at the
+# repo root (`make setup`), so they are not repeated here.
+dependencies = []
+
+[project.scripts]
+laueportal = "laueportal.cli:main"
+
+[tool.hatch.build]
+# Editable installs put src/ on sys.path.
+dev-mode-dirs = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/laueportal"]
+
+# ---------------------------------------------------------------------------
+# ruff: pyflakes, pycodestyle, isort and bugbear, plus ASYNC (sync endpoints, but for the capped computations':
+# docs/contributing/backend.md, Long work).
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = [
+    "src/laueportal/util/srange.py",     # vendored
+    "src/laueportal/util/hkl_parse.py",  # vendored
+]
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "I", "B", "ASYNC"]
+ignore = [
+    "E501", # line length is the formatter's job; long comments and strings are fine
+    "E741", # ambiguous name 'l' is used on purpose in scientific code
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["laueportal"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+# ---------------------------------------------------------------------------
+# pyright: standard mode over the whole package except vendored util/, plus the Alembic scripts.
+
+[tool.pyright]
+include = ["src/laueportal", "migrations"]
+exclude = ["src/laueportal/util", "**/__pycache__"]
+typeCheckingMode = "standard"
+pythonVersion = "3.12"
+
+# ---------------------------------------------------------------------------
+# pytest
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = ["-p", "no:cacheprovider", "--strict-markers", "-ra"]
+markers = [
+    "slow: native lauelab compute, the live-against-batch parity, the demo seed, the fault injection with live workers and wall-clock checks (make test-slow)",
+]
+
+# ---------------------------------------------------------------------------
+# import-linter: the import rules (docs/contributing/backend.md). Run with `lint-imports`.
+# Forbidden contracts check indirect imports too (chains through laueportal modules); protected
+# contracts check direct imports.
+
+[tool.importlinter]
+root_packages = ["laueportal"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+id = "rule-1-api-only"
+name = "1a. Only api.py modules, app.py and core.errors import fastapi or starlette"
+type = "protected"
+protected_modules = ["fastapi", "starlette"]
+allowed_importers = ["laueportal.app", "laueportal.core.errors", "laueportal.**.api"]
+
+[[tool.importlinter.contracts]]
+id = "rule-1-no-web-below-api"
+name = "1b. Only app.py, api.py modules and the CLI import the web layer, so nothing else reaches fastapi or starlette, even indirectly"
+type = "protected"
+# Together with 1a this covers indirect imports: any chain from another module to fastapi or starlette
+# has to enter the web layer (app, core.errors, an api.py module) somewhere, and that direct import is
+# what this contract forbids. The CLI imports app (serve, openapi), so it is protected in turn: only
+# __main__ imports it. No ignore_imports: an api.py module's own imports never excuse its importer.
+protected_modules = ["laueportal.app", "laueportal.core.errors", "laueportal.**.api", "laueportal.cli", "laueportal.__main__"]
+allowed_importers = ["laueportal.app", "laueportal.**.api", "laueportal.cli", "laueportal.__main__"]
+
+[[tool.importlinter.contracts]]
+id = "rule-2-lauelab"
+name = "2. Only laueportal.science and the compute modules import lauelab"
+type = "protected"
+protected_modules = ["lauelab"]
+allowed_importers = [
+    "laueportal.science",
+    "laueportal.indexing.lauego.compute",
+    "laueportal.indexing.lauego.live_compute",
+    "laueportal.reconstruction.wire.compute",
+    "laueportal.reconstruction.wire.live_compute",
+]
+
+[[tool.importlinter.contracts]]
+id = "rule-3-alcf-seam"
+name = "3. The run contract, the run directory, the execution targets, the remote runners, the remote path helpers, the launcher-side remote modules and the compute modules never import the database, the settings or the web layer"
+type = "forbidden"
+# The launcher side runs on the DM host from the YAML settings alone: remote.settings (the bdp.yaml model), remote.plan,
+# remote.transport, remote.stage, remote.dm (its permissions stage's DM call), remote.flow, remote.pbs and remote.auth;
+# remote.settings imports jobs.backends, the one definition of the execution targets; remote.observation (the remote
+# observation's format) is the poller's and may be the launcher's. Besides the portal's database and settings modules,
+# the packages behind them are forbidden too (also a function-level import, which the runtime seam test,
+# tests/jobs/test_alcf_seam.py, sees only when it runs): SQLAlchemy, FastAPI and Starlette, and pydantic-settings.
+# pydantic itself is allowed: remote.settings is a pydantic model (requirements/launcher.in).
+source_modules = [
+    "laueportal.jobs.backends",
+    "laueportal.jobs.contract",
+    "laueportal.jobs.rundir",
+    "laueportal.jobs.runner",
+    "laueportal.jobs.mpi_runner",
+    "laueportal.jobs.processes",
+    "laueportal.remote.paths",
+    "laueportal.remote.observation",
+    "laueportal.remote.settings",
+    "laueportal.remote.plan",
+    "laueportal.remote.transport",
+    "laueportal.remote.stage",
+    "laueportal.remote.dm",
+    "laueportal.remote.flow",
+    "laueportal.remote.pbs",
+    "laueportal.remote.auth",
+    "laueportal.**.compute",
+    "laueportal.**.live_compute",
+]
+forbidden_modules = [
+    "laueportal.core.db",
+    "laueportal.core.settings",
+    "sqlalchemy",
+    "fastapi",
+    "starlette",
+    "pydantic_settings",
+]
+
+[[tool.importlinter.contracts]]
+id = "rule-3b-compute-node-packages"
+name = "3b. What a compute node loads (the run contract, the run directory, the remote runners, the remote path helpers and the compute modules) never imports pydantic, which a compute node lacks"
+type = "forbidden"
+# A compute node has only requirements/compute.in, lauelab and its conda-forge packages (the slow runner tests check
+# what the runners load: tests/remote_support.py, COMPUTE_PACKAGES). The parameter models are pydantic, so the
+# compute modules read request.json by name and never import them (wire.constants holds what both need).
+source_modules = [
+    "laueportal.jobs.contract",
+    "laueportal.jobs.rundir",
+    "laueportal.jobs.runner",
+    "laueportal.jobs.mpi_runner",
+    "laueportal.jobs.processes",
+    "laueportal.remote.paths",
+    "laueportal.**.compute",
+    "laueportal.**.live_compute",
+]
+forbidden_modules = ["pydantic", "pydantic_core"]
+
+[[tool.importlinter.contracts]]
+id = "rule-4-api-not-worker"
+name = "4. api.py modules never import the worker, the executor, the run lifecycle or the reconciler"
+type = "forbidden"
+source_modules = ["laueportal.**.api"]
+forbidden_modules = [
+    "laueportal.jobs.worker",
+    "laueportal.jobs.executor",
+    "laueportal.jobs.lifecycle",
+    "laueportal.jobs.reconciler",
+]
+
+[[tool.importlinter.contracts]]
+id = "rule-5-no-cross-domain-api"
+name = "5. Domain packages never import each other's api (only their services and schemas)"
+type = "forbidden"
+source_modules = [
+    "laueportal.scans",
+    "laueportal.indexing",
+    "laueportal.reconstruction",
+    "laueportal.jobs",
+    "laueportal.files",
+    "laueportal.system",
+]
+# A domain's own api is skipped (it overlaps its package); the ones not written yet are ignored until they exist.
+forbidden_modules = [
+    "laueportal.scans.api",
+    "laueportal.indexing.api",
+    "laueportal.reconstruction.api",
+    "laueportal.jobs.api",
+    "laueportal.files.api",
+    "laueportal.system.api",
+]
+
+[[tool.importlinter.contracts]]
+id = "no-redis-rq"
+name = "6. Nothing imports Redis or RQ (the job table is the queue)"
+type = "forbidden"
+source_modules = ["laueportal"]
+forbidden_modules = ["redis", "rq"]

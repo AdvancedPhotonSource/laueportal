@@ -1,0 +1,2152 @@
+{
+  "programs": [
+    {
+      "kind": "lauego",
+      "title": "LaueGo indexing",
+      "schema_id": "lauego/v1",
+      "json_schema": {
+        "additionalProperties": false,
+        "description": "The parameters of one LaueGo indexing run (`lauego/v1`).",
+        "properties": {
+          "scan_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The scan the run belongs to; empty for an unlinked run, which then takes its reconstruction's scan, if any.",
+            "title": "Scan Number",
+            "x-group": "Identity",
+            "x-hint": "The scan the run belongs to. Empty: the reconstruction's scan, or an unlinked run.",
+            "x-source": "form",
+            "x-widget": "scan"
+          },
+          "reconstruction_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reconstruction whose depth-resolved frames the run indexes (its `scan.h5` is the input); empty for a folder of frame files.",
+            "title": "Reconstruction ID",
+            "x-group": "Identity",
+            "x-hint": "The reconstruction whose depth-resolved frames are indexed. Empty: a folder of frame files.",
+            "x-source": "form",
+            "x-widget": "reconstruction"
+          },
+          "input_path": {
+            "description": "The folder of the frame files, or a reconstruction's catalog (its `scan.h5`).",
+            "title": "Folder Path",
+            "type": "string",
+            "x-group": "File Paths",
+            "x-hint": "The folder of the frame files, or a reconstruction's scan.h5.",
+            "x-source": "form",
+            "x-widget": "folder"
+          },
+          "output_path_template": {
+            "description": "The run directory, with exactly one `%d`, the run ID. The default is `[output_templates] indexing` under `files.runs_root`, without the segments of a scan or reconstruction the run does not have.",
+            "title": "Output Path",
+            "type": "string",
+            "x-config": "output_templates.indexing",
+            "x-group": "File Paths",
+            "x-hint": "The run's folder; %d becomes the run ID.",
+            "x-source": "form",
+            "x-widget": "output-folder",
+            "default": "/data/runs/analysis/index_%d"
+          },
+          "filename_prefixes": {
+            "description": "The frame files' name templates: `%d` takes the scan index, a second `%d` the depth index; wildcards are allowed. At least one, at most 100, each at most 255 characters; blank ones are dropped.",
+            "items": {
+              "maxLength": 255,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Filename",
+            "type": "array",
+            "x-group": "File Paths",
+            "x-hint": "Frame file names, comma-separated: %d is the scan index, a second %d the depth index, * any text (e.g. Si_*%d.h5).",
+            "x-placeholder": "Si_%d.h5",
+            "x-source": "form",
+            "x-widget": "filename-templates"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The peak search's absolute intensity threshold; empty: automatic (from the Threshold Ratio).",
+            "title": "Threshold",
+            "x-config": "indexing.defaults.threshold",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The peak search's intensity threshold. Empty: automatic, from the Threshold Ratio.",
+            "x-placeholder": "Automatic",
+            "x-source": "form",
+            "x-unit": "counts",
+            "x-widget": "integer",
+            "default": null
+          },
+          "threshold_ratio": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The automatic threshold as a multiple of the image's standard deviation (lauelab `PeakParams.threshold_ratio`, a float); empty or 0: lauelab's default (4.0).",
+            "title": "Threshold Ratio",
+            "x-config": "indexing.defaults.threshold_ratio",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The automatic threshold, in standard deviations of the image. Empty or 0: 4.",
+            "x-placeholder": "Automatic",
+            "x-source": "form",
+            "x-widget": "number",
+            "default": null
+          },
+          "max_rfactor": {
+            "description": "The largest R-factor of a fitted peak that is kept.",
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Max R-factor",
+            "type": "number",
+            "x-config": "indexing.defaults.max_rfactor",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The largest R-factor of a fitted peak that is kept.",
+            "x-source": "form",
+            "x-widget": "number",
+            "default": 0.5
+          },
+          "box_size": {
+            "description": "The side of the box each peak is fitted in.",
+            "exclusiveMinimum": 0,
+            "title": "Box Size",
+            "type": "integer",
+            "x-config": "indexing.defaults.box_size",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The side of the box each peak is fitted in.",
+            "x-source": "form",
+            "x-unit": "px",
+            "x-widget": "integer",
+            "default": 18
+          },
+          "max_number": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most peaks the peak search keeps per frame; empty: all.",
+            "title": "Max detected spots",
+            "x-config": "indexing.defaults.max_number",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The most peaks kept per frame. Empty: all.",
+            "x-placeholder": "All",
+            "x-source": "form",
+            "x-widget": "integer",
+            "default": 300
+          },
+          "min_separation": {
+            "description": "The smallest distance between two peaks.",
+            "minimum": 0,
+            "title": "Min Spot Separation",
+            "type": "integer",
+            "x-config": "indexing.defaults.min_separation",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The smallest distance between two peaks.",
+            "x-source": "form",
+            "x-unit": "px",
+            "x-widget": "integer",
+            "default": 20
+          },
+          "peak_shape": {
+            "description": "The profile fitted to each peak (lauelab's peak models).",
+            "enum": ["Lorentzian", "Gaussian"],
+            "title": "Peak Shape",
+            "type": "string",
+            "x-config": "indexing.defaults.peak_shape",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The profile fitted to each peak.",
+            "x-options": [
+              {
+                "label": "Lorentzian",
+                "value": "Lorentzian"
+              },
+              {
+                "label": "Gaussian",
+                "value": "Gaussian"
+              }
+            ],
+            "x-source": "form",
+            "x-widget": "select",
+            "default": "Lorentzian"
+          },
+          "scan_points": {
+            "description": "The scan points to index: srange syntax, at least one; stored as srange writes it (`3,1-2` is `1-3`).",
+            "title": "Scan Indices",
+            "type": "string",
+            "x-config": "indexing.defaults.scan_points",
+            "x-group": "File Paths",
+            "x-hint": "The scan points to index, e.g. 1-10, 1,5,8,9, 1-4,10-21 or 1-10:2 (every second).",
+            "x-placeholder": "1-10,15",
+            "x-source": "form",
+            "x-widget": "indices",
+            "default": ""
+          },
+          "depth_range": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The depth indices to index (srange syntax), for a reconstruction's frames or file names with two `%d`; empty: every depth of a reconstruction's `scan.h5`, none for file names with one `%d`.",
+            "title": "Depth Indices",
+            "x-config": "indexing.defaults.depth_range",
+            "x-group": "File Paths",
+            "x-hint": "The depth indices to index, e.g. 0-90:30. Empty: every depth of a reconstruction; none for names with one %d.",
+            "x-source": "form",
+            "x-widget": "indices",
+            "default": ""
+          },
+          "detector_crop_x1": {
+            "description": "The detector crop (x1, x2, y1, y2), stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Detector Crop X1",
+            "type": "integer",
+            "x-config": "indexing.fixed.detector_crop[0]",
+            "x-source": "config",
+            "x-unit": "px",
+            "default": 0
+          },
+          "detector_crop_x2": {
+            "description": "The detector crop (x1, x2, y1, y2), stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Detector Crop X2",
+            "type": "integer",
+            "x-config": "indexing.fixed.detector_crop[1]",
+            "x-source": "config",
+            "x-unit": "px",
+            "default": 2047
+          },
+          "detector_crop_y1": {
+            "description": "The detector crop (x1, x2, y1, y2), stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Detector Crop Y1",
+            "type": "integer",
+            "x-config": "indexing.fixed.detector_crop[2]",
+            "x-source": "config",
+            "x-unit": "px",
+            "default": 0
+          },
+          "detector_crop_y2": {
+            "description": "The detector crop (x1, x2, y1, y2), stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Detector Crop Y2",
+            "type": "integer",
+            "x-config": "indexing.fixed.detector_crop[3]",
+            "x-source": "config",
+            "x-unit": "px",
+            "default": 2047
+          },
+          "min_size": {
+            "description": "The smallest peak kept (LaueGo `peaksearch -m`), used as given: a fraction is not rounded.",
+            "exclusiveMinimum": 0,
+            "title": "Min Spot Size",
+            "type": "number",
+            "x-config": "indexing.defaults.min_size",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The smallest peak kept.",
+            "x-source": "form",
+            "x-unit": "px",
+            "x-widget": "number",
+            "default": 3.0
+          },
+          "max_peaks": {
+            "description": "How many of a frame's peaks the indexer uses (lauelab `IndexParams.max_data`).",
+            "exclusiveMinimum": 0,
+            "title": "Max spots to index",
+            "type": "integer",
+            "x-config": "indexing.defaults.max_peaks",
+            "x-group": "Indexing Parameters",
+            "x-hint": "How many of a frame's peaks the indexer uses.",
+            "x-source": "form",
+            "x-widget": "integer",
+            "default": 200
+          },
+          "smooth": {
+            "description": "Smooth each peak before it is fitted.",
+            "title": "Smooth peak before fitting",
+            "type": "boolean",
+            "x-config": "indexing.defaults.smooth",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "Smooth each peak before it is fitted.",
+            "x-source": "form",
+            "x-widget": "checkbox",
+            "default": false
+          },
+          "mask_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A detector mask for the peak search, inside the roots; empty: none.",
+            "title": "Mask File",
+            "x-config": "indexing.defaults.mask_file",
+            "x-extensions": [".h5", ".hdf5"],
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The pixels the peak search ignores (an HDF5 image). Empty: none.",
+            "x-source": "form",
+            "x-widget": "file",
+            "default": null
+          },
+          "index_kev_max_calc": {
+            "description": "The highest energy of the reflections the indexer calculates. The scan's source energy does not replace it (a white-beam header's energy is not an indexing cutoff).",
+            "exclusiveMinimum": 0,
+            "title": "Max Calc Energy",
+            "type": "number",
+            "x-config": "indexing.defaults.index_kev_max_calc",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The highest energy of the reflections the indexer calculates.",
+            "x-source": "form",
+            "x-unit": "keV",
+            "x-widget": "number",
+            "default": 17.2
+          },
+          "index_kev_max_test": {
+            "description": "The highest energy of the reflections the indexer tests (not replaced by the scan's energy).",
+            "exclusiveMinimum": 0,
+            "title": "Max Test Energy",
+            "type": "number",
+            "x-config": "indexing.defaults.index_kev_max_test",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The highest energy of the reflections the indexer tests.",
+            "x-source": "form",
+            "x-unit": "keV",
+            "x-widget": "number",
+            "default": 35.0
+          },
+          "index_angle_tolerance": {
+            "description": "The largest angle between a measured and a calculated reflection that still match.",
+            "minimum": 0,
+            "title": "Angle Tolerance",
+            "type": "number",
+            "x-config": "indexing.defaults.index_angle_tolerance",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The largest angle between a measured and a calculated reflection that still match.",
+            "x-source": "form",
+            "x-unit": "deg",
+            "x-widget": "number",
+            "default": 0.1
+          },
+          "index_h": {
+            "description": "The H of the Central HKL (one HKL widget of three integers): the reflection the indexer prefers at the centre of the cone (lauelab `hkl_prefer`).",
+            "title": "Central HKL: H",
+            "type": "integer",
+            "x-config": "indexing.defaults.index_hkl[0]",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The reflection the indexer prefers at the centre of the cone.",
+            "x-source": "form",
+            "x-widget": "hkl",
+            "default": 0
+          },
+          "index_k": {
+            "description": "The K of the Central HKL (one HKL widget of three integers): the reflection the indexer prefers at the centre of the cone (lauelab `hkl_prefer`).",
+            "title": "Central HKL: K",
+            "type": "integer",
+            "x-config": "indexing.defaults.index_hkl[1]",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The reflection the indexer prefers at the centre of the cone.",
+            "x-source": "form",
+            "x-widget": "hkl",
+            "default": 0
+          },
+          "index_l": {
+            "description": "The L of the Central HKL (one HKL widget of three integers): the reflection the indexer prefers at the centre of the cone (lauelab `hkl_prefer`).",
+            "title": "Central HKL: L",
+            "type": "integer",
+            "x-config": "indexing.defaults.index_hkl[2]",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The reflection the indexer prefers at the centre of the cone.",
+            "x-source": "form",
+            "x-widget": "hkl",
+            "default": 1
+          },
+          "index_cone": {
+            "description": "The opening angle of the cone around the Central HKL in which reflections are matched.",
+            "maximum": 180,
+            "minimum": 0,
+            "title": "Cone Angle",
+            "type": "number",
+            "x-config": "indexing.defaults.index_cone",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The opening angle of the cone around the Central HKL in which reflections are matched.",
+            "x-source": "form",
+            "x-unit": "deg",
+            "x-widget": "number",
+            "default": 72.0
+          },
+          "energy_unit": {
+            "description": "Stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Energy Unit",
+            "type": "string",
+            "x-config": "indexing.fixed.energy_unit",
+            "x-source": "config",
+            "default": "keV"
+          },
+          "exposure_unit": {
+            "description": "Stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Exposure Unit",
+            "type": "string",
+            "x-config": "indexing.fixed.exposure_unit",
+            "x-source": "config",
+            "default": "sec"
+          },
+          "cosmic_filter": {
+            "default": false,
+            "description": "Off: every new run stores `false`, and compute never filters.",
+            "readOnly": true,
+            "title": "Cosmic Filter",
+            "type": "boolean",
+            "x-source": "derived"
+          },
+          "reciprocal_lattice_unit": {
+            "description": "Stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Reciprocal Lattice Unit",
+            "type": "string",
+            "x-config": "indexing.fixed.reciprocal_lattice_unit",
+            "x-source": "config",
+            "default": "1/nm"
+          },
+          "lattice_parameters_unit": {
+            "description": "Stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Lattice Parameters Unit",
+            "type": "string",
+            "x-config": "indexing.fixed.lattice_parameters_unit",
+            "x-source": "config",
+            "default": "nm"
+          },
+          "output_xml": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Output XML file: a relative name is inside the run directory, an absolute one is used as given; not a name the run directory reserves. Empty: `output.xml`, which is stored.",
+            "title": "Output XML",
+            "x-config": "indexing.defaults.output_xml",
+            "x-group": "File Paths",
+            "x-hint": "The results file: a name inside the run's folder, or an absolute path. Empty: output.xml.",
+            "x-source": "form",
+            "x-widget": "text",
+            "default": "output.xml"
+          },
+          "geometry_file": {
+            "description": "The detector geometry (XML); it must exist inside the roots.",
+            "title": "Geometry File",
+            "type": "string",
+            "x-config": "indexing.defaults.geometry_file",
+            "x-extensions": [".xml"],
+            "x-group": "File Paths",
+            "x-hint": "The detector geometry (XML).",
+            "x-source": "form",
+            "x-widget": "file",
+            "default": "/data/config/geoN_2022-03-29_14-15-05.xml"
+          },
+          "crystal_file": {
+            "description": "The crystal structure (XML); it must exist inside the roots.",
+            "title": "Crystal Structure File",
+            "type": "string",
+            "x-config": "indexing.defaults.crystal_file",
+            "x-extensions": [".xml"],
+            "x-group": "File Paths",
+            "x-hint": "The crystal structure (XML).",
+            "x-source": "form",
+            "x-widget": "file",
+            "default": "/data/config/Ni.xml"
+          },
+          "depth": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A depth that replaces every frame's; empty: each frame's own. A finite number, stored as typed (text); other text, NaN and infinity are refused.",
+            "title": "Depth",
+            "x-config": "indexing.defaults.depth",
+            "x-group": "Indexing Parameters",
+            "x-hint": "One depth for every frame. Empty: each frame's own.",
+            "x-placeholder": "Automatic",
+            "x-source": "form",
+            "x-unit": "µm",
+            "x-widget": "text",
+            "default": null
+          },
+          "beamline": {
+            "description": "Stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Beamline",
+            "type": "string",
+            "x-config": "indexing.fixed.beamline",
+            "x-source": "config",
+            "default": "34ID-E"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "description": "Who made the run, or a tag (at most 200 characters).",
+            "title": "Author",
+            "x-config": "indexing.defaults.author",
+            "x-group": "Identity",
+            "x-hint": "Who made the run, or a tag.",
+            "x-source": "form",
+            "x-widget": "text"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "description": "Free text about the run (at most 10,000 characters).",
+            "title": "Notes",
+            "x-config": "indexing.defaults.notes",
+            "x-group": "Notes",
+            "x-hint": "Free text about the run.",
+            "x-source": "form",
+            "x-widget": "textarea"
+          },
+          "algorithm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Not set by the portal: null.",
+            "readOnly": true,
+            "title": "Algorithm Version",
+            "x-source": "derived"
+          },
+          "backend": {
+            "default": "local",
+            "description": "The execution target: `local` (this portal's worker), `aps` (PBS on the APS cluster, through DM) or `crux` (ALCF's Crux, through Globus). The form offers these choices (`remote.settings.available_backends`): one APS choice, `local` until the `aps` target is enabled, and ALCF when the `crux` target is.",
+            "enum": ["local", "aps", "crux"],
+            "title": "Run on",
+            "type": "string",
+            "x-group": "Execution",
+            "x-hint": "Where the run is computed.",
+            "x-options": [
+              {
+                "value": "local",
+                "label": "APS"
+              }
+            ],
+            "x-source": "form",
+            "x-widget": "target"
+          },
+          "computer_name": {
+            "description": "The host that created the run (its real name).",
+            "readOnly": true,
+            "title": "Computer",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "priority": {
+            "default": 0,
+            "description": "Always 0: a queue priority, unused.",
+            "readOnly": true,
+            "title": "Priority",
+            "type": "integer",
+            "x-source": "derived"
+          },
+          "submitted_at": {
+            "description": "When the run was created: aware UTC.",
+            "format": "date-time",
+            "readOnly": true,
+            "title": "Submitted",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "schema_id": {
+            "const": "lauego/v1",
+            "default": "lauego/v1",
+            "description": "The parameter schema, `lauego/v1`.",
+            "readOnly": true,
+            "title": "Schema",
+            "type": "string",
+            "x-source": "derived"
+          }
+        },
+        "required": [
+          "scan_number",
+          "reconstruction_id",
+          "input_path",
+          "output_path_template",
+          "filename_prefixes",
+          "threshold",
+          "threshold_ratio",
+          "max_rfactor",
+          "box_size",
+          "max_number",
+          "min_separation",
+          "peak_shape",
+          "scan_points",
+          "depth_range",
+          "min_size",
+          "max_peaks",
+          "smooth",
+          "mask_file",
+          "index_kev_max_calc",
+          "index_kev_max_test",
+          "index_angle_tolerance",
+          "index_h",
+          "index_k",
+          "index_l",
+          "index_cone",
+          "output_xml",
+          "geometry_file",
+          "crystal_file",
+          "depth"
+        ],
+        "title": "LaueGoParamsV1",
+        "type": "object",
+        "x-layout": [
+          {
+            "group": "Identity",
+            "fields": ["scan_number", "reconstruction_id", "author"]
+          },
+          {
+            "group": "File Paths",
+            "fields": [
+              "input_path",
+              "filename_prefixes",
+              "scan_points",
+              "depth_range",
+              "geometry_file",
+              "crystal_file",
+              "output_path_template",
+              "output_xml"
+            ]
+          },
+          {
+            "group": "Peak Search Parameters",
+            "fields": [
+              "box_size",
+              "max_rfactor",
+              "threshold",
+              "threshold_ratio",
+              "min_size",
+              "min_separation",
+              "max_number",
+              "peak_shape",
+              "mask_file",
+              "smooth"
+            ]
+          },
+          {
+            "group": "Indexing Parameters",
+            "fields": [
+              "index_kev_max_calc",
+              "index_kev_max_test",
+              "index_angle_tolerance",
+              "index_h",
+              "index_k",
+              "index_l",
+              "index_cone",
+              "max_peaks",
+              "depth"
+            ]
+          },
+          {
+            "group": "Notes",
+            "fields": ["notes"]
+          },
+          {
+            "group": "Execution",
+            "fields": ["backend"]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "wire",
+      "title": "Wire reconstruction",
+      "schema_id": "wire/v1",
+      "json_schema": {
+        "additionalProperties": false,
+        "description": "The parameters of one wire reconstruction run (`wire/v1`).",
+        "properties": {
+          "scan_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The scan the run reconstructs; empty for an unlinked run.",
+            "title": "Scan Number",
+            "x-group": "Identity",
+            "x-hint": "The scan the run reconstructs. Empty: an unlinked run.",
+            "x-source": "form",
+            "x-widget": "scan"
+          },
+          "input_path": {
+            "description": "The folder of the wire-scan files (from the scan's catalog or the source run).",
+            "title": "Folder Path",
+            "type": "string",
+            "x-group": "File Paths",
+            "x-hint": "The folder of the wire-scan files.",
+            "x-source": "form",
+            "x-widget": "folder"
+          },
+          "output_path_template": {
+            "description": "The run directory, with exactly one `%d`, the run ID. The default is `[output_templates] reconstruction` under `files.runs_root`, without the scan segment when the run has no scan.",
+            "title": "Output Path",
+            "type": "string",
+            "x-config": "output_templates.reconstruction",
+            "x-group": "File Paths",
+            "x-hint": "The run's folder; %d becomes the run ID.",
+            "x-source": "form",
+            "x-widget": "output-folder",
+            "default": "/data/runs/analysis/rec_%d/data"
+          },
+          "filename_prefixes": {
+            "description": "The wire-scan files' name templates (the catalog's prefixes): at most one `%d` each, the scan index; wildcards are allowed. At least one, at most 100, each at most 255 characters; blank ones are dropped.",
+            "items": {
+              "maxLength": 255,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Filename",
+            "type": "array",
+            "x-group": "File Paths",
+            "x-hint": "The wire-scan files' names, comma-separated: %d is the scan index, * any text (e.g. Si_%d.h5).",
+            "x-placeholder": "Si_%d.h5",
+            "x-source": "form",
+            "x-widget": "filename-templates"
+          },
+          "geometry_file": {
+            "description": "The detector geometry (XML); it must exist inside the roots.",
+            "title": "Geometry File",
+            "type": "string",
+            "x-config": "reconstruction.defaults.geometry_file",
+            "x-extensions": [".xml"],
+            "x-group": "File Paths",
+            "x-hint": "The detector geometry (XML).",
+            "x-source": "form",
+            "x-widget": "file",
+            "default": "/data/config/geometry.xml"
+          },
+          "percent_brightest": {
+            "description": "The percentage of the brightest pixels that are reconstructed, in (0, 100].",
+            "exclusiveMinimum": 0,
+            "maximum": 100,
+            "title": "Intensity Percentile",
+            "type": "number",
+            "x-config": "reconstruction.defaults.percent_brightest",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The share of the brightest pixels that are reconstructed.",
+            "x-source": "form",
+            "x-unit": "%",
+            "x-widget": "number",
+            "default": 100.0
+          },
+          "wire_edges": {
+            "description": "The edge of the wire's shadow that is used.",
+            "enum": ["leading", "trailing", "both"],
+            "title": "Wire Edges",
+            "type": "string",
+            "x-config": "reconstruction.defaults.wire_edges",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The edge of the wire's shadow that is used.",
+            "x-options": [
+              {
+                "label": "Leading Edge",
+                "value": "leading"
+              },
+              {
+                "label": "Trailing Edge",
+                "value": "trailing"
+              },
+              {
+                "label": "Both Edges",
+                "value": "both"
+              }
+            ],
+            "x-source": "form",
+            "x-widget": "select",
+            "default": "leading"
+          },
+          "depth_start": {
+            "description": "The start of the reconstructed depth range.",
+            "title": "Depth Start",
+            "type": "number",
+            "x-config": "reconstruction.defaults.depth_start",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The start of the reconstructed depth range.",
+            "x-source": "form",
+            "x-unit": "µm",
+            "x-widget": "number",
+            "default": -50.0
+          },
+          "depth_end": {
+            "description": "The end of the reconstructed depth range.",
+            "title": "Depth End",
+            "type": "number",
+            "x-config": "reconstruction.defaults.depth_end",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The end of the reconstructed depth range.",
+            "x-source": "form",
+            "x-unit": "µm",
+            "x-widget": "number",
+            "default": 150.0
+          },
+          "depth_resolution": {
+            "description": "The depth step of the reconstruction.",
+            "exclusiveMinimum": 0,
+            "title": "Depth Resolution",
+            "type": "number",
+            "x-config": "reconstruction.defaults.depth_resolution",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The depth step of the reconstruction.",
+            "x-source": "form",
+            "x-unit": "µm",
+            "x-widget": "number",
+            "default": 1.0
+          },
+          "num_threads": {
+            "description": "The OpenMP threads of each reconstruction worker.",
+            "exclusiveMinimum": 0,
+            "readOnly": true,
+            "title": "Threads",
+            "type": "integer",
+            "x-config": "execution.num_threads",
+            "x-source": "config",
+            "default": 1
+          },
+          "memory_limit_mb": {
+            "description": "The stripe-buffer budget of each reconstruction worker.",
+            "exclusiveMinimum": 0,
+            "readOnly": true,
+            "title": "Memory Limit",
+            "type": "integer",
+            "x-config": "execution.memory_limit_mb",
+            "x-source": "config",
+            "x-unit": "MB",
+            "default": 512
+          },
+          "scan_points": {
+            "description": "The scan points to reconstruct (found from the files): srange syntax, at least one; stored as srange writes it.",
+            "title": "Scan Indices",
+            "type": "string",
+            "x-group": "File Paths",
+            "x-hint": "The scan points to reconstruct, e.g. 1-10, 1,5,8,9, 1-4,10-21 or 1-10:2 (every second).",
+            "x-placeholder": "1-10,15",
+            "x-source": "form",
+            "x-widget": "indices"
+          },
+          "verbose": {
+            "description": "Stored for the record: compute does not use it.",
+            "minimum": 0,
+            "readOnly": true,
+            "title": "Verbose",
+            "type": "integer",
+            "x-config": "execution.verbose",
+            "x-source": "config",
+            "default": 1
+          },
+          "frame_skip": {
+            "default": 1,
+            "description": "The leading stored slices the reconstruction skips (reconstructN_cpu's `MULTI_IMAGE_SKIP`, 1); another value changes which wire positions are paired with each frame.",
+            "minimum": 0,
+            "title": "Frame Skip",
+            "type": "integer",
+            "x-config": "reconstruction.defaults.frame_skip",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The leading frames the reconstruction skips; another value changes which wire positions match each frame.",
+            "x-source": "form",
+            "x-unit": "slices",
+            "x-widget": "integer"
+          },
+          "wire_skip": {
+            "default": 1,
+            "description": "The leading wire-vector entries the reconstruction skips (reconstructN_cpu's `MULTI_IMAGE_SKIPV`, 1).",
+            "minimum": 0,
+            "title": "Wire Skip",
+            "type": "integer",
+            "x-config": "reconstruction.defaults.wire_skip",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The leading wire positions the reconstruction skips.",
+            "x-source": "form",
+            "x-unit": "entries",
+            "x-widget": "integer"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "description": "Who made the run, or a tag (at most 200 characters).",
+            "title": "Author",
+            "x-config": "reconstruction.defaults.author",
+            "x-group": "Identity",
+            "x-hint": "Who made the run, or a tag.",
+            "x-source": "form",
+            "x-widget": "text"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "description": "Free text about the run (at most 10,000 characters).",
+            "title": "Notes",
+            "x-config": "reconstruction.defaults.notes",
+            "x-group": "Notes",
+            "x-hint": "Free text about the run.",
+            "x-source": "form",
+            "x-widget": "textarea"
+          },
+          "algorithm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Not set by the portal: null.",
+            "readOnly": true,
+            "title": "Algorithm Version",
+            "x-source": "derived"
+          },
+          "backend": {
+            "default": "local",
+            "description": "The execution target: `local` (this portal's worker), `aps` (PBS on the APS cluster, through DM) or `crux` (ALCF's Crux, through Globus). The form offers these choices (`remote.settings.available_backends`): one APS choice, `local` until the `aps` target is enabled, and ALCF when the `crux` target is.",
+            "enum": ["local", "aps", "crux"],
+            "title": "Run on",
+            "type": "string",
+            "x-group": "Execution",
+            "x-hint": "Where the run is computed.",
+            "x-options": [
+              {
+                "value": "local",
+                "label": "APS"
+              }
+            ],
+            "x-source": "form",
+            "x-widget": "target"
+          },
+          "computer_name": {
+            "description": "The host that created the run (its real name).",
+            "readOnly": true,
+            "title": "Computer",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "priority": {
+            "default": 0,
+            "description": "Always 0: a queue priority, unused.",
+            "readOnly": true,
+            "title": "Priority",
+            "type": "integer",
+            "x-source": "derived"
+          },
+          "submitted_at": {
+            "description": "When the run was created: aware UTC.",
+            "format": "date-time",
+            "readOnly": true,
+            "title": "Submitted",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "schema_id": {
+            "const": "wire/v1",
+            "default": "wire/v1",
+            "description": "The parameter schema, `wire/v1`.",
+            "readOnly": true,
+            "title": "Schema",
+            "type": "string",
+            "x-source": "derived"
+          }
+        },
+        "required": [
+          "scan_number",
+          "input_path",
+          "output_path_template",
+          "filename_prefixes",
+          "geometry_file",
+          "percent_brightest",
+          "wire_edges",
+          "depth_start",
+          "depth_end",
+          "depth_resolution",
+          "scan_points"
+        ],
+        "title": "WireParamsV1",
+        "type": "object",
+        "x-layout": [
+          {
+            "group": "Identity",
+            "fields": ["scan_number", "author"]
+          },
+          {
+            "group": "File Paths",
+            "fields": [
+              "input_path",
+              "filename_prefixes",
+              "scan_points",
+              "output_path_template",
+              "geometry_file"
+            ]
+          },
+          {
+            "group": "Wire Reconstruction Parameters",
+            "fields": [
+              "depth_start",
+              "depth_end",
+              "depth_resolution",
+              "wire_edges",
+              "percent_brightest",
+              "frame_skip",
+              "wire_skip"
+            ]
+          },
+          {
+            "group": "Notes",
+            "fields": ["notes"]
+          },
+          {
+            "group": "Execution",
+            "fields": ["backend"]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "lauego-live",
+      "title": "Live LaueGo indexing",
+      "schema_id": "lauego-live/v1",
+      "json_schema": {
+        "additionalProperties": false,
+        "description": "The parameters of one live LaueGo indexing run (`lauego-live/v1`): `lauego/v1`'s, without the scan indices.",
+        "properties": {
+          "scan_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The scan the run belongs to; empty for an unlinked run, which then takes its reconstruction's scan, if any.",
+            "title": "Scan Number",
+            "x-group": "Identity",
+            "x-hint": "The scan the run belongs to. Empty: the reconstruction's scan, or an unlinked run.",
+            "x-source": "form",
+            "x-widget": "scan"
+          },
+          "reconstruction_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reconstruction whose depth-resolved frames the run indexes (its `scan.h5` is the input); empty for a folder of frame files.",
+            "title": "Reconstruction ID",
+            "x-group": "Identity",
+            "x-hint": "The reconstruction whose depth-resolved frames are indexed. Empty: a folder of frame files.",
+            "x-source": "form",
+            "x-widget": "reconstruction"
+          },
+          "input_path": {
+            "description": "The folder of the frame files, or a reconstruction's catalog (its `scan.h5`).",
+            "title": "Folder Path",
+            "type": "string",
+            "x-group": "File Paths",
+            "x-hint": "The folder of the frame files, or a reconstruction's scan.h5.",
+            "x-source": "form",
+            "x-widget": "folder"
+          },
+          "output_path_template": {
+            "description": "The run directory, with exactly one `%d`, the run ID. The default is `[output_templates] indexing` under `files.runs_root`, without the segments of a scan or reconstruction the run does not have.",
+            "title": "Output Path",
+            "type": "string",
+            "x-config": "output_templates.indexing",
+            "x-group": "File Paths",
+            "x-hint": "The run's folder; %d becomes the run ID.",
+            "x-source": "form",
+            "x-widget": "output-folder",
+            "default": "/data/runs/analysis/index_%d"
+          },
+          "filename_prefixes": {
+            "description": "The arriving frame files' name template, or the followed wire run's: exactly one, with exactly one `%d`, each file's number; wildcards are allowed; at most 255 characters.",
+            "items": {
+              "maxLength": 255,
+              "type": "string"
+            },
+            "maxItems": 1,
+            "minItems": 1,
+            "title": "Filename",
+            "type": "array",
+            "x-group": "File Paths",
+            "x-hint": "The frame files' name: %d is each file's number, * any text (e.g. Si_%d.h5).",
+            "x-placeholder": "Si_%d.h5",
+            "x-source": "form",
+            "x-widget": "filename-templates"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The peak search's absolute intensity threshold; empty: automatic (from the Threshold Ratio).",
+            "title": "Threshold",
+            "x-config": "indexing.defaults.threshold",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The peak search's intensity threshold. Empty: automatic, from the Threshold Ratio.",
+            "x-placeholder": "Automatic",
+            "x-source": "form",
+            "x-unit": "counts",
+            "x-widget": "integer",
+            "default": null
+          },
+          "threshold_ratio": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The automatic threshold as a multiple of the image's standard deviation (lauelab `PeakParams.threshold_ratio`, a float); empty or 0: lauelab's default (4.0).",
+            "title": "Threshold Ratio",
+            "x-config": "indexing.defaults.threshold_ratio",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The automatic threshold, in standard deviations of the image. Empty or 0: 4.",
+            "x-placeholder": "Automatic",
+            "x-source": "form",
+            "x-widget": "number",
+            "default": null
+          },
+          "max_rfactor": {
+            "description": "The largest R-factor of a fitted peak that is kept.",
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Max R-factor",
+            "type": "number",
+            "x-config": "indexing.defaults.max_rfactor",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The largest R-factor of a fitted peak that is kept.",
+            "x-source": "form",
+            "x-widget": "number",
+            "default": 0.5
+          },
+          "box_size": {
+            "description": "The side of the box each peak is fitted in.",
+            "exclusiveMinimum": 0,
+            "title": "Box Size",
+            "type": "integer",
+            "x-config": "indexing.defaults.box_size",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The side of the box each peak is fitted in.",
+            "x-source": "form",
+            "x-unit": "px",
+            "x-widget": "integer",
+            "default": 18
+          },
+          "max_number": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most peaks the peak search keeps per frame; empty: all.",
+            "title": "Max detected spots",
+            "x-config": "indexing.defaults.max_number",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The most peaks kept per frame. Empty: all.",
+            "x-placeholder": "All",
+            "x-source": "form",
+            "x-widget": "integer",
+            "default": 300
+          },
+          "min_separation": {
+            "description": "The smallest distance between two peaks.",
+            "minimum": 0,
+            "title": "Min Spot Separation",
+            "type": "integer",
+            "x-config": "indexing.defaults.min_separation",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The smallest distance between two peaks.",
+            "x-source": "form",
+            "x-unit": "px",
+            "x-widget": "integer",
+            "default": 20
+          },
+          "peak_shape": {
+            "description": "The profile fitted to each peak (lauelab's peak models).",
+            "enum": ["Lorentzian", "Gaussian"],
+            "title": "Peak Shape",
+            "type": "string",
+            "x-config": "indexing.defaults.peak_shape",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The profile fitted to each peak.",
+            "x-options": [
+              {
+                "label": "Lorentzian",
+                "value": "Lorentzian"
+              },
+              {
+                "label": "Gaussian",
+                "value": "Gaussian"
+              }
+            ],
+            "x-source": "form",
+            "x-widget": "select",
+            "default": "Lorentzian"
+          },
+          "scan_points": {
+            "const": "",
+            "default": "",
+            "description": "Always empty for a live run: its inputs are the files that arrive while it runs (`arrivals.jsonl`), and the run row's scan points become their numbers when it ends. Kept so that `request.json` holds exactly the batch schema's keys.",
+            "readOnly": true,
+            "title": "Scan Indices",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "depth_range": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The depth indices to index (srange syntax), for a reconstruction's frames or file names with two `%d`; empty: every depth of a reconstruction's `scan.h5`, none for file names with one `%d`.",
+            "title": "Depth Indices",
+            "x-config": "indexing.defaults.depth_range",
+            "x-group": "File Paths",
+            "x-hint": "The depth indices to index, e.g. 0-90:30. Empty: every depth of a reconstruction; none for names with one %d.",
+            "x-source": "form",
+            "x-widget": "indices",
+            "default": ""
+          },
+          "detector_crop_x1": {
+            "description": "The detector crop (x1, x2, y1, y2), stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Detector Crop X1",
+            "type": "integer",
+            "x-config": "indexing.fixed.detector_crop[0]",
+            "x-source": "config",
+            "x-unit": "px",
+            "default": 0
+          },
+          "detector_crop_x2": {
+            "description": "The detector crop (x1, x2, y1, y2), stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Detector Crop X2",
+            "type": "integer",
+            "x-config": "indexing.fixed.detector_crop[1]",
+            "x-source": "config",
+            "x-unit": "px",
+            "default": 2047
+          },
+          "detector_crop_y1": {
+            "description": "The detector crop (x1, x2, y1, y2), stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Detector Crop Y1",
+            "type": "integer",
+            "x-config": "indexing.fixed.detector_crop[2]",
+            "x-source": "config",
+            "x-unit": "px",
+            "default": 0
+          },
+          "detector_crop_y2": {
+            "description": "The detector crop (x1, x2, y1, y2), stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Detector Crop Y2",
+            "type": "integer",
+            "x-config": "indexing.fixed.detector_crop[3]",
+            "x-source": "config",
+            "x-unit": "px",
+            "default": 2047
+          },
+          "min_size": {
+            "description": "The smallest peak kept (LaueGo `peaksearch -m`), used as given: a fraction is not rounded.",
+            "exclusiveMinimum": 0,
+            "title": "Min Spot Size",
+            "type": "number",
+            "x-config": "indexing.defaults.min_size",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The smallest peak kept.",
+            "x-source": "form",
+            "x-unit": "px",
+            "x-widget": "number",
+            "default": 3.0
+          },
+          "max_peaks": {
+            "description": "How many of a frame's peaks the indexer uses (lauelab `IndexParams.max_data`).",
+            "exclusiveMinimum": 0,
+            "title": "Max spots to index",
+            "type": "integer",
+            "x-config": "indexing.defaults.max_peaks",
+            "x-group": "Indexing Parameters",
+            "x-hint": "How many of a frame's peaks the indexer uses.",
+            "x-source": "form",
+            "x-widget": "integer",
+            "default": 200
+          },
+          "smooth": {
+            "description": "Smooth each peak before it is fitted.",
+            "title": "Smooth peak before fitting",
+            "type": "boolean",
+            "x-config": "indexing.defaults.smooth",
+            "x-group": "Peak Search Parameters",
+            "x-hint": "Smooth each peak before it is fitted.",
+            "x-source": "form",
+            "x-widget": "checkbox",
+            "default": false
+          },
+          "mask_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A detector mask for the peak search, inside the roots; empty: none.",
+            "title": "Mask File",
+            "x-config": "indexing.defaults.mask_file",
+            "x-extensions": [".h5", ".hdf5"],
+            "x-group": "Peak Search Parameters",
+            "x-hint": "The pixels the peak search ignores (an HDF5 image). Empty: none.",
+            "x-source": "form",
+            "x-widget": "file",
+            "default": null
+          },
+          "index_kev_max_calc": {
+            "description": "The highest energy of the reflections the indexer calculates. The scan's source energy does not replace it (a white-beam header's energy is not an indexing cutoff).",
+            "exclusiveMinimum": 0,
+            "title": "Max Calc Energy",
+            "type": "number",
+            "x-config": "indexing.defaults.index_kev_max_calc",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The highest energy of the reflections the indexer calculates.",
+            "x-source": "form",
+            "x-unit": "keV",
+            "x-widget": "number",
+            "default": 17.2
+          },
+          "index_kev_max_test": {
+            "description": "The highest energy of the reflections the indexer tests (not replaced by the scan's energy).",
+            "exclusiveMinimum": 0,
+            "title": "Max Test Energy",
+            "type": "number",
+            "x-config": "indexing.defaults.index_kev_max_test",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The highest energy of the reflections the indexer tests.",
+            "x-source": "form",
+            "x-unit": "keV",
+            "x-widget": "number",
+            "default": 35.0
+          },
+          "index_angle_tolerance": {
+            "description": "The largest angle between a measured and a calculated reflection that still match.",
+            "minimum": 0,
+            "title": "Angle Tolerance",
+            "type": "number",
+            "x-config": "indexing.defaults.index_angle_tolerance",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The largest angle between a measured and a calculated reflection that still match.",
+            "x-source": "form",
+            "x-unit": "deg",
+            "x-widget": "number",
+            "default": 0.1
+          },
+          "index_h": {
+            "description": "The H of the Central HKL (one HKL widget of three integers): the reflection the indexer prefers at the centre of the cone (lauelab `hkl_prefer`).",
+            "title": "Central HKL: H",
+            "type": "integer",
+            "x-config": "indexing.defaults.index_hkl[0]",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The reflection the indexer prefers at the centre of the cone.",
+            "x-source": "form",
+            "x-widget": "hkl",
+            "default": 0
+          },
+          "index_k": {
+            "description": "The K of the Central HKL (one HKL widget of three integers): the reflection the indexer prefers at the centre of the cone (lauelab `hkl_prefer`).",
+            "title": "Central HKL: K",
+            "type": "integer",
+            "x-config": "indexing.defaults.index_hkl[1]",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The reflection the indexer prefers at the centre of the cone.",
+            "x-source": "form",
+            "x-widget": "hkl",
+            "default": 0
+          },
+          "index_l": {
+            "description": "The L of the Central HKL (one HKL widget of three integers): the reflection the indexer prefers at the centre of the cone (lauelab `hkl_prefer`).",
+            "title": "Central HKL: L",
+            "type": "integer",
+            "x-config": "indexing.defaults.index_hkl[2]",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The reflection the indexer prefers at the centre of the cone.",
+            "x-source": "form",
+            "x-widget": "hkl",
+            "default": 1
+          },
+          "index_cone": {
+            "description": "The opening angle of the cone around the Central HKL in which reflections are matched.",
+            "maximum": 180,
+            "minimum": 0,
+            "title": "Cone Angle",
+            "type": "number",
+            "x-config": "indexing.defaults.index_cone",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The opening angle of the cone around the Central HKL in which reflections are matched.",
+            "x-source": "form",
+            "x-unit": "deg",
+            "x-widget": "number",
+            "default": 72.0
+          },
+          "energy_unit": {
+            "description": "Stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Energy Unit",
+            "type": "string",
+            "x-config": "indexing.fixed.energy_unit",
+            "x-source": "config",
+            "default": "keV"
+          },
+          "exposure_unit": {
+            "description": "Stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Exposure Unit",
+            "type": "string",
+            "x-config": "indexing.fixed.exposure_unit",
+            "x-source": "config",
+            "default": "sec"
+          },
+          "cosmic_filter": {
+            "default": false,
+            "description": "Off: every new run stores `false`, and compute never filters.",
+            "readOnly": true,
+            "title": "Cosmic Filter",
+            "type": "boolean",
+            "x-source": "derived"
+          },
+          "reciprocal_lattice_unit": {
+            "description": "Stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Reciprocal Lattice Unit",
+            "type": "string",
+            "x-config": "indexing.fixed.reciprocal_lattice_unit",
+            "x-source": "config",
+            "default": "1/nm"
+          },
+          "lattice_parameters_unit": {
+            "description": "Stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Lattice Parameters Unit",
+            "type": "string",
+            "x-config": "indexing.fixed.lattice_parameters_unit",
+            "x-source": "config",
+            "default": "nm"
+          },
+          "output_xml": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Output XML file's name in the run directory, written when the run ends; not a name the run directory reserves. Empty: `output.xml`, which is stored.",
+            "title": "Output XML",
+            "x-config": "indexing.defaults.output_xml",
+            "x-group": "File Paths",
+            "x-hint": "The results file's name in the run's folder. Empty: output.xml.",
+            "x-source": "form",
+            "x-widget": "text",
+            "default": "output.xml"
+          },
+          "geometry_file": {
+            "description": "The detector geometry (XML); it must exist inside the roots.",
+            "title": "Geometry File",
+            "type": "string",
+            "x-config": "indexing.defaults.geometry_file",
+            "x-extensions": [".xml"],
+            "x-group": "File Paths",
+            "x-hint": "The detector geometry (XML).",
+            "x-source": "form",
+            "x-widget": "file",
+            "default": "/data/config/geoN_2022-03-29_14-15-05.xml"
+          },
+          "crystal_file": {
+            "description": "The crystal structure (XML); it must exist inside the roots.",
+            "title": "Crystal Structure File",
+            "type": "string",
+            "x-config": "indexing.defaults.crystal_file",
+            "x-extensions": [".xml"],
+            "x-group": "File Paths",
+            "x-hint": "The crystal structure (XML).",
+            "x-source": "form",
+            "x-widget": "file",
+            "default": "/data/config/Ni.xml"
+          },
+          "depth": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A depth that replaces every frame's; empty: each frame's own. A finite number, stored as typed (text); other text, NaN and infinity are refused.",
+            "title": "Depth",
+            "x-config": "indexing.defaults.depth",
+            "x-group": "Indexing Parameters",
+            "x-hint": "One depth for every frame. Empty: each frame's own.",
+            "x-placeholder": "Automatic",
+            "x-source": "form",
+            "x-unit": "µm",
+            "x-widget": "text",
+            "default": null
+          },
+          "beamline": {
+            "description": "Stored for the record: compute does not use it.",
+            "readOnly": true,
+            "title": "Beamline",
+            "type": "string",
+            "x-config": "indexing.fixed.beamline",
+            "x-source": "config",
+            "default": "34ID-E"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "description": "Who made the run, or a tag (at most 200 characters).",
+            "title": "Author",
+            "x-config": "indexing.defaults.author",
+            "x-group": "Identity",
+            "x-hint": "Who made the run, or a tag.",
+            "x-source": "form",
+            "x-widget": "text"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "description": "Free text about the run (at most 10,000 characters).",
+            "title": "Notes",
+            "x-config": "indexing.defaults.notes",
+            "x-group": "Notes",
+            "x-hint": "Free text about the run.",
+            "x-source": "form",
+            "x-widget": "textarea"
+          },
+          "algorithm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Not set by the portal: null.",
+            "readOnly": true,
+            "title": "Algorithm Version",
+            "x-source": "derived"
+          },
+          "backend": {
+            "const": "local",
+            "default": "local",
+            "description": "Always `local`: a live run is computed on the portal host.",
+            "readOnly": true,
+            "title": "Run on",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "computer_name": {
+            "description": "The host that created the run (its real name).",
+            "readOnly": true,
+            "title": "Computer",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "priority": {
+            "default": 0,
+            "description": "Always 0: a queue priority, unused.",
+            "readOnly": true,
+            "title": "Priority",
+            "type": "integer",
+            "x-source": "derived"
+          },
+          "submitted_at": {
+            "description": "When the run was created: aware UTC.",
+            "format": "date-time",
+            "readOnly": true,
+            "title": "Submitted",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "schema_id": {
+            "const": "lauego-live/v1",
+            "default": "lauego-live/v1",
+            "description": "The parameter schema, `lauego-live/v1`.",
+            "readOnly": true,
+            "title": "Schema",
+            "type": "string",
+            "x-source": "derived"
+          }
+        },
+        "required": [
+          "scan_number",
+          "reconstruction_id",
+          "input_path",
+          "output_path_template",
+          "filename_prefixes",
+          "threshold",
+          "threshold_ratio",
+          "max_rfactor",
+          "box_size",
+          "max_number",
+          "min_separation",
+          "peak_shape",
+          "depth_range",
+          "min_size",
+          "max_peaks",
+          "smooth",
+          "mask_file",
+          "index_kev_max_calc",
+          "index_kev_max_test",
+          "index_angle_tolerance",
+          "index_h",
+          "index_k",
+          "index_l",
+          "index_cone",
+          "output_xml",
+          "geometry_file",
+          "crystal_file",
+          "depth"
+        ],
+        "title": "LaueGoLiveParamsV1",
+        "type": "object",
+        "x-layout": [
+          {
+            "group": "Identity",
+            "fields": ["scan_number", "reconstruction_id", "author"]
+          },
+          {
+            "group": "File Paths",
+            "fields": [
+              "input_path",
+              "filename_prefixes",
+              "depth_range",
+              "geometry_file",
+              "crystal_file",
+              "output_path_template",
+              "output_xml"
+            ]
+          },
+          {
+            "group": "Peak Search Parameters",
+            "fields": [
+              "box_size",
+              "max_rfactor",
+              "threshold",
+              "threshold_ratio",
+              "min_size",
+              "min_separation",
+              "max_number",
+              "peak_shape",
+              "mask_file",
+              "smooth"
+            ]
+          },
+          {
+            "group": "Indexing Parameters",
+            "fields": [
+              "index_kev_max_calc",
+              "index_kev_max_test",
+              "index_angle_tolerance",
+              "index_h",
+              "index_k",
+              "index_l",
+              "index_cone",
+              "max_peaks",
+              "depth"
+            ]
+          },
+          {
+            "group": "Notes",
+            "fields": ["notes"]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "wire-live",
+      "title": "Live wire reconstruction",
+      "schema_id": "wire-live/v1",
+      "json_schema": {
+        "additionalProperties": false,
+        "description": "The parameters of one live wire reconstruction run (`wire-live/v1`): `wire/v1`'s, without the scan indices.",
+        "properties": {
+          "scan_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The scan the run reconstructs; empty for an unlinked run.",
+            "title": "Scan Number",
+            "x-group": "Identity",
+            "x-hint": "The scan the run reconstructs. Empty: an unlinked run.",
+            "x-source": "form",
+            "x-widget": "scan"
+          },
+          "input_path": {
+            "description": "The folder of the wire-scan files (from the scan's catalog or the source run).",
+            "title": "Folder Path",
+            "type": "string",
+            "x-group": "File Paths",
+            "x-hint": "The folder of the wire-scan files.",
+            "x-source": "form",
+            "x-widget": "folder"
+          },
+          "output_path_template": {
+            "description": "The run directory, with exactly one `%d`, the run ID. The default is `[output_templates] reconstruction` under `files.runs_root`, without the scan segment when the run has no scan.",
+            "title": "Output Path",
+            "type": "string",
+            "x-config": "output_templates.reconstruction",
+            "x-group": "File Paths",
+            "x-hint": "The run's folder; %d becomes the run ID.",
+            "x-source": "form",
+            "x-widget": "output-folder",
+            "default": "/data/runs/analysis/rec_%d/data"
+          },
+          "filename_prefixes": {
+            "description": "The arriving wire-scan files' name template: exactly one, with exactly one `%d`, each file's number; wildcards are allowed; at most 255 characters.",
+            "items": {
+              "maxLength": 255,
+              "type": "string"
+            },
+            "maxItems": 1,
+            "minItems": 1,
+            "title": "Filename",
+            "type": "array",
+            "x-group": "File Paths",
+            "x-hint": "The wire-scan files' name: %d is each file's number, * any text (e.g. Si_%d.h5).",
+            "x-placeholder": "Si_%d.h5",
+            "x-source": "form",
+            "x-widget": "filename-templates"
+          },
+          "geometry_file": {
+            "description": "The detector geometry (XML); it must exist inside the roots.",
+            "title": "Geometry File",
+            "type": "string",
+            "x-config": "reconstruction.defaults.geometry_file",
+            "x-extensions": [".xml"],
+            "x-group": "File Paths",
+            "x-hint": "The detector geometry (XML).",
+            "x-source": "form",
+            "x-widget": "file",
+            "default": "/data/config/geometry.xml"
+          },
+          "percent_brightest": {
+            "description": "The percentage of the brightest pixels that are reconstructed, in (0, 100].",
+            "exclusiveMinimum": 0,
+            "maximum": 100,
+            "title": "Intensity Percentile",
+            "type": "number",
+            "x-config": "reconstruction.defaults.percent_brightest",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The share of the brightest pixels that are reconstructed.",
+            "x-source": "form",
+            "x-unit": "%",
+            "x-widget": "number",
+            "default": 100.0
+          },
+          "wire_edges": {
+            "description": "The edge of the wire's shadow that is used.",
+            "enum": ["leading", "trailing", "both"],
+            "title": "Wire Edges",
+            "type": "string",
+            "x-config": "reconstruction.defaults.wire_edges",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The edge of the wire's shadow that is used.",
+            "x-options": [
+              {
+                "label": "Leading Edge",
+                "value": "leading"
+              },
+              {
+                "label": "Trailing Edge",
+                "value": "trailing"
+              },
+              {
+                "label": "Both Edges",
+                "value": "both"
+              }
+            ],
+            "x-source": "form",
+            "x-widget": "select",
+            "default": "leading"
+          },
+          "depth_start": {
+            "description": "The start of the reconstructed depth range.",
+            "title": "Depth Start",
+            "type": "number",
+            "x-config": "reconstruction.defaults.depth_start",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The start of the reconstructed depth range.",
+            "x-source": "form",
+            "x-unit": "µm",
+            "x-widget": "number",
+            "default": -50.0
+          },
+          "depth_end": {
+            "description": "The end of the reconstructed depth range.",
+            "title": "Depth End",
+            "type": "number",
+            "x-config": "reconstruction.defaults.depth_end",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The end of the reconstructed depth range.",
+            "x-source": "form",
+            "x-unit": "µm",
+            "x-widget": "number",
+            "default": 150.0
+          },
+          "depth_resolution": {
+            "description": "The depth step of the reconstruction.",
+            "exclusiveMinimum": 0,
+            "title": "Depth Resolution",
+            "type": "number",
+            "x-config": "reconstruction.defaults.depth_resolution",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The depth step of the reconstruction.",
+            "x-source": "form",
+            "x-unit": "µm",
+            "x-widget": "number",
+            "default": 1.0
+          },
+          "num_threads": {
+            "description": "The OpenMP threads of each reconstruction worker.",
+            "exclusiveMinimum": 0,
+            "readOnly": true,
+            "title": "Threads",
+            "type": "integer",
+            "x-config": "execution.num_threads",
+            "x-source": "config",
+            "default": 1
+          },
+          "memory_limit_mb": {
+            "description": "The stripe-buffer budget of each reconstruction worker.",
+            "exclusiveMinimum": 0,
+            "readOnly": true,
+            "title": "Memory Limit",
+            "type": "integer",
+            "x-config": "execution.memory_limit_mb",
+            "x-source": "config",
+            "x-unit": "MB",
+            "default": 512
+          },
+          "scan_points": {
+            "const": "",
+            "default": "",
+            "description": "Always empty for a live run: its inputs are the files that arrive while it runs (`arrivals.jsonl`), and the run row's scan points become their numbers when it ends. Kept so that `request.json` holds exactly the batch schema's keys.",
+            "readOnly": true,
+            "title": "Scan Indices",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "verbose": {
+            "description": "Stored for the record: compute does not use it.",
+            "minimum": 0,
+            "readOnly": true,
+            "title": "Verbose",
+            "type": "integer",
+            "x-config": "execution.verbose",
+            "x-source": "config",
+            "default": 1
+          },
+          "frame_skip": {
+            "default": 1,
+            "description": "The leading stored slices the reconstruction skips (reconstructN_cpu's `MULTI_IMAGE_SKIP`, 1); another value changes which wire positions are paired with each frame.",
+            "minimum": 0,
+            "title": "Frame Skip",
+            "type": "integer",
+            "x-config": "reconstruction.defaults.frame_skip",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The leading frames the reconstruction skips; another value changes which wire positions match each frame.",
+            "x-source": "form",
+            "x-unit": "slices",
+            "x-widget": "integer"
+          },
+          "wire_skip": {
+            "default": 1,
+            "description": "The leading wire-vector entries the reconstruction skips (reconstructN_cpu's `MULTI_IMAGE_SKIPV`, 1).",
+            "minimum": 0,
+            "title": "Wire Skip",
+            "type": "integer",
+            "x-config": "reconstruction.defaults.wire_skip",
+            "x-group": "Wire Reconstruction Parameters",
+            "x-hint": "The leading wire positions the reconstruction skips.",
+            "x-source": "form",
+            "x-unit": "entries",
+            "x-widget": "integer"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "description": "Who made the run, or a tag (at most 200 characters).",
+            "title": "Author",
+            "x-config": "reconstruction.defaults.author",
+            "x-group": "Identity",
+            "x-hint": "Who made the run, or a tag.",
+            "x-source": "form",
+            "x-widget": "text"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "description": "Free text about the run (at most 10,000 characters).",
+            "title": "Notes",
+            "x-config": "reconstruction.defaults.notes",
+            "x-group": "Notes",
+            "x-hint": "Free text about the run.",
+            "x-source": "form",
+            "x-widget": "textarea"
+          },
+          "algorithm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Not set by the portal: null.",
+            "readOnly": true,
+            "title": "Algorithm Version",
+            "x-source": "derived"
+          },
+          "backend": {
+            "const": "local",
+            "default": "local",
+            "description": "Always `local`: a live run is computed on the portal host.",
+            "readOnly": true,
+            "title": "Run on",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "computer_name": {
+            "description": "The host that created the run (its real name).",
+            "readOnly": true,
+            "title": "Computer",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "priority": {
+            "default": 0,
+            "description": "Always 0: a queue priority, unused.",
+            "readOnly": true,
+            "title": "Priority",
+            "type": "integer",
+            "x-source": "derived"
+          },
+          "submitted_at": {
+            "description": "When the run was created: aware UTC.",
+            "format": "date-time",
+            "readOnly": true,
+            "title": "Submitted",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "schema_id": {
+            "const": "wire-live/v1",
+            "default": "wire-live/v1",
+            "description": "The parameter schema, `wire-live/v1`.",
+            "readOnly": true,
+            "title": "Schema",
+            "type": "string",
+            "x-source": "derived"
+          }
+        },
+        "required": [
+          "scan_number",
+          "input_path",
+          "output_path_template",
+          "filename_prefixes",
+          "geometry_file",
+          "percent_brightest",
+          "wire_edges",
+          "depth_start",
+          "depth_end",
+          "depth_resolution"
+        ],
+        "title": "WireLiveParamsV1",
+        "type": "object",
+        "x-layout": [
+          {
+            "group": "Identity",
+            "fields": ["scan_number", "author"]
+          },
+          {
+            "group": "File Paths",
+            "fields": [
+              "input_path",
+              "filename_prefixes",
+              "output_path_template",
+              "geometry_file"
+            ]
+          },
+          {
+            "group": "Wire Reconstruction Parameters",
+            "fields": [
+              "depth_start",
+              "depth_end",
+              "depth_resolution",
+              "wire_edges",
+              "percent_brightest",
+              "frame_skip",
+              "wire_skip"
+            ]
+          },
+          {
+            "group": "Notes",
+            "fields": ["notes"]
+          }
+        ]
+      }
+    }
+  ]
+}

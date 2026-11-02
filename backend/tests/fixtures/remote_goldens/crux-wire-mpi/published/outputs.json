@@ -1,0 +1,2076 @@
+{
+ "reconstruction/points/wire_1.h5": {
+  "/": {
+   "attrs": {
+    "created": "<volatile>",
+    "format": "lauelab-reconstruction-point",
+    "lauelab_version": "<volatile>",
+    "version": 2
+   }
+  },
+  "entry1": {
+   "attrs": {}
+  },
+  "entry1/data": {
+   "attrs": {}
+  },
+  "entry1/data/data": {
+   "attrs": {
+    "signal": 1
+   },
+   "dtype": "uint16",
+   "shape": [
+    11,
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<u2",
+    "sha256": "ff4b24cb99538b384c9a815df94d406c6a603f7741654c326c0160a72f4eb734",
+    "shape": [
+     11,
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/depth": {
+   "attrs": {
+    "units": "micron"
+   },
+   "dtype": "float64",
+   "shape": [
+    11
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "6a172611a4708f8ddc9b4fd4325e6ef5ce5874e0f9665f86fcd418419570b78c",
+    "shape": [
+     11
+    ]
+   }
+  },
+  "entry1/detector": {
+   "attrs": {}
+  },
+  "entry1/detector/ID": {
+   "attrs": {},
+   "dtype": "|S15",
+   "shape": [
+    1
+   ],
+   "value": [
+    "PE1621 723-3335"
+   ]
+  },
+  "entry1/detector/Nx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "cbfd218787df784c39fbc4f4fad92a8f28e2a880430c210b6d0d8dc133c07e66",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/Ny": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "cbfd218787df784c39fbc4f4fad92a8f28e2a880430c210b6d0d8dc133c07e66",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/binx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "c31425b44a7ed682a3356bf6820141e1584a15c43b6d6793f552e5d4621586f7",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/biny": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "c31425b44a7ed682a3356bf6820141e1584a15c43b6d6793f552e5d4621586f7",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/endx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "51593c382f4fdfe38d472575c1f2bc766a59ae38e5393f5e25462ebdc56dbbed",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/endy": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "51593c382f4fdfe38d472575c1f2bc766a59ae38e5393f5e25462ebdc56dbbed",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/exposure": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "6c3c396ed6b5c36dcae172271f462051b1266b851e92df3deea8ac65478fd712",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/startx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/starty": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction": {
+   "attrs": {}
+  },
+  "entry1/reconstruction/computed_depth_intensity": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    11
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "41f9164512e41c83271f00fc2382fd72b145fdc92814b9839b8ed7d0b5544434",
+    "shape": [
+     11
+    ]
+   }
+  },
+  "entry1/reconstruction/depth_intensity": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    11
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "e72d77e6084f4c89c4861fb60d1653e63f9bf9903c067c15fee51ba9f419ea75",
+    "shape": [
+     11
+    ]
+   }
+  },
+  "entry1/reconstruction/depth_range": {
+   "attrs": {
+    "units": "micron"
+   },
+   "dtype": "float64",
+   "shape": [
+    2
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "9cc6d7eb9fab333b22e8a406068f5777f92aa01b351f3f794407c7795be3ba8f",
+    "shape": [
+     2
+    ]
+   }
+  },
+  "entry1/reconstruction/detector": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/elapsed_seconds": {
+   "attrs": {
+    "units": "s"
+   },
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": "<volatile>"
+  },
+  "entry1/reconstruction/first_raw": {
+   "attrs": {},
+   "dtype": "uint16",
+   "shape": [
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<u2",
+    "sha256": "0d5e74a33b6286ffff86819c45c5490c8d22f315718d930378210e5ffa49be7e",
+    "shape": [
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/reconstruction/frame_skip": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/geometry_path": {
+   "attrs": {},
+   "dtype": "|S<length of a path>",
+   "shape": [
+    1
+   ],
+   "value": [
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml"
+   ]
+  },
+  "entry1/reconstruction/geometry_xml": {
+   "attrs": {},
+   "dtype": "|S2290",
+   "shape": [
+    1
+   ],
+   "value": [
+    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n\n<geoN xmlns=\"http:example.com/geoN\">\n\t<dateWritten>Maon, Jan 1, 2020</dateWritten>\n\t<timeWritten>12:00:00 (-5)</timeWritten>\n\t<EPOCH start=\"midnight Jan 1, 1904\" unit=\"sec\">0</EPOCH>\n\n\t<Sample>\n\t\t<Origin unit=\"micron\">0 0 0</Origin>\t<!-- sample origin in raw positioner units (micron) -->\n\t\t<R unit=\"radian\">-0.006 0.006 -1.8e-05</R>\n\t</Sample>\n\n\t<Detectors Ndetectors=\"3\">\t\t\t<!-- Ndetectors, number of detectors in use, must be <= MAX_Ndetectors -->\n\t\t<Detector N=\"0\">\n\t\t\t<Npixels>2048 2048</Npixels>\t\t<!-- Nx,Ny is number of un-binned pixels in full detector -->\n\t\t\t<size unit=\"mm\">409.6 409.6</size>\t<!-- sizeX,sizeY otuside size of full detector -->\n\t\t\t<R unit=\"radian\">-1.20127231 -1.21381742 -1.21879073</R>\t\t<!-- Rotation and translation vector -->\n\t\t\t<P unit=\"mm\">28.720 3.010 513.097</P>\n\t\t\t<timeMeasured>Tue, Mar 29, 2022, 14:15:05 (-5)</timeMeasured>\t<!-- when this geometry was calculated -->\n\t\t\t<note>Optimized using CalibrationListOrange0</note>\n\t\t\t<ID>PE1621 723-3335</ID>\t\t\t\t<!-- unique detector ID -->\n\t\t</Detector>\n\t\t<Detector N=\"1\">\n\t\t\t<Npixels>1024 1024</Npixels>\n\t\t\t<size unit=\"mm\">204.8 204.8</size>\n\t\t\t<R unit=\"radian\">-1.74964147 -0.72538764 -1.7707796</R>\n\t\t\t<P unit=\"mm\">-144.183 26.808 402.341</P>\n\t\t\t<timeMeasured>Tue, Feb 26, 2019, 12:29:06 (-6)</timeMeasured>\n\t\t\t<note>Optimized using CalibrationListYellow1</note>\n\t\t\t<ID>PE0822 883-4841</ID>\n\t\t</Detector>\n\t\t<Detector N=\"2\">\n\t\t\t<Npixels>1024 1024</Npixels>\n\t\t\t<size unit=\"mm\">204.8 204.8</size>\n\t\t\t<R unit=\"radian\">-0.60682911 -1.49103705 -0.61968032</R>\n\t\t\t<P unit=\"mm\">-143.358 31.515 399.770</P>\n\t\t\t<timeMeasured>Tue, Oct 29, 2019, 14:10:51 (-5)</timeMeasured>\n\t\t\t<note>Optimized using CalibrationListPurple2</note>\n\t\t\t<ID>PE0822 883-4843</ID>\n\t\t</Detector>\n\t</Detectors>\n\n\t<Wire>\n\t\t<dia unit=\"micron\">101.5</dia>\n\t\t<Knife>0</Knife>\t\t\t\t<!-- true if wire on a knife edge, false for free-standing wire -->\n\t\t<Origin unit=\"micron\">0 0 0</Origin>\t\t<!-- wire origin in raw positioner frame (micron) -->\n\t\t<R unit=\"radian\">0.0045 -0.00684 -3.375e-05</R>\n\t\t<Axis>0.99999608 0 0.0028000002</Axis>\t\t<!-- unit vector along wire axis, usually close to (1,0,0) -->\n\t\t<F unit=\"micron\">0</F>\t\t<!-- F of wire for a constant F wire scan (raw positioner units) -->\n\t</Wire>\n</geoN>\n"
+   ]
+  },
+  "entry1/reconstruction/manifest_index": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/memory_limit_mb": {
+   "attrs": {
+    "units": "MiB"
+   },
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "bf5e8ffa51a9e748985800c1d3d7f1a2a6ae7435136593ca8d9637e3f87c699c",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/native_version": {
+   "attrs": {},
+   "dtype": "|S5",
+   "shape": [
+    1
+   ],
+   "value": "<volatile>"
+  },
+  "entry1/reconstruction/num_threads": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/percent_brightest": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "00754a39f7de30495780d4c6242f680316f56bf4bf735c3681b3ac1d14f1512e",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/point_id": {
+   "attrs": {},
+   "dtype": "|S6",
+   "shape": [
+    1
+   ],
+   "value": [
+    "wire_1"
+   ]
+  },
+  "entry1/reconstruction/raw_slices": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    2
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "f35382f62e255dd4f8f1a16ca9d39c335793c99c570619c9bed3d6c5f86bc7b8",
+    "shape": [
+     2
+    ]
+   }
+  },
+  "entry1/reconstruction/resolution": {
+   "attrs": {
+    "units": "micron"
+   },
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "a7ca1349517e14c0690dccc98bf9a515019b2018116a3191f6c7d53831c0432a",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/rows_per_stripe": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "8d71b3faab8201459ad37ef499beb336ba88bdcfa0f51ee6f0a46ec3192d750a",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/source_mtime_ns": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    1
+   ],
+   "value": "<volatile>"
+  },
+  "entry1/reconstruction/source_path": {
+   "attrs": {},
+   "dtype": "|S<length of a path>",
+   "shape": [
+    1
+   ],
+   "value": [
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/wire/wire_1.h5"
+   ]
+  },
+  "entry1/reconstruction/source_size": {
+   "attrs": {
+    "units": "bytes"
+   },
+   "dtype": "int64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "ff36fd12a2034e2faf28f84dd46870654c55bd0fd598cdebef929748ac0678d6",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/sum_raw": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "be880877a2f187e73c0205af28c01ecfc2b01e45d4f4589ee45c29c67e8d3aad",
+    "shape": [
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/reconstruction/sum_reconstructed": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "b7a444e88c25e53cec8f392f8a0be1c5d4bc38ac69cadf45b1a069cb7db8a657",
+    "shape": [
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/reconstruction/wire_edge": {
+   "attrs": {},
+   "dtype": "|S7",
+   "shape": [
+    1
+   ],
+   "value": [
+    "leading"
+   ]
+  },
+  "entry1/reconstruction/wire_skip": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample": {
+   "attrs": {}
+  },
+  "entry1/sample/incident_energy": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "055e7dd5bc7591c950c5683cab13f99a935400b719798b39b6152f8c1bf71555",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample/sampleX": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "6c3c396ed6b5c36dcae172271f462051b1266b851e92df3deea8ac65478fd712",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample/sampleY": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "3f710ac088db33363087de2b9a657541fe5447821debaa9fe5cbd538eb1a5f29",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample/sampleZ": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "161f4c0b1a18a0501127332c387e782b5acc10c6c7a9f7e494c1e3394c49bad5",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/scanNum": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  }
+ },
+ "reconstruction/points/wire_2.h5": {
+  "/": {
+   "attrs": {
+    "created": "<volatile>",
+    "format": "lauelab-reconstruction-point",
+    "lauelab_version": "<volatile>",
+    "version": 2
+   }
+  },
+  "entry1": {
+   "attrs": {}
+  },
+  "entry1/data": {
+   "attrs": {}
+  },
+  "entry1/data/data": {
+   "attrs": {
+    "signal": 1
+   },
+   "dtype": "uint16",
+   "shape": [
+    11,
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<u2",
+    "sha256": "ac8116bbfdfe5534b46df86e698740040e600f9351ed39029224564a5ddc7fbe",
+    "shape": [
+     11,
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/depth": {
+   "attrs": {
+    "units": "micron"
+   },
+   "dtype": "float64",
+   "shape": [
+    11
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "6a172611a4708f8ddc9b4fd4325e6ef5ce5874e0f9665f86fcd418419570b78c",
+    "shape": [
+     11
+    ]
+   }
+  },
+  "entry1/detector": {
+   "attrs": {}
+  },
+  "entry1/detector/ID": {
+   "attrs": {},
+   "dtype": "|S15",
+   "shape": [
+    1
+   ],
+   "value": [
+    "PE1621 723-3335"
+   ]
+  },
+  "entry1/detector/Nx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "cbfd218787df784c39fbc4f4fad92a8f28e2a880430c210b6d0d8dc133c07e66",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/Ny": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "cbfd218787df784c39fbc4f4fad92a8f28e2a880430c210b6d0d8dc133c07e66",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/binx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "c31425b44a7ed682a3356bf6820141e1584a15c43b6d6793f552e5d4621586f7",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/biny": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "c31425b44a7ed682a3356bf6820141e1584a15c43b6d6793f552e5d4621586f7",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/endx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "51593c382f4fdfe38d472575c1f2bc766a59ae38e5393f5e25462ebdc56dbbed",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/endy": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "51593c382f4fdfe38d472575c1f2bc766a59ae38e5393f5e25462ebdc56dbbed",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/exposure": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "6c3c396ed6b5c36dcae172271f462051b1266b851e92df3deea8ac65478fd712",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/startx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/starty": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction": {
+   "attrs": {}
+  },
+  "entry1/reconstruction/computed_depth_intensity": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    11
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "1350dab8ae9ad74e46838c3ef083d2425153f0ecf261f946816310c30c49c68d",
+    "shape": [
+     11
+    ]
+   }
+  },
+  "entry1/reconstruction/depth_intensity": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    11
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "ae5fa4a42ab8f01482f0db1886780a615290c5a9a4240446fc393b91ef32f8c2",
+    "shape": [
+     11
+    ]
+   }
+  },
+  "entry1/reconstruction/depth_range": {
+   "attrs": {
+    "units": "micron"
+   },
+   "dtype": "float64",
+   "shape": [
+    2
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "9cc6d7eb9fab333b22e8a406068f5777f92aa01b351f3f794407c7795be3ba8f",
+    "shape": [
+     2
+    ]
+   }
+  },
+  "entry1/reconstruction/detector": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/elapsed_seconds": {
+   "attrs": {
+    "units": "s"
+   },
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": "<volatile>"
+  },
+  "entry1/reconstruction/first_raw": {
+   "attrs": {},
+   "dtype": "uint16",
+   "shape": [
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<u2",
+    "sha256": "d2655a44f82f0d225482882b34ee9f0c80c7e21edc380c02c413a144679b7bbe",
+    "shape": [
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/reconstruction/frame_skip": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/geometry_path": {
+   "attrs": {},
+   "dtype": "|S<length of a path>",
+   "shape": [
+    1
+   ],
+   "value": [
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml"
+   ]
+  },
+  "entry1/reconstruction/geometry_xml": {
+   "attrs": {},
+   "dtype": "|S2290",
+   "shape": [
+    1
+   ],
+   "value": [
+    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n\n<geoN xmlns=\"http:example.com/geoN\">\n\t<dateWritten>Maon, Jan 1, 2020</dateWritten>\n\t<timeWritten>12:00:00 (-5)</timeWritten>\n\t<EPOCH start=\"midnight Jan 1, 1904\" unit=\"sec\">0</EPOCH>\n\n\t<Sample>\n\t\t<Origin unit=\"micron\">0 0 0</Origin>\t<!-- sample origin in raw positioner units (micron) -->\n\t\t<R unit=\"radian\">-0.006 0.006 -1.8e-05</R>\n\t</Sample>\n\n\t<Detectors Ndetectors=\"3\">\t\t\t<!-- Ndetectors, number of detectors in use, must be <= MAX_Ndetectors -->\n\t\t<Detector N=\"0\">\n\t\t\t<Npixels>2048 2048</Npixels>\t\t<!-- Nx,Ny is number of un-binned pixels in full detector -->\n\t\t\t<size unit=\"mm\">409.6 409.6</size>\t<!-- sizeX,sizeY otuside size of full detector -->\n\t\t\t<R unit=\"radian\">-1.20127231 -1.21381742 -1.21879073</R>\t\t<!-- Rotation and translation vector -->\n\t\t\t<P unit=\"mm\">28.720 3.010 513.097</P>\n\t\t\t<timeMeasured>Tue, Mar 29, 2022, 14:15:05 (-5)</timeMeasured>\t<!-- when this geometry was calculated -->\n\t\t\t<note>Optimized using CalibrationListOrange0</note>\n\t\t\t<ID>PE1621 723-3335</ID>\t\t\t\t<!-- unique detector ID -->\n\t\t</Detector>\n\t\t<Detector N=\"1\">\n\t\t\t<Npixels>1024 1024</Npixels>\n\t\t\t<size unit=\"mm\">204.8 204.8</size>\n\t\t\t<R unit=\"radian\">-1.74964147 -0.72538764 -1.7707796</R>\n\t\t\t<P unit=\"mm\">-144.183 26.808 402.341</P>\n\t\t\t<timeMeasured>Tue, Feb 26, 2019, 12:29:06 (-6)</timeMeasured>\n\t\t\t<note>Optimized using CalibrationListYellow1</note>\n\t\t\t<ID>PE0822 883-4841</ID>\n\t\t</Detector>\n\t\t<Detector N=\"2\">\n\t\t\t<Npixels>1024 1024</Npixels>\n\t\t\t<size unit=\"mm\">204.8 204.8</size>\n\t\t\t<R unit=\"radian\">-0.60682911 -1.49103705 -0.61968032</R>\n\t\t\t<P unit=\"mm\">-143.358 31.515 399.770</P>\n\t\t\t<timeMeasured>Tue, Oct 29, 2019, 14:10:51 (-5)</timeMeasured>\n\t\t\t<note>Optimized using CalibrationListPurple2</note>\n\t\t\t<ID>PE0822 883-4843</ID>\n\t\t</Detector>\n\t</Detectors>\n\n\t<Wire>\n\t\t<dia unit=\"micron\">101.5</dia>\n\t\t<Knife>0</Knife>\t\t\t\t<!-- true if wire on a knife edge, false for free-standing wire -->\n\t\t<Origin unit=\"micron\">0 0 0</Origin>\t\t<!-- wire origin in raw positioner frame (micron) -->\n\t\t<R unit=\"radian\">0.0045 -0.00684 -3.375e-05</R>\n\t\t<Axis>0.99999608 0 0.0028000002</Axis>\t\t<!-- unit vector along wire axis, usually close to (1,0,0) -->\n\t\t<F unit=\"micron\">0</F>\t\t<!-- F of wire for a constant F wire scan (raw positioner units) -->\n\t</Wire>\n</geoN>\n"
+   ]
+  },
+  "entry1/reconstruction/manifest_index": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/memory_limit_mb": {
+   "attrs": {
+    "units": "MiB"
+   },
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "bf5e8ffa51a9e748985800c1d3d7f1a2a6ae7435136593ca8d9637e3f87c699c",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/native_version": {
+   "attrs": {},
+   "dtype": "|S5",
+   "shape": [
+    1
+   ],
+   "value": "<volatile>"
+  },
+  "entry1/reconstruction/num_threads": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/percent_brightest": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "00754a39f7de30495780d4c6242f680316f56bf4bf735c3681b3ac1d14f1512e",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/point_id": {
+   "attrs": {},
+   "dtype": "|S6",
+   "shape": [
+    1
+   ],
+   "value": [
+    "wire_2"
+   ]
+  },
+  "entry1/reconstruction/raw_slices": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    2
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "f35382f62e255dd4f8f1a16ca9d39c335793c99c570619c9bed3d6c5f86bc7b8",
+    "shape": [
+     2
+    ]
+   }
+  },
+  "entry1/reconstruction/resolution": {
+   "attrs": {
+    "units": "micron"
+   },
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "a7ca1349517e14c0690dccc98bf9a515019b2018116a3191f6c7d53831c0432a",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/rows_per_stripe": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "8d71b3faab8201459ad37ef499beb336ba88bdcfa0f51ee6f0a46ec3192d750a",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/source_mtime_ns": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    1
+   ],
+   "value": "<volatile>"
+  },
+  "entry1/reconstruction/source_path": {
+   "attrs": {},
+   "dtype": "|S<length of a path>",
+   "shape": [
+    1
+   ],
+   "value": [
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/wire/wire_2.h5"
+   ]
+  },
+  "entry1/reconstruction/source_size": {
+   "attrs": {
+    "units": "bytes"
+   },
+   "dtype": "int64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "ff36fd12a2034e2faf28f84dd46870654c55bd0fd598cdebef929748ac0678d6",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/sum_raw": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "ff2838d51142aee83f18408c5de7ac98245ba3b5c5b296090ea3774e56285c20",
+    "shape": [
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/reconstruction/sum_reconstructed": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "6b02a202777b6ac03d0a8d7ed05c3033c887b29ca72f8a71023fb122be8188ad",
+    "shape": [
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/reconstruction/wire_edge": {
+   "attrs": {},
+   "dtype": "|S7",
+   "shape": [
+    1
+   ],
+   "value": [
+    "leading"
+   ]
+  },
+  "entry1/reconstruction/wire_skip": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample": {
+   "attrs": {}
+  },
+  "entry1/sample/incident_energy": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "055e7dd5bc7591c950c5683cab13f99a935400b719798b39b6152f8c1bf71555",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample/sampleX": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "6c3c396ed6b5c36dcae172271f462051b1266b851e92df3deea8ac65478fd712",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample/sampleY": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "3f710ac088db33363087de2b9a657541fe5447821debaa9fe5cbd538eb1a5f29",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample/sampleZ": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "161f4c0b1a18a0501127332c387e782b5acc10c6c7a9f7e494c1e3394c49bad5",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/scanNum": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  }
+ },
+ "reconstruction/points/wire_3.h5": {
+  "/": {
+   "attrs": {
+    "created": "<volatile>",
+    "format": "lauelab-reconstruction-point",
+    "lauelab_version": "<volatile>",
+    "version": 2
+   }
+  },
+  "entry1": {
+   "attrs": {}
+  },
+  "entry1/data": {
+   "attrs": {}
+  },
+  "entry1/data/data": {
+   "attrs": {
+    "signal": 1
+   },
+   "dtype": "uint16",
+   "shape": [
+    11,
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<u2",
+    "sha256": "6a541d3a398f0adc585a8b566be274c5e93d9193f280861352d8b93b70c3610a",
+    "shape": [
+     11,
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/depth": {
+   "attrs": {
+    "units": "micron"
+   },
+   "dtype": "float64",
+   "shape": [
+    11
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "6a172611a4708f8ddc9b4fd4325e6ef5ce5874e0f9665f86fcd418419570b78c",
+    "shape": [
+     11
+    ]
+   }
+  },
+  "entry1/detector": {
+   "attrs": {}
+  },
+  "entry1/detector/ID": {
+   "attrs": {},
+   "dtype": "|S15",
+   "shape": [
+    1
+   ],
+   "value": [
+    "PE1621 723-3335"
+   ]
+  },
+  "entry1/detector/Nx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "cbfd218787df784c39fbc4f4fad92a8f28e2a880430c210b6d0d8dc133c07e66",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/Ny": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "cbfd218787df784c39fbc4f4fad92a8f28e2a880430c210b6d0d8dc133c07e66",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/binx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "c31425b44a7ed682a3356bf6820141e1584a15c43b6d6793f552e5d4621586f7",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/biny": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "c31425b44a7ed682a3356bf6820141e1584a15c43b6d6793f552e5d4621586f7",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/endx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "51593c382f4fdfe38d472575c1f2bc766a59ae38e5393f5e25462ebdc56dbbed",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/endy": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "51593c382f4fdfe38d472575c1f2bc766a59ae38e5393f5e25462ebdc56dbbed",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/exposure": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "6c3c396ed6b5c36dcae172271f462051b1266b851e92df3deea8ac65478fd712",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/startx": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/detector/starty": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction": {
+   "attrs": {}
+  },
+  "entry1/reconstruction/computed_depth_intensity": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    11
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "1d2c4094a1dea9ab40e323fd43ee51cd700b95814dce1b6db8f1358ce75a32ee",
+    "shape": [
+     11
+    ]
+   }
+  },
+  "entry1/reconstruction/depth_intensity": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    11
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "8bef17ee8e21a6fb4f864ba624a51d12bf8cbe6cb5d8de42b06df5c641282337",
+    "shape": [
+     11
+    ]
+   }
+  },
+  "entry1/reconstruction/depth_range": {
+   "attrs": {
+    "units": "micron"
+   },
+   "dtype": "float64",
+   "shape": [
+    2
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "9cc6d7eb9fab333b22e8a406068f5777f92aa01b351f3f794407c7795be3ba8f",
+    "shape": [
+     2
+    ]
+   }
+  },
+  "entry1/reconstruction/detector": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/elapsed_seconds": {
+   "attrs": {
+    "units": "s"
+   },
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": "<volatile>"
+  },
+  "entry1/reconstruction/first_raw": {
+   "attrs": {},
+   "dtype": "uint16",
+   "shape": [
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<u2",
+    "sha256": "00d7833dd41fb0dd4850a1a0f75df59fb8a6eea6f9215e4cdc696f87f7d374a4",
+    "shape": [
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/reconstruction/frame_skip": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/geometry_path": {
+   "attrs": {},
+   "dtype": "|S<length of a path>",
+   "shape": [
+    1
+   ],
+   "value": [
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml"
+   ]
+  },
+  "entry1/reconstruction/geometry_xml": {
+   "attrs": {},
+   "dtype": "|S2290",
+   "shape": [
+    1
+   ],
+   "value": [
+    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n\n<geoN xmlns=\"http:example.com/geoN\">\n\t<dateWritten>Maon, Jan 1, 2020</dateWritten>\n\t<timeWritten>12:00:00 (-5)</timeWritten>\n\t<EPOCH start=\"midnight Jan 1, 1904\" unit=\"sec\">0</EPOCH>\n\n\t<Sample>\n\t\t<Origin unit=\"micron\">0 0 0</Origin>\t<!-- sample origin in raw positioner units (micron) -->\n\t\t<R unit=\"radian\">-0.006 0.006 -1.8e-05</R>\n\t</Sample>\n\n\t<Detectors Ndetectors=\"3\">\t\t\t<!-- Ndetectors, number of detectors in use, must be <= MAX_Ndetectors -->\n\t\t<Detector N=\"0\">\n\t\t\t<Npixels>2048 2048</Npixels>\t\t<!-- Nx,Ny is number of un-binned pixels in full detector -->\n\t\t\t<size unit=\"mm\">409.6 409.6</size>\t<!-- sizeX,sizeY otuside size of full detector -->\n\t\t\t<R unit=\"radian\">-1.20127231 -1.21381742 -1.21879073</R>\t\t<!-- Rotation and translation vector -->\n\t\t\t<P unit=\"mm\">28.720 3.010 513.097</P>\n\t\t\t<timeMeasured>Tue, Mar 29, 2022, 14:15:05 (-5)</timeMeasured>\t<!-- when this geometry was calculated -->\n\t\t\t<note>Optimized using CalibrationListOrange0</note>\n\t\t\t<ID>PE1621 723-3335</ID>\t\t\t\t<!-- unique detector ID -->\n\t\t</Detector>\n\t\t<Detector N=\"1\">\n\t\t\t<Npixels>1024 1024</Npixels>\n\t\t\t<size unit=\"mm\">204.8 204.8</size>\n\t\t\t<R unit=\"radian\">-1.74964147 -0.72538764 -1.7707796</R>\n\t\t\t<P unit=\"mm\">-144.183 26.808 402.341</P>\n\t\t\t<timeMeasured>Tue, Feb 26, 2019, 12:29:06 (-6)</timeMeasured>\n\t\t\t<note>Optimized using CalibrationListYellow1</note>\n\t\t\t<ID>PE0822 883-4841</ID>\n\t\t</Detector>\n\t\t<Detector N=\"2\">\n\t\t\t<Npixels>1024 1024</Npixels>\n\t\t\t<size unit=\"mm\">204.8 204.8</size>\n\t\t\t<R unit=\"radian\">-0.60682911 -1.49103705 -0.61968032</R>\n\t\t\t<P unit=\"mm\">-143.358 31.515 399.770</P>\n\t\t\t<timeMeasured>Tue, Oct 29, 2019, 14:10:51 (-5)</timeMeasured>\n\t\t\t<note>Optimized using CalibrationListPurple2</note>\n\t\t\t<ID>PE0822 883-4843</ID>\n\t\t</Detector>\n\t</Detectors>\n\n\t<Wire>\n\t\t<dia unit=\"micron\">101.5</dia>\n\t\t<Knife>0</Knife>\t\t\t\t<!-- true if wire on a knife edge, false for free-standing wire -->\n\t\t<Origin unit=\"micron\">0 0 0</Origin>\t\t<!-- wire origin in raw positioner frame (micron) -->\n\t\t<R unit=\"radian\">0.0045 -0.00684 -3.375e-05</R>\n\t\t<Axis>0.99999608 0 0.0028000002</Axis>\t\t<!-- unit vector along wire axis, usually close to (1,0,0) -->\n\t\t<F unit=\"micron\">0</F>\t\t<!-- F of wire for a constant F wire scan (raw positioner units) -->\n\t</Wire>\n</geoN>\n"
+   ]
+  },
+  "entry1/reconstruction/manifest_index": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "26b25d457597a7b0463f9620f666dd10aa2c4373a505967c7c8d70922a2d6ece",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/memory_limit_mb": {
+   "attrs": {
+    "units": "MiB"
+   },
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "bf5e8ffa51a9e748985800c1d3d7f1a2a6ae7435136593ca8d9637e3f87c699c",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/native_version": {
+   "attrs": {},
+   "dtype": "|S5",
+   "shape": [
+    1
+   ],
+   "value": "<volatile>"
+  },
+  "entry1/reconstruction/num_threads": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/percent_brightest": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "00754a39f7de30495780d4c6242f680316f56bf4bf735c3681b3ac1d14f1512e",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/point_id": {
+   "attrs": {},
+   "dtype": "|S6",
+   "shape": [
+    1
+   ],
+   "value": [
+    "wire_3"
+   ]
+  },
+  "entry1/reconstruction/raw_slices": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    2
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "f35382f62e255dd4f8f1a16ca9d39c335793c99c570619c9bed3d6c5f86bc7b8",
+    "shape": [
+     2
+    ]
+   }
+  },
+  "entry1/reconstruction/resolution": {
+   "attrs": {
+    "units": "micron"
+   },
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "a7ca1349517e14c0690dccc98bf9a515019b2018116a3191f6c7d53831c0432a",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/rows_per_stripe": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "8d71b3faab8201459ad37ef499beb336ba88bdcfa0f51ee6f0a46ec3192d750a",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/source_mtime_ns": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    1
+   ],
+   "value": "<volatile>"
+  },
+  "entry1/reconstruction/source_path": {
+   "attrs": {},
+   "dtype": "|S<length of a path>",
+   "shape": [
+    1
+   ],
+   "value": [
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/wire/wire_3.h5"
+   ]
+  },
+  "entry1/reconstruction/source_size": {
+   "attrs": {
+    "units": "bytes"
+   },
+   "dtype": "int64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "ff36fd12a2034e2faf28f84dd46870654c55bd0fd598cdebef929748ac0678d6",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/reconstruction/sum_raw": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "40b92edc2c1056e352c499c5451925341412983561c30ca2b0c68f40238e9432",
+    "shape": [
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/reconstruction/sum_reconstructed": {
+   "attrs": {},
+   "dtype": "int64",
+   "shape": [
+    32,
+    32
+   ],
+   "value": {
+    "dtype": "<i8",
+    "sha256": "228190d0cb098c122d996843c0009bf308aa98ea1b6b09b6be05e74479ff6d83",
+    "shape": [
+     32,
+     32
+    ]
+   }
+  },
+  "entry1/reconstruction/wire_edge": {
+   "attrs": {},
+   "dtype": "|S7",
+   "shape": [
+    1
+   ],
+   "value": [
+    "leading"
+   ]
+  },
+  "entry1/reconstruction/wire_skip": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample": {
+   "attrs": {}
+  },
+  "entry1/sample/incident_energy": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "055e7dd5bc7591c950c5683cab13f99a935400b719798b39b6152f8c1bf71555",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample/sampleX": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "6c3c396ed6b5c36dcae172271f462051b1266b851e92df3deea8ac65478fd712",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample/sampleY": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "3f710ac088db33363087de2b9a657541fe5447821debaa9fe5cbd538eb1a5f29",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/sample/sampleZ": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "161f4c0b1a18a0501127332c387e782b5acc10c6c7a9f7e494c1e3394c49bad5",
+    "shape": [
+     1
+    ]
+   }
+  },
+  "entry1/scanNum": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    1
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450",
+    "shape": [
+     1
+    ]
+   }
+  }
+ },
+ "reconstruction/scan.h5": {
+  "/": {
+   "attrs": {
+    "created": "<volatile>",
+    "format": "lauelab-reconstruction-scan",
+    "lauelab_version": "<volatile>",
+    "native_version": "<volatile>",
+    "program": "lauelab",
+    "status": 1,
+    "version": 2
+   }
+  },
+  "geometry": {
+   "attrs": {
+    "path": "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/config/geoN_2022-03-29_14-15-05.xml"
+   }
+  },
+  "geometry/xml": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [],
+   "value": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n\n<geoN xmlns=\"http:example.com/geoN\">\n\t<dateWritten>Maon, Jan 1, 2020</dateWritten>\n\t<timeWritten>12:00:00 (-5)</timeWritten>\n\t<EPOCH start=\"midnight Jan 1, 1904\" unit=\"sec\">0</EPOCH>\n\n\t<Sample>\n\t\t<Origin unit=\"micron\">0 0 0</Origin>\t<!-- sample origin in raw positioner units (micron) -->\n\t\t<R unit=\"radian\">-0.006 0.006 -1.8e-05</R>\n\t</Sample>\n\n\t<Detectors Ndetectors=\"3\">\t\t\t<!-- Ndetectors, number of detectors in use, must be <= MAX_Ndetectors -->\n\t\t<Detector N=\"0\">\n\t\t\t<Npixels>2048 2048</Npixels>\t\t<!-- Nx,Ny is number of un-binned pixels in full detector -->\n\t\t\t<size unit=\"mm\">409.6 409.6</size>\t<!-- sizeX,sizeY otuside size of full detector -->\n\t\t\t<R unit=\"radian\">-1.20127231 -1.21381742 -1.21879073</R>\t\t<!-- Rotation and translation vector -->\n\t\t\t<P unit=\"mm\">28.720 3.010 513.097</P>\n\t\t\t<timeMeasured>Tue, Mar 29, 2022, 14:15:05 (-5)</timeMeasured>\t<!-- when this geometry was calculated -->\n\t\t\t<note>Optimized using CalibrationListOrange0</note>\n\t\t\t<ID>PE1621 723-3335</ID>\t\t\t\t<!-- unique detector ID -->\n\t\t</Detector>\n\t\t<Detector N=\"1\">\n\t\t\t<Npixels>1024 1024</Npixels>\n\t\t\t<size unit=\"mm\">204.8 204.8</size>\n\t\t\t<R unit=\"radian\">-1.74964147 -0.72538764 -1.7707796</R>\n\t\t\t<P unit=\"mm\">-144.183 26.808 402.341</P>\n\t\t\t<timeMeasured>Tue, Feb 26, 2019, 12:29:06 (-6)</timeMeasured>\n\t\t\t<note>Optimized using CalibrationListYellow1</note>\n\t\t\t<ID>PE0822 883-4841</ID>\n\t\t</Detector>\n\t\t<Detector N=\"2\">\n\t\t\t<Npixels>1024 1024</Npixels>\n\t\t\t<size unit=\"mm\">204.8 204.8</size>\n\t\t\t<R unit=\"radian\">-0.60682911 -1.49103705 -0.61968032</R>\n\t\t\t<P unit=\"mm\">-143.358 31.515 399.770</P>\n\t\t\t<timeMeasured>Tue, Oct 29, 2019, 14:10:51 (-5)</timeMeasured>\n\t\t\t<note>Optimized using CalibrationListPurple2</note>\n\t\t\t<ID>PE0822 883-4843</ID>\n\t\t</Detector>\n\t</Detectors>\n\n\t<Wire>\n\t\t<dia unit=\"micron\">101.5</dia>\n\t\t<Knife>0</Knife>\t\t\t\t<!-- true if wire on a knife edge, false for free-standing wire -->\n\t\t<Origin unit=\"micron\">0 0 0</Origin>\t\t<!-- wire origin in raw positioner frame (micron) -->\n\t\t<R unit=\"radian\">0.0045 -0.00684 -3.375e-05</R>\n\t\t<Axis>0.99999608 0 0.0028000002</Axis>\t\t<!-- unit vector along wire axis, usually close to (1,0,0) -->\n\t\t<F unit=\"micron\">0</F>\t\t<!-- F of wire for a constant F wire scan (raw positioner units) -->\n\t</Wire>\n</geoN>\n"
+  },
+  "parameters": {
+   "attrs": {}
+  },
+  "parameters/cosmic_filter": {
+   "attrs": {},
+   "dtype": "uint8",
+   "shape": [],
+   "value": 0
+  },
+  "parameters/depth_range": {
+   "attrs": {
+    "units": "um"
+   },
+   "dtype": "float64",
+   "shape": [
+    2
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "9cc6d7eb9fab333b22e8a406068f5777f92aa01b351f3f794407c7795be3ba8f",
+    "shape": [
+     2
+    ]
+   }
+  },
+  "parameters/detector": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [],
+   "value": 0
+  },
+  "parameters/frame_skip": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [],
+   "value": 1
+  },
+  "parameters/memory_limit_mb": {
+   "attrs": {
+    "units": "MiB"
+   },
+   "dtype": "int32",
+   "shape": [],
+   "value": 256
+  },
+  "parameters/norm_exponent": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [],
+   "value": NaN
+  },
+  "parameters/norm_threshold": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [],
+   "value": NaN
+  },
+  "parameters/normalization": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [],
+   "value": ""
+  },
+  "parameters/output_pixel_type": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [],
+   "value": -1
+  },
+  "parameters/percent_brightest": {
+   "attrs": {},
+   "dtype": "float64",
+   "shape": [],
+   "value": 100.0
+  },
+  "parameters/resolution": {
+   "attrs": {
+    "units": "um"
+   },
+   "dtype": "float64",
+   "shape": [],
+   "value": 5.0
+  },
+  "parameters/rows_per_stripe": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [],
+   "value": -1
+  },
+  "parameters/wire_edge": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [],
+   "value": "leading"
+  },
+  "parameters/wire_skip": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [],
+   "value": 1
+  },
+  "point_files": {
+   "attrs": {}
+  },
+  "points": {
+   "attrs": {}
+  },
+  "points/depth_bounds": {
+   "attrs": {
+    "units": "um"
+   },
+   "dtype": "float64",
+   "shape": [
+    3,
+    2
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "7cbda711342f024e9da1bddbc426b8611e39a1d739f13e12b00d9a9ebed9a238",
+    "shape": [
+     3,
+     2
+    ]
+   }
+  },
+  "points/dtypes": {
+   "attrs": {},
+   "dtype": "int8",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "|i1",
+    "sha256": "99f5eb64687cc7b7794b8be90b374592b85b01a2688a889d2ca6fd73768a6e52",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "points/energies_kev": {
+   "attrs": {
+    "units": "keV"
+   },
+   "dtype": "float64",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "2d5dadc431ac0590358aa47a64634335827552607d3dbb0ed75578b37d79f491",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "points/errors": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "",
+    "",
+    ""
+   ]
+  },
+  "points/paths": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "points/wire_1.h5",
+    "points/wire_2.h5",
+    "points/wire_3.h5"
+   ]
+  },
+  "points/point_ids": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "wire_1",
+    "wire_2",
+    "wire_3"
+   ]
+  },
+  "points/sample_positions": {
+   "attrs": {
+    "units": "um"
+   },
+   "dtype": "float64",
+   "shape": [
+    3,
+    3
+   ],
+   "value": {
+    "dtype": "<f8",
+    "sha256": "5f1220234b15afc9499a5e6117267a54b7f995f39a42df3bf0abb15dfccba81e",
+    "shape": [
+     3,
+     3
+    ]
+   }
+  },
+  "points/scan_numbers": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "11047585fe102fbb5cadb42446612a578d88c6ef5ed076bb7ac360c4f9e4373d",
+    "shape": [
+     3
+    ]
+   }
+  },
+  "points/shapes": {
+   "attrs": {},
+   "dtype": "int32",
+   "shape": [
+    3,
+    3
+   ],
+   "value": {
+    "dtype": "<i4",
+    "sha256": "a8ff01e0f33e438236c716bbe359338829afaac5a7b054b8c03553e409206573",
+    "shape": [
+     3,
+     3
+    ]
+   }
+  },
+  "points/source_paths": {
+   "attrs": {},
+   "dtype": "object",
+   "shape": [
+    3
+   ],
+   "value": [
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/wire/wire_1.h5",
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/wire/wire_2.h5",
+    "<BASE>/eagle/workspace/runs/6f1c2a4e-3b5d-4e7f-8a9b-0c1d2e3f4a5b/inputs/LauePortal/data/wire/wire_3.h5"
+   ]
+  },
+  "points/statuses": {
+   "attrs": {},
+   "dtype": "uint8",
+   "shape": [
+    3
+   ],
+   "value": {
+    "dtype": "|u1",
+    "sha256": "970bec7483984728e413a0ff65986310f4bbe8fff5f02c58e6064856262d8476",
+    "shape": [
+     3
+    ]
+   }
+  }
+ }
+}
