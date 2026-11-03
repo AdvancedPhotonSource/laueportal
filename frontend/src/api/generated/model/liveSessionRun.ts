@@ -12,7 +12,10 @@ import type { RunStatus } from './runStatus';
  * One run of the live session, as its job row and its run directory say: the Live page's header strip.
  */
 export interface LiveSessionRun {
-  /** Its `arrival-status.json`; null while it has none (a `notify` run, a follower before its first). */
+  /**
+     * Its `arrival-status.json`; null while it has none (a follower before its first; a `notify` run until it
+     * refused a file without a number, its one line then).
+     */
   arrival: LiveArrivalStatus | null;
   job_id: number;
   n_failed: number;
@@ -24,4 +27,10 @@ export interface LiveSessionRun {
   status: RunStatus;
   /** A stop (Stop seals the session) is requested and the run has not ended yet. */
   stop_requested: boolean;
+  /**
+     * It ended by its Stop now: Failed, phase `interrupted`, its job process killed once its job's messages held
+     * "Stop now requested" (`jobs.dispatch.end_stopped_now`). A failure of its own (a failed file, a run-level error, a
+     * worker stop) is not.
+     */
+  stopped_now: boolean;
 }

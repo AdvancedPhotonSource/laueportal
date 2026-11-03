@@ -15,7 +15,11 @@ import {
   daqChoice,
   daqFolder,
   daqListWait,
+  EVERY_H5,
+  followedOutput,
   type LiveSpecs,
+  mirroredOutput,
+  outputFollows,
   namedSessionEnded,
   NOTIFY,
   openRuns,
@@ -25,6 +29,7 @@ import {
   sessionRequest,
   sessionState,
   shownSections,
+  shownSession,
   waitingReason,
 } from "./live-form"
 
@@ -60,12 +65,14 @@ const RUN: LiveSessionRun = {
   n_succeeded: 0,
   n_failed: 0,
   stop_requested: false,
+  stopped_now: false,
   arrival: null,
 }
 
 function session(values: Partial<LiveSession> = {}): LiveSession {
   return {
     open: true,
+    stopped: false,
     runs: [RUN],
     scan: {
       source: "daq",
@@ -311,6 +318,137 @@ describe("the Live page's form", () => {
     expect(daqListWait(undefined, failed)).toBe(9_000)
   })
 
+  it("Output Folder mirrors the Folder: its last component that is exactly data becomes analysis", () => {
+    expect(mirroredOutput("/x/exp/data/scan_12")).toBe(
+      "/x/exp/analysis/scan_12"
+    )
+    expect(mirroredOutput("/x/exp/data")).toBe("/x/exp/analysis")
+    expect(mirroredOutput("/data/exp/data/scan_12")).toBe(
+      "/data/exp/analysis/scan_12"
+    )
+    // The rest as typed: the server normalizes a trailing or a doubled slash, and refuses a `..`.
+    expect(mirroredOutput("/x/exp/data/scan_12/")).toBe(
+      "/x/exp/analysis/scan_12/"
+    )
+    expect(mirroredOutput("/x/exp//data/scan_12")).toBe(
+      "/x/exp//analysis/scan_12"
+    )
+    expect(mirroredOutput("/x/exp/data/../data/scan_12")).toBe(
+      "/x/exp/data/../analysis/scan_12"
+    )
+    // Only a whole component named exactly data.
+    for (const folder of [
+      "/x/exp/raw/scan_12",
+      "/x/database/s",
+      "/x/Data/s",
+      "",
+    ]) {
+      expect(mirroredOutput(folder)).toBeUndefined()
+    }
+  })
+
+  it("Output Folder follows the Folder's mirror, else the configured default (never an earlier Folder's mirror)", () => {
+    expect(followedOutput("/x/exp/data/scan_12", "/runs/analysis")).toBe(
+      "/x/exp/analysis/scan_12"
+    )
+    expect(followedOutput("", "/runs/analysis")).toBe("/runs/analysis")
+    expect(followedOutput("  ", "/runs/analysis")).toBe("/runs/analysis")
+    expect(followedOutput("/x/exp/raw/scan_12", "/runs/analysis")).toBe(
+      "/runs/analysis"
+    )
+  })
+
+  it("a form filled from a session follows its Folder only when its Output Folder is the one the Folder gives", () => {
+    const follows = (folder: string, output: string) =>
+      outputFollows(folder, output, "/runs/analysis")
+    expect(follows("/x/exp/data/scan_12", "/x/exp/analysis/scan_12")).toBe(true)
+    expect(follows("/x/exp/raw/scan_12", "/runs/analysis")).toBe(true)
+    expect(follows("/x/exp/data/scan_12", "/x/exp/analysis/scan_11")).toBe(
+      false
+    )
+    expect(follows("/x/exp/data/scan_12", "/runs/analysis")).toBe(false)
+    expect(follows("/x/exp/raw/scan_12", "/y/out")).toBe(false)
+    // The Folder recorded by its real path, the Output Folder as typed through a link: the names below the mirrored
+    // component decide.
+    expect(follows("/r/beamline/exp/data/s7", "/r/link/exp/analysis/s7")).toBe(
+      true
+    )
+    expect(follows("/r/beamline/exp/data", "/r/link/exp/analysis")).toBe(true)
+    expect(follows("/r/x/data/s7", "/r/y/analysis/s8")).toBe(false)
+    expect(follows("/r/x/data/s7/a", "/r/y/analysis/s7")).toBe(false)
+    expect(follows("/r/x/raw/s7", "/r/y/analysis/s7")).toBe(false)
+  })
+
+  it("Filename Template is optional: blank sends every .h5 file, and a session without one fills it blank", () => {
+    expect(SPECS.scan.filename_template).toMatchObject({
+      required: false,
+      placeholder: EVERY_H5,
+    })
+    expect(SPECS.scan.filename_template?.hint).toContain(
+      "Empty: every .h5 file"
+    )
+    const scan = session().scan
+    const none = session({ scan: scan && { ...scan, filename_template: null } })
+    expect(scanValuesOf(SPECS.scan, none).filename_template).toBe("")
+  })
+
+  it("the header shows no session once a session a user stopped has ended, one that ended by itself stays", () => {
+    const ended = {
+      open: false,
+      runs: [{ ...RUN, status: "finished" as const }],
+    }
+    expect(shownSession(null)).toBeNull()
+    expect(shownSession(undefined)).toBeNull()
+    const stopping = session({
+      stopped: true,
+      runs: [{ ...RUN, stop_requested: true }],
+    })
+    expect(shownSession(stopping)).toBe(stopping)
+    expect(shownSession(session({ ...ended, stopped: true }))).toBeNull()
+    const failed = session({
+      open: false,
+      runs: [{ ...RUN, status: "failed" }],
+    })
+    expect(shownSession(failed)).toBe(failed)
+    const finished = session(ended)
+    expect(shownSession(finished)).toBe(finished)
+    // Stopped, but a run Failed (a file failed in the drain, Stop now): it stays shown.
+    const stoppedFailed = session({
+      open: false,
+      stopped: true,
+      runs: [
+        { ...RUN, status: "finished" },
+        { ...RUN, job_id: 8, status: "failed" },
+      ],
+    })
+    expect(shownSession(stoppedFailed)).toBe(stoppedFailed)
+    // Its follower ended by its Stop now (killed, Failed): the Stop's end, hidden; with a failed file, a failure.
+    const killed = {
+      ...RUN,
+      job_id: 8,
+      status: "failed" as const,
+      stopped_now: true,
+    }
+    const stoppedNow = session({
+      open: false,
+      stopped: true,
+      runs: [{ ...RUN, status: "finished" }, killed],
+    })
+    expect(shownSession(stoppedNow)).toBeNull()
+    const killedWithAFailure = session({
+      open: false,
+      stopped: true,
+      runs: [
+        { ...RUN, status: "finished" },
+        { ...killed, n_failed: 1 },
+      ],
+    })
+    expect(shownSession(killedWithAFailure)).toBe(killedWithAFailure)
+    // Stop now on a session that ended without a Stop is not a stopped session.
+    const unstopped = session({ ...stoppedNow, stopped: false })
+    expect(shownSession(unstopped)).toBe(unstopped)
+  })
+
   it("a session gives the Scan card its values, its author only while it is open (a clone resets it)", () => {
     const open = scanValuesOf(SPECS.scan, session())
     expect(open).toMatchObject({
@@ -369,5 +507,24 @@ describe("Stop now and the waiting reason", () => {
       arrival: { ...arrival, state: "not_responding" as const },
     }
     expect(waitingReason(session({ runs: [ended, unread] }))).toBeUndefined()
+  })
+
+  it("a DAQ's or a notify run's arrival error is never what a Stopping session waits for", () => {
+    const refused: NonNullable<LiveSessionRun["arrival"]> = {
+      ...arrival,
+      error:
+        "0 catalogued file(s) not admitted yet, 1 refused: 'Si_dark.h5' has no number in its name",
+    }
+    // An Indexing session alone, its run draining with a file refused for good.
+    const alone = { ...follower, stop_requested: true, arrival: refused }
+    expect(waitingReason(session({ runs: [alone] }))).toBeUndefined()
+    // A Both session: the wire run's error (still open) is not; the follower's held point is.
+    const wire = { ...RUN, stop_requested: true, arrival: refused }
+    expect(
+      waitingReason(session({ runs: [wire, { ...follower, arrival: null }] }))
+    ).toBeUndefined()
+    expect(waitingReason(session({ runs: [wire, follower] }))).toBe(
+      "I4: point 'wire_3' (line 3 of the followed run's completed.jsonl) not admitted yet"
+    )
   })
 })

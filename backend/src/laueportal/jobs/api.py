@@ -221,8 +221,12 @@ def get_daq_list(request: Request) -> DaqList:
     dependencies=LIVE,
     responses=LIVE_DAQS_RESPONSES,
 )
-async def list_live_daqs(response: Response, daqs: Annotated[DaqList, Depends(get_daq_list)]) -> LiveDaqList:
-    """The Live page's DAQ list: DM's DAQs, each with where it writes (`destination`, the folder a DAQ source fills in).
+async def list_live_daqs(
+    response: Response, daqs: Annotated[DaqList, Depends(get_daq_list)], settings: SettingsDep
+) -> LiveDaqList:
+    """The Live page's DAQ list: DM's DAQs, each with where it writes (`destination`, the folder a DAQ source fills in),
+    but those whose experiment name or data directory contains one of `[live] daq_name_exclude` (`logs`, `current`),
+    ignoring case: left out of this list only (Validate and Start take any DAQ, the bind check at Start being DM's).
     One answer shared by every browser: at most one DM call per `[live] daq_list_seconds` (30 s), made only when asked
     (no Live page open, no call), a request that comes while it runs waiting for its answer (holding no thread);
     `kept_seconds`, the time the answer is still the one served (ask again after it). A failed call is a 503 problem
@@ -231,7 +235,7 @@ async def list_live_daqs(response: Response, daqs: Annotated[DaqList, Depends(ge
     is off."""
     response.headers["Cache-Control"] = "no-store"
     answer = await daqs.get_async()
-    return live_session.daq_list(answer, time_left=daqs.time_left())
+    return live_session.daq_list(answer, time_left=daqs.time_left(), exclude=settings.live.daq_name_exclude)
 
 
 @router.get(
@@ -246,7 +250,10 @@ def get_live_session(sessions: SessionsDep, response: Response) -> LiveSessionSt
     """The Live page's session: the latest live session (the runs one Start created: the wire run
     first, then its follower; or the one run), or `session` null before the first. Each run's status, counters
     (`n_inputs` arrived, `n_succeeded`, `n_failed`) and stop request from its job row, and its `arrival-status.json`
-    (null while it has none: a `notify` run); `open` while a run of it is Queued or Running; `scan`, the session's
+    (null while it has none: a follower before its first, a `notify` run until it refused a file without a number);
+    `open` while a run of it is Queued or Running; `stopped` once a user stopped it (its first run's stop flag, kept
+    after it has ended: the Live page then shows no session once it has ended with no run Failed, a run ended by its
+    Stop now with no failed file, `stopped_now`, not counting, and fills its form from it); `scan`, the session's
     Scan card from its source run's `live.json` and rows (null when that file cannot be read). Poll it while
     the session is open. The rows are read in a session closed before any file is; a file that is missing,
     unreadable or not answering is a state, never an error. 404 while live processing is off."""
@@ -269,8 +276,9 @@ async def validate_live_runs(
     request: Request,
 ) -> ValidationReport | Response:
     """Check a live session's form: the Scan card (the source and its DAQ, the folder an existing
-    folder inside the roots, the template one file name with one `%d`, the output folder inside the roots, the scan,
-    the author), each run's parameters as its live schema's (`wire-live/v1`, `lauego-live/v1`) and the batch form's
+    folder inside the roots, for a DAQ source one not there yet a warning (the DAQ makes it), the template blank or
+    one file name with one `%d`, the output folder inside the roots, a warning when it exists and is not empty, the
+    scan, the author), each run's parameters as its live schema's (`wire-live/v1`, `lauego-live/v1`) and the batch form's
     checks that apply, and the session's own: one scan number for the pair (the Scan card's), depth indices only for
     indexing that follows the reconstruction, the geometry (and the crystal) loading. Never a DM call (DM
     checks the DAQ once, at Start): a DAQ source's folder is checked against where the DAQ writes as the

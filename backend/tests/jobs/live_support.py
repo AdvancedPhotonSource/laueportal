@@ -109,20 +109,21 @@ def create_live_wire_run(
     source: LiveSource = "notify",
     settings: Settings | None = None,
     params: dict[str, Any] | None = None,
+    template: bool = True,
 ) -> LiveRun:
     """A live wire run on ``tmp_path/<name>-input`` (made unless it exists; files ``<name>_%d.h5``), created and queued
     (``create_live_run``), whose source is ``source``; ``params``: its parameters' other values
-    (``live_wire_params``)."""
+    (``live_wire_params``); ``template`` False: no file name template (every file whose name ends ``.h5``)."""
     with Session(engine) as session:
         if session.get(Metadata, 1) is None:
             session.add(create_test_metadata(1))
             session.commit()
     folder = tmp_path / f"{name}-input"
     folder.mkdir(exist_ok=True)
-    wire_params = live_wire_params(folder, tmp_path / f"{name}-run_%d", name, **(params or {}))
-    created = create_live_run(
-        wire_params, live_document(folder, name, source), settings=settings or live_settings(tmp_path), engine=engine
-    )
+    untemplated: dict[str, Any] = {} if template else {"filename_prefixes": []}
+    wire_params = live_wire_params(folder, tmp_path / f"{name}-run_%d", name, **untemplated, **(params or {}))
+    document = live_document(folder, name, source, **({} if template else {"filename_template": None}))
+    created = create_live_run(wire_params, document, settings=settings or live_settings(tmp_path), engine=engine)
     assert created.failure is None, created.failure
     with Session(engine) as session:
         run_directory = session.scalar(select(Job.run_directory).where(Job.job_id == created.job_id))

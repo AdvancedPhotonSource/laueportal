@@ -135,7 +135,7 @@ export function LiveHeader({
     <Card role="region" aria-label="Session">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Session
+          <h2>Session</h2>
           <SessionBadge state={state} hint={waiting} />
         </CardTitle>
         <CardAction className="flex flex-wrap items-center gap-2">

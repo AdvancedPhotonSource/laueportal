@@ -1,11 +1,12 @@
 // The Live page's cards: Scan (the source, the identity and the paths each run gets) and the two program
 // cards (a switch; the live program's fields but those the Scan card sets), drawn with the form kit's
-// fields. While a session is open the page's fieldset disables them all.
+// section card and fields. While a session is open the page's fieldset disables them all.
+import { FolderSyncIcon } from "lucide-react"
 import { useMemo } from "react"
 import { type Control, useWatch, type UseFormSetValue } from "react-hook-form"
 import type { LiveDaqEntry } from "@/api"
 import { DefinitionList } from "@/components/DefinitionList"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import {
   blocksOf,
@@ -18,8 +19,8 @@ import {
   OptionalNumberField,
   PathPickerField,
   type ProgramSpec,
+  SectionCard,
   SectionIcon,
-  sectionIdentity,
   SelectField,
   TextField,
   ToggleField,
@@ -30,6 +31,8 @@ import { cn } from "@/lib/utils"
 import {
   chosenDaq,
   daqFolder,
+  FROM_DATA_FOLDER,
+  mirroredOutput,
   type Part,
   PART_TITLES,
   shownSections,
@@ -120,7 +123,10 @@ function Block({
   )
 }
 
-/** The Scan card: Source (Notifications or a DAQ, which fills the folder), scan, author and paths. */
+/**
+ * The Scan card: Source (Notifications or a DAQ, which fills the folder), scan, author and paths; Output Folder
+ * with its From data folder button (the Folder's mirror, `mirroredOutput`; off with nothing to mirror).
+ */
 export function ScanCard({
   fields,
   control,
@@ -129,6 +135,8 @@ export function ScanCard({
   daqs,
   daqError,
   readOnly,
+  onFolderFilled,
+  onFromDataFolder,
 }: {
   fields: Record<string, FieldSpec>
   control: Control<FormValues>
@@ -138,6 +146,10 @@ export function ScanCard({
   /** Why the DAQ list is not there (DM unavailable), if it is not. */
   daqError: unknown
   readOnly: boolean
+  /** A DAQ the user picked filled Folder with this. */
+  onFolderFilled: (folder: string) => void
+  /** From data folder: Output Folder is the Folder's mirror again. */
+  onFromDataFolder: () => void
 }) {
   const source = String(useWatch({ control, name: "source" }))
   const folder = String(useWatch({ control, name: "folder" }))
@@ -154,6 +166,7 @@ export function ScanCard({
     const filled = daq && daqFolder(daq, folder)
     if (filled !== undefined) {
       setValue("folder", filled, { shouldDirty: true })
+      onFolderFilled(filled)
     }
   }
   const daq = chosenDaq(daqs, source)
@@ -171,54 +184,72 @@ export function ScanCard({
     )
   }
   return (
-    <Card
+    <SectionCard
       id="live-scan"
       role="region"
       aria-label={PART_TITLES.scan}
-      className={sectionIdentity(PART_TITLES.scan).stripe}
+      title={PART_TITLES.scan}
+      contentClassName="grid items-start gap-4 md:grid-cols-3"
     >
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <SectionIcon title={PART_TITLES.scan} className="size-4.5" />
-          {PART_TITLES.scan}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="grid items-start gap-4 md:grid-cols-3">
-        <div className="flex flex-col gap-2">
-          {sourceSpec && (
-            <SelectField
-              field={sourceSpec}
-              control={control}
-              issues={issuesOf("source")}
-              onPick={pick}
-            />
-          )}
-          {daqError !== null && daqError !== undefined && (
-            <p role="status" className="text-sm text-warning">
-              DAQ list unavailable:{" "}
-              {describeError(daqError).detail ?? describeError(daqError).title}
-            </p>
-          )}
-        </div>
-        <div className="md:col-span-2">
-          {daq && (
-            <DefinitionList
-              aria-label="DAQ"
-              rows={[
-                { label: "From", value: daq.data_directory ?? "–", mono: true },
-                { label: "To", value: daq.destination ?? "–", mono: true },
-              ]}
-            />
-          )}
-        </div>
-        {field("scan_number")}
-        {field("author")}
-        <div aria-hidden />
-        <div className="md:col-span-3">{field("folder")}</div>
-        {field("filename_template")}
-        <div className="md:col-span-2">{field("output_folder")}</div>
-      </CardContent>
-    </Card>
+      <div className="flex flex-col gap-2">
+        {sourceSpec && (
+          <SelectField
+            field={sourceSpec}
+            control={control}
+            issues={issuesOf("source")}
+            onPick={pick}
+          />
+        )}
+        {daqError !== null && daqError !== undefined && (
+          <p role="status" className="text-sm text-warning">
+            DAQ list unavailable:{" "}
+            {describeError(daqError).detail ?? describeError(daqError).title}
+          </p>
+        )}
+      </div>
+      <div className="md:col-span-2">
+        {daq && (
+          <DefinitionList
+            aria-label="DAQ"
+            rows={[
+              { label: "From", value: daq.data_directory ?? "–", mono: true },
+              { label: "To", value: daq.destination ?? "–", mono: true },
+            ]}
+          />
+        )}
+      </div>
+      {field("scan_number")}
+      {field("author")}
+      <div aria-hidden />
+      <div className="md:col-span-3">{field("folder")}</div>
+      {field("filename_template")}
+      <div className="md:col-span-2">
+        {fields.output_folder && (
+          <PathPickerField
+            field={fields.output_folder}
+            control={control}
+            issues={issuesOf("output_folder")}
+            mode="directory"
+            actions={
+              // A disabled button takes no pointer events, so its tooltip sits on a wrapper.
+              <span title={FROM_DATA_FOLDER} className="inline-flex shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label={FROM_DATA_FOLDER}
+                  disabled={readOnly || mirroredOutput(folder) === undefined}
+                  className="text-foreground"
+                  onClick={onFromDataFolder}
+                >
+                  <FolderSyncIcon aria-hidden />
+                </Button>
+              </span>
+            }
+          />
+        )}
+      </div>
+    </SectionCard>
   )
 }
 
@@ -247,19 +278,13 @@ export function ProgramCard({
   const title = PART_TITLES[part]
   const sections = shownSections(spec, follower)
   return (
-    <Card
+    <SectionCard
       id={`live-${part}`}
       role="region"
       aria-label={title}
-      className={cn(!on && "pb-0", sectionIdentity(title).stripe)}
-    >
-      {/* The switch first, left of the title (at the far right it is easy to miss). */}
-      <CardHeader
-        className={cn(
-          "grid-cols-[auto_1fr] items-center gap-3",
-          !on && "border-b-0"
-        )}
-      >
+      title={title}
+      // The switch first, left of the title (at the far right it is easy to miss).
+      lead={
         <Switch
           checked={on}
           disabled={readOnly}
@@ -273,47 +298,42 @@ export function ProgramCard({
                 : "Index each frame as it arrives"
           }
         />
-        <CardTitle className="flex items-center gap-2">
-          <SectionIcon title={title} className="size-4.5" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      {on && (
-        <CardContent className="flex flex-col gap-6">
-          {sections.map((section) => (
-            <div key={section.group} className="flex flex-col gap-3">
-              <h3 className={cn(subheading, "flex items-center gap-2")}>
-                {/* The shape only: the card's stripe and title icon carry its one colour. */}
-                <SectionIcon
-                  title={section.group}
-                  className="size-3.5 text-muted-foreground"
-                />
-                {section.group}
-              </h3>
-              <div className="grid items-start gap-4 md:grid-cols-3">
-                {blocksOf(section.fields).map((block) => (
-                  <div
-                    key={blockKey(block)}
-                    className={cn(
-                      wide(block) && "md:col-span-3",
-                      block.kind === "field" &&
-                        block.field.widget === "checkbox" &&
-                        "md:self-end"
-                    )}
-                  >
-                    <Block
-                      block={block}
-                      control={control}
-                      issuesOf={issuesOf}
-                      readOnly={readOnly}
-                    />
-                  </div>
-                ))}
-              </div>
+      }
+      contentClassName="flex flex-col gap-6"
+    >
+      {on &&
+        sections.map((section) => (
+          <div key={section.group} className="flex flex-col gap-3">
+            <h3 className={cn(subheading, "flex items-center gap-2")}>
+              {/* The shape only: the card's stripe and title icon carry its one colour. */}
+              <SectionIcon
+                title={section.group}
+                className="size-3.5 text-muted-foreground"
+              />
+              {section.group}
+            </h3>
+            <div className="grid items-start gap-4 md:grid-cols-3">
+              {blocksOf(section.fields).map((block) => (
+                <div
+                  key={blockKey(block)}
+                  className={cn(
+                    wide(block) && "md:col-span-3",
+                    block.kind === "field" &&
+                      block.field.widget === "checkbox" &&
+                      "md:self-end"
+                  )}
+                >
+                  <Block
+                    block={block}
+                    control={control}
+                    issuesOf={issuesOf}
+                    readOnly={readOnly}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </CardContent>
-      )}
-    </Card>
+          </div>
+        ))}
+    </SectionCard>
   )
 }

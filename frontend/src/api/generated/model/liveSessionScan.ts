@@ -13,7 +13,8 @@ import type { LiveSessionScanSource } from './liveSessionScanSource';
 export interface LiveSessionScan {
   author: string | null;
   daq_id: string | null;
-  filename_template: string;
+  /** Null: none (every file whose name ends `.h5`, its number the last run of digits in its name). */
+  filename_template: string | null;
   folder: string;
   /** The folder the session's run folders went in (`<output_folder>/rec_%d`, `index_%d`). */
   output_folder: string | null;

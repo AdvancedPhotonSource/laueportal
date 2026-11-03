@@ -469,7 +469,7 @@ class LaueGoParamsV1(ProgramParams):
         description="The detector geometry (XML); it must exist inside the roots.",
     )
     crystal_file: PathText = param(
-        title="Crystal Structure File",
+        title="Structures File",
         source="form",
         config=_defaults("crystal_file"),
         group=FILES,
@@ -535,7 +535,7 @@ class LaueGoParamsV1(ProgramParams):
     @field_validator("crystal_file")
     @classmethod
     def _crystal_file(cls, value: str) -> str:
-        return required_path(value, "Crystal file")
+        return required_path(value, "Structures file")
 
     @field_validator("mask_file")
     @classmethod

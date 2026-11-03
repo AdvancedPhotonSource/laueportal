@@ -485,7 +485,7 @@
           },
           "crystal_file": {
             "description": "The crystal structure (XML); it must exist inside the roots.",
-            "title": "Crystal Structure File",
+            "title": "Structures File",
             "type": "string",
             "x-config": "indexing.defaults.crystal_file",
             "x-extensions": [".xml"],
@@ -1151,13 +1151,12 @@
             "default": "/data/runs/analysis/index_%d"
           },
           "filename_prefixes": {
-            "description": "The arriving frame files' name template, or the followed wire run's: exactly one, with exactly one `%d`, each file's number; wildcards are allowed; at most 255 characters.",
+            "description": "The arriving frame files' name template, or the followed wire run's: at most one, with exactly one `%d`, each file's number; wildcards are allowed; at most 255 characters. None (`[]`): every file arriving whose name ends `.h5`, its number the last run of digits in its name.",
             "items": {
               "maxLength": 255,
               "type": "string"
             },
             "maxItems": 1,
-            "minItems": 1,
             "title": "Filename",
             "type": "array",
             "x-group": "File Paths",
@@ -1572,7 +1571,7 @@
           },
           "crystal_file": {
             "description": "The crystal structure (XML); it must exist inside the roots.",
-            "title": "Crystal Structure File",
+            "title": "Structures File",
             "type": "string",
             "x-config": "indexing.defaults.crystal_file",
             "x-extensions": [".xml"],
@@ -1836,13 +1835,12 @@
             "default": "/data/runs/analysis/rec_%d/data"
           },
           "filename_prefixes": {
-            "description": "The arriving wire-scan files' name template: exactly one, with exactly one `%d`, each file's number; wildcards are allowed; at most 255 characters.",
+            "description": "The arriving wire-scan files' name template: at most one, with exactly one `%d`, each file's number; wildcards are allowed; at most 255 characters. None (`[]`): every file arriving whose name ends `.h5`, its number the last run of digits in its name.",
             "items": {
               "maxLength": 255,
               "type": "string"
             },
             "maxItems": 1,
-            "minItems": 1,
             "title": "Filename",
             "type": "array",
             "x-group": "File Paths",

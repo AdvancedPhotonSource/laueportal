@@ -17,8 +17,8 @@ import type { RunReference } from './runReference';
 export interface JobLive {
   /**
      * Its `arrival-status.json` (a DAQ's catalog thread, or a follower: its last check, the points read and, while a
-     * point holds it, the waiting reason in `error`); null while it has none (a `notify` run, a follower before its
-     * first).
+     * point holds it, the waiting reason in `error`; a `notify` run's: the last file it refused for having no number);
+     * null while it has none (a follower before its first, a `notify` run before such a file).
      */
   arrival: LiveArrivalStatus | null;
   /**
@@ -29,7 +29,10 @@ export interface JobLive {
   arrivals_state: FileState;
   /** `daq`: DM's DAQ ID. */
   daq_id: string | null;
-  /** Their name, one `%d` each file's number. */
+  /**
+     * Their name, one `%d` each file's number; null when the run has none (every file whose name ends `.h5`, its
+     * number the last run of digits in its name) or `live.json` was not read.
+     */
   filename_template: string | null;
   /** The folder the files arrive in (a follower's: its wire run's). */
   folder: string | null;

@@ -188,7 +188,7 @@ NORMALIZED_VALUES: list[tuple[programs.ProgramKind, str, Any, Any]] = [
     ("lauego", "geometry_file", Path("/config//geometry.xml"), "/config/geometry.xml"),
     ("wire", "geometry_file", "", Refused("Geometry file is required")),
     ("lauego", "crystal_file", "/config/./Ni.xml", "/config/Ni.xml"),
-    ("lauego", "crystal_file", ".", Refused("Crystal file is required")),
+    ("lauego", "crystal_file", ".", Refused("Structures file is required")),
     # the index ranges: srange's text; at least one scan point; an empty depth range is none
     ("lauego", "scan_points", "3,1-2", "1-3"),
     ("wire", "scan_points", "5, 1-3", "1-3,5"),

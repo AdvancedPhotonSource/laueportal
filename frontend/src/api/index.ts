@@ -13,6 +13,7 @@ export {
 // system
 export {
   getGetHealthQueryKey,
+  getHealth,
   useGetHealth,
   useGetSystemStatus,
 } from "./generated/endpoints"

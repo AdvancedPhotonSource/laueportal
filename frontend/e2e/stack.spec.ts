@@ -185,7 +185,7 @@ test("the status page shows the database and its file, the worker and its thread
   await expect(page.getByRole("alert")).toHaveCount(0)
 })
 
-test("the navbar's live indicator shows the worker running", async ({
+test("the navbar's live indicator shows the worker running: the quiet dot", async ({
   page,
   request,
 }) => {
@@ -194,11 +194,21 @@ test("the navbar's live indicator shows the worker running", async ({
   expect(health).toMatchObject({ db: "ok", worker: "running" })
 
   await page.goto("/runs")
-  const indicators = page
+  const indicator = page
     .getByRole("group", { name: "Live system status" })
     .getByRole("link")
-  await expect(indicators).toHaveText(["Worker: running"])
-  await expect(indicators).toHaveAttribute("data-tone", "ok")
+  await expect(indicator).toHaveAccessibleName("Worker: running")
+  await expect(indicator).toHaveAttribute("data-tone", "ok")
+  await expect(indicator.locator('[data-slot="status-dot"]')).toBeVisible()
+  // The dot alone: no visible words (its name is screen-reader-only text); words show only when something is
+  // wrong.
+  expect(
+    await indicator.evaluate((link) => {
+      const copy = link.cloneNode(true) as HTMLElement
+      for (const hidden of copy.querySelectorAll(".sr-only")) hidden.remove()
+      return copy.textContent.trim()
+    })
+  ).toBe("")
 })
 
 test("the scans page lists the seeded scans; a date filter keeps the local day", async ({

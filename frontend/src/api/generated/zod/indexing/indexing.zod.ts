@@ -45,7 +45,7 @@ export const ListIndexingRunsResponse = zod.object({
   "author": zod.union([zod.string(),zod.null()]),
   "box_size": zod.union([zod.int(),zod.null()]).describe('The peak search box.'),
   "created_at": zod.iso.datetime({"offset":true}).describe('When the run was submitted.'),
-  "crystal_file": zod.union([zod.string(),zod.null()]).describe('The structure file (the card\'s Structure File).'),
+  "crystal_file": zod.union([zod.string(),zod.null()]).describe('The structure file (the card\'s Structures File).'),
   "id": zod.int().describe('The indexing run\'s ID (shown as ``I<id>``).'),
   "method": zod.string().describe('The indexing method: ``lauego`` (the list holds LaueGo runs only).'),
   "n_depths": zod.union([zod.int(),zod.null()]).describe('The depths it indexes per point (the card\'s Depth Points); null when it indexes no depths.'),

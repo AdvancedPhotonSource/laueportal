@@ -362,25 +362,25 @@ def live_form_layout(model: type[ProgramParams]) -> tuple[tuple[str, tuple[str, 
     return tuple((group, fields) for group, fields in sections if fields)
 
 
-LIVE_TEMPLATE_RULE = "A live run takes one file name template with exactly one %d, the number of each file"
+LIVE_TEMPLATE_RULE = "A live run takes at most one file name template, with exactly one %d, the number of each file"
 
 
 def live_template_items(value: Any) -> Any:
     """A live run's ``filename_prefixes`` before its one-item limit: blank templates dropped, as the batch schemas
-    drop them (``files.inputs.normalize_filename_templates``), keeping the first when all are blank, so that the
-    batch schema's "At least one filename template is required" answers it."""
+    drop them (``files.inputs.normalize_filename_templates``); none left is a run with no template."""
     if not isinstance(value, list | tuple):
         return value
-    kept = [item for item in value if not (isinstance(item, str) and not item.strip())]
-    return kept or list(value[:1])
+    return [item for item in value if not (isinstance(item, str) and not item.strip())]
 
 
-def live_templates(templates: tuple[str, ...]) -> tuple[str, ...]:
-    """A live run's ``filename_prefixes``, normalized as the batch schema's: exactly one template with exactly one
-    ``%d`` (the number of each arriving file comes from it)."""
-    if len(templates) != 1 or templates[0].count("%d") != 1:
+def live_templates(templates: Sequence[str]) -> tuple[str, ...]:
+    """A live run's ``filename_prefixes``, stripped as the batch schema's: at most one template, with exactly one
+    ``%d`` (the number of each arriving file comes from it). None (``()``): the run takes every file whose name ends
+    ``.h5``, its number the last run of digits in its name (``jobs.arrivals.RunFiles``)."""
+    stripped = tuple(text for template in templates if (text := str(template).strip()))
+    if len(stripped) > 1 or any(template.count("%d") != 1 for template in stripped):
         raise ValueError(LIVE_TEMPLATE_RULE)
-    return templates
+    return stripped
 
 
 def required_path(value: str, label: str) -> str:

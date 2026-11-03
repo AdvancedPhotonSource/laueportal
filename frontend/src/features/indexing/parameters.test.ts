@@ -47,7 +47,7 @@ describe("the Parameters tab's groups", () => {
       "Scan Indices": "1-4",
       "Depth Indices": "-5 5",
       "Geometry File": "/data/geoN.xml",
-      "Crystal Structure File": "/data/Ni.xml",
+      "Structures File": "/data/Ni.xml",
       "Output Path": "/runs/index_1",
       "Output XML": "output.xml",
     })
@@ -92,7 +92,7 @@ describe("the Parameters tab's groups", () => {
       "Folder Path",
       "Filename",
       "Geometry File",
-      "Crystal Structure File",
+      "Structures File",
       "Output Path",
       "Output XML",
     ])

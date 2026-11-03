@@ -18,7 +18,7 @@ from laueportal.indexing.lauego.live_params import LaueGoLiveParamsV1
 from laueportal.indexing.lauego.params import DEFAULT_OUTPUT_XML, LaueGoParamsV1
 from laueportal.indexing.models import IndexingRun, LaueGoIndexingParameters
 from laueportal.indexing.schemas import IndexingRunPage, IndexingRunSummary
-from laueportal.jobs.live import LiveDocument
+from laueportal.jobs.live import LiveDocument, live_template
 from laueportal.jobs.models import Job
 from laueportal.jobs.progress import RUN_PROGRESS_FIELDS, active_or_changed_since, grid_progress_columns
 from laueportal.jobs.records import new_job, publish_live_run, publish_run_inputs, publishing
@@ -187,7 +187,7 @@ def create_live_indexing(
     if live.source == "run":
         if live.follows is None or request.reconstruction_id is None:
             raise WorkflowValidationError("A live indexing run that follows a reconstruction names it")
-    elif live.folder != request.input_path or live.filename_template != request.filename_prefixes[0]:
+    elif live.folder != request.input_path or live.filename_template != live_template(request.filename_prefixes):
         raise WorkflowValidationError("A live indexing run takes the files of its live.json's folder and file name")
 
     with Session(engine, expire_on_commit=False) as session:

@@ -177,13 +177,16 @@ check-frontend: ## tsc, ESLint, Prettier, Vitest without the slow set (test-fron
 test-frontend-slow: ## Vitest's slow set: the heaviest page tests (SLOW_TESTS in frontend/vite.config.ts)
 	@$(ENV); cd frontend; pnpm exec vitest run --project slow
 
-check-contract: ## make gen, then no change in the generated client
+check-contract: ## make gen, then the client in the index matches it
 	@$(ENV)
 	if [ ! -f frontend/orval.config.ts ] || [ ! -f backend/src/laueportal/cli.py ]; then
 	  echo "SKIPPED: needs the frontend client"; exit 0; fi
 	$(MAKE) gen
+	# The client in the index (staged, or committed when nothing is staged) is what `make gen` writes, and every
+	# generated file is in the index.
 	git diff --exit-code -- frontend/openapi.json frontend/src/api/generated
-	test -z "$$(git status --porcelain -- frontend/src/api/generated)" || { echo "untracked generated files"; exit 1; }
+	untracked="$$(git ls-files --others -- frontend/openapi.json frontend/src/api/generated)"
+	test -z "$$untracked" || { echo "generated files not in the index:"; echo "$$untracked"; exit 1; }
 
 test: ## backend tests except slow ones; TESTS= picks an area
 	@$(ENV); cd backend; $(FAST_TESTS) $(TESTS)

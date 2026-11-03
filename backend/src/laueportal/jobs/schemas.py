@@ -434,8 +434,9 @@ class RunConfiguration(_ApiModel):
 
 
 class LiveArrivalStatus(_ApiModel):
-    """A live run's `arrival-status.json`: how its source of arrivals is doing (a
-    DAQ's catalog thread, or a follower waiting for a point). Its keys as written, unchecked."""
+    """A live run's `arrival-status.json`: how its source of arrivals is doing (a DAQ's catalog thread, a follower
+    waiting for a point, or a `notify` run's last file refused for having no number). Its keys as written,
+    unchecked."""
 
     state: FileState
     """`available` (read), `unreadable` or `not_responding`; the keys are null unless it was read."""
@@ -464,7 +465,8 @@ class JobLive(_ApiModel):
     folder: str | None
     """The folder the files arrive in (a follower's: its wire run's)."""
     filename_template: str | None
-    """Their name, one `%d` each file's number."""
+    """Their name, one `%d` each file's number; null when the run has none (every file whose name ends `.h5`, its
+    number the last run of digits in its name) or `live.json` was not read."""
     follows: RunReference | None
     """`run`: the live wire run it follows."""
     follows_job_id: int | None
@@ -475,8 +477,8 @@ class JobLive(_ApiModel):
     arrivals_state: FileState
     arrival: LiveArrivalStatus | None
     """Its `arrival-status.json` (a DAQ's catalog thread, or a follower: its last check, the points read and, while a
-    point holds it, the waiting reason in `error`); null while it has none (a `notify` run, a follower before its
-    first)."""
+    point holds it, the waiting reason in `error`; a `notify` run's: the last file it refused for having no number);
+    null while it has none (a follower before its first, a `notify` run before such a file)."""
 
 
 class JobDetail(_ApiModel):
@@ -759,7 +761,8 @@ class LiveDaqList(_ApiModel):
 LIVE_RUNS_BODY = (
     "A live session: `scan`, the Scan card, `{source, daq_id, folder, filename_template, "
     "output_folder, scan_number, author}` (`source` `daq` with the DAQ's `daq_id`, or `notify`; the folder the files "
-    "arrive in, their name with one `%d`, the folder the runs' folders go in); `reconstruction`, the live wire run's "
+    "arrive in, their name with one `%d` (blank or null: every file whose name ends `.h5`, its number the last run of "
+    "digits in its name), the folder the runs' folders go in); `reconstruction`, the live wire run's "
     "form fields of `wire-live/v1` but those the Scan card sets, or null; `indexing`, the live LaueGo run's of "
     "`lauego-live/v1` likewise, or null (`GET /api/v1/programs`). With both, the LaueGo run follows the wire run. The "
     "Scan card sets each run's `scan_number`, `author`, `input_path`, `filename_prefixes`, `output_path_template` "
@@ -813,8 +816,13 @@ class LiveSessionRun(_ApiModel):
     n_failed: int
     stop_requested: bool
     """A stop (Stop seals the session) is requested and the run has not ended yet."""
+    stopped_now: bool
+    """It ended by its Stop now: Failed, phase `interrupted`, its job process killed once its job's messages held
+    "Stop now requested" (`jobs.dispatch.end_stopped_now`). A failure of its own (a failed file, a run-level error, a
+    worker stop) is not."""
     arrival: LiveArrivalStatus | None
-    """Its `arrival-status.json`; null while it has none (a `notify` run, a follower before its first)."""
+    """Its `arrival-status.json`; null while it has none (a follower before its first; a `notify` run until it
+    refused a file without a number, its one line then)."""
 
 
 class LiveSessionScan(_ApiModel):
@@ -824,7 +832,8 @@ class LiveSessionScan(_ApiModel):
     source: Literal["daq", "notify"]
     daq_id: str | None
     folder: str
-    filename_template: str
+    filename_template: str | None
+    """Null: none (every file whose name ends `.h5`, its number the last run of digits in its name)."""
     output_folder: str | None
     """The folder the session's run folders went in (`<output_folder>/rec_%d`, `index_%d`)."""
     scan_number: int | None
@@ -837,6 +846,12 @@ class LiveSession(_ApiModel):
 
     open: bool
     """A run of it is Queued or Running (one live session at a time: Start is refused meanwhile)."""
+    stopped: bool
+    """A user stopped it: its first run's stop was requested (the Live page's Stop or Stop now, or Stop Run on that
+    run's job page or in the Run Monitor), whether or not it has ended. The Live page shows no session once a stopped
+    one has ended with no run Failed of its own (a run ended by its Stop now with no failed file, `stopped_now`, does
+    not count; it still fills the next session's form from it); one that ended without a Stop, or with a run Failed
+    otherwise, stays shown."""
     runs: list[LiveSessionRun]
     scan: LiveSessionScan | None
     """Null when its source run's `live.json` could not be read."""

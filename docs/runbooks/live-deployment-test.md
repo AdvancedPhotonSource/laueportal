@@ -13,8 +13,8 @@ on the real ones: a DAQ's file catalog in DM, and `laueportal live notify`, with
       access for live runs"); the api and the worker restarted since.
 - [ ] No batch run running, or one that may be stopped: a live session stops it ("stopped for a live run", Cancelled;
       re-run by Clone) and holds the queue until it ends. Tell the users.
-- [ ] Test data, copies only: a past scan's raw frames (`<prefix>_%d.h5`, 100 numbered in sequence) with its geometry
-      and crystal files, and a wire scan's stacks (`<wire prefix>_%d.h5`, 10 points) with its geometry file.
+- [ ] Test data, copies only: a past scan's raw frames (`<prefix>_%d.h5`, 100 numbered in sequence) with its Geometry
+      File and Structures File, and a wire scan's stacks (`<wire prefix>_%d.h5`, 10 points) with its Geometry File.
 - [ ] A DM DAQ running for a test experiment, watching a fresh folder that the portal host sees at DM's
       `storageDirectory` (DM's administrators start and stop it).
 - [ ] For the replays (steps 2 and 3), a scratch folder beside each destination folder (outside it, on its file
@@ -45,7 +45,7 @@ date -u +%s; ssh -o BatchMode=yes <dm_ssh_host> date -u +%s       # with dm_ssh_
 
 1. On the Live page: **Source** the test DAQ (Folder fills with where it writes), **Filename Template**
    `<prefix>_%d.h5`, **Output Folder** under the runs root, a Scan Number and Author; Reconstruction off, Indexing on
-   with the geometry and crystal files. **Validate**, then **Start**.
+   with the **Geometry File** and the **Structures File**. **Validate**, then **Start**.
 2. Replay the frames into the DAQ's folder, about two per second (the loop stops at a file it cannot copy or link):
 
    ```bash
@@ -75,7 +75,8 @@ date -u +%s; ssh -o BatchMode=yes <dm_ssh_host> date -u +%s       # with dm_ssh_
      ```
 
    - [ ] the job log (`$root/logs/jobs.log`, the job processes' own): no catalog errors.
-4. **Stop**: Stopping, then Finished with Done equal to Arrived (every frame taken is finished; none after the Stop).
+4. **Stop**: Stopping, then no session on the Live page (Idle); in the Run Monitor, the run Finished with Done equal
+   to Arrived (every frame taken is finished; none after the Stop).
 5. Optional: a batch indexing run (New Index) of the same folder with the same parameters: the same frames indexed,
    the same peaks (live runs keep arrival order, matched to batch by scan point).
 
@@ -116,8 +117,8 @@ date -u +%s; ssh -o BatchMode=yes <dm_ssh_host> date -u +%s       # with dm_ssh_
    - [ ] the indexing's job page (it follows the reconstruction): **Points Read** reaches the reconstruction's
          completed points within about a minute (on NFS a stat can show a file's old size for the mount's attribute
          cache time, `acregmax`, 60 s by default), **Waiting** empty, **Arrivals** the points;
-   - [ ] **Stop** on the Live page: Stopping until both have ended: the reconstruction Finished, then the indexing
-         Finished once it has indexed the last points.
+   - [ ] **Stop** on the Live page: Stopping until both have ended, then no session on the page (Idle); in the Run
+         Monitor, the reconstruction Finished, then the indexing Finished once it has indexed the last points.
 4. Optional: batch runs of the same stacks (New Recon, then New Index of it) give the same points and indexed depths.
 
 ## 4. A hung input (if it happens; do not provoke it on the experiment's storage)

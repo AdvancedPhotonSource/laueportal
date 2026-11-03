@@ -1,4 +1,5 @@
-// The form's validation summary, its Run on / Validate / Submit bar, and the submission's answer.
+// The form's validation summary, its Run on / Validate / Submit bar (the create page's header), a refused
+// submission's message, and the submission's answer.
 import { LoaderCircleIcon } from "lucide-react"
 import type { Control } from "react-hook-form"
 import { JobLink, RunLink } from "@/components/RunLinks"
@@ -40,6 +41,7 @@ export function ValidationSummary({
   failed,
   titleOf,
   onFocusField,
+  className,
 }: {
   issues: PlacedIssues
   shown?: PlacedIssues
@@ -47,11 +49,12 @@ export function ValidationSummary({
   failed: boolean
   titleOf: (field: string | null) => string | undefined
   onFocusField: (field: string) => void
+  className?: string
 }) {
   return (
     <section
       aria-label="Validation"
-      className={cn(surface, "flex flex-col gap-2 p-4")}
+      className={cn(surface, "flex flex-col gap-2 p-4", className)}
     >
       <div className="flex items-center gap-2">
         <h2 className={subheading}>Validation</h2>
@@ -113,11 +116,7 @@ function SummaryLine({
   )
 }
 
-/**
- * The "Run on" choice (the deployment's targets), Validate and Submit, with why the last submission was
- * refused or failed while its values are on screen; after a 409 (the key in use), New Submission, beside the
- * run the key created when it did.
- */
+/** The "Run on" choice (the deployment's targets), Validate and Submit. */
 export function SubmitBar({
   target,
   control,
@@ -131,42 +130,14 @@ export function SubmitBar({
 }) {
   const submitting = submission.submitState.status === "submitting"
   return (
-    <div
-      className={cn(surface, "flex flex-wrap items-end justify-end gap-3 p-4")}
-    >
-      {submission.message !== null && (
-        <div className="mr-auto flex min-w-0 basis-full flex-wrap items-center gap-3 sm:basis-auto sm:self-center">
-          <p role="alert" className="min-w-0 text-sm text-destructive">
-            {submission.message}
-          </p>
-          {submission.existing && (
-            <span className="flex items-center gap-3 text-sm">
-              <span>
-                Run <RunLink run={submission.existing.run} />
-              </span>
-              <span>
-                Job <JobLink id={submission.existing.job_id} />
-              </span>
-            </span>
-          )}
-          {submission.conflict && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={submission.newSession}
-            >
-              New Submission
-            </Button>
-          )}
-        </div>
-      )}
+    <div className="flex flex-wrap items-center justify-end gap-3">
       {target && (
         <SelectField
           field={target}
           control={control}
           issues={issuesOf(target.name)}
-          className="w-48"
+          orientation="horizontal"
+          className="w-auto *:data-[slot=field-label]:flex-none [&_[data-slot=select-trigger]]:w-36"
         />
       )}
       <Button
@@ -186,23 +157,64 @@ export function SubmitBar({
   )
 }
 
-/** The created run's answer: the new run and job (or why it could not be queued), and New Submission. */
+/**
+ * Why the last submission was refused or failed, while its values are on screen; after a 409 (the key in use),
+ * New Submission, beside the run the key created when it did. Nothing otherwise.
+ */
+export function SubmitMessage({ submission }: { submission: RunSubmission }) {
+  if (submission.message === null) return null
+  return (
+    <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
+      <p role="alert" className="min-w-0 text-sm text-destructive">
+        {submission.message}
+      </p>
+      {submission.existing && (
+        <span className="flex items-center gap-3 text-sm">
+          <span>
+            Run <RunLink run={submission.existing.run} />
+          </span>
+          <span>
+            Job <JobLink id={submission.existing.job_id} />
+          </span>
+        </span>
+      )}
+      {submission.conflict && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={submission.newSession}
+        >
+          New Submission
+        </Button>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The created run's answer: the new run and job (or why it could not be queued), and New Submission. It
+ * scrolls into view when it appears (Submit may have been clicked far below it).
+ */
 export function SubmitAnswer({
   state,
   targetLabels,
   onNewSession,
+  className,
 }: {
   state: SubmitState
   /** The targets' labels (`local` is "APS"). */
   targetLabels: Record<string, string>
   onNewSession: () => void
+  className?: string
 }) {
   if (state.status !== "created") return null
   const { created } = state
   return (
     <section
+      ref={reveal}
       aria-label="Submitted"
-      className={cn(surface, "flex flex-col gap-3 p-4")}
+      className={cn(surface, "flex flex-col gap-3 p-4", className)}
     >
       <div className="flex items-center gap-2">
         <h2 className={subheading}>Submitted</h2>
@@ -235,4 +247,8 @@ export function SubmitAnswer({
       </div>
     </section>
   )
+}
+
+function reveal(panel: HTMLElement | null) {
+  panel?.scrollIntoView({ block: "nearest" })
 }

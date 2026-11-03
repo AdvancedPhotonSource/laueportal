@@ -7,7 +7,8 @@
 source and form metadata: ``core.params.shared_field``), normalized as ``wire/v1`` does, but for:
 
 - ``scan_points``: derived, always empty: a live run's inputs are the files that arrive while it runs;
-- ``filename_prefixes``: exactly one template with exactly one ``%d``;
+- ``filename_prefixes``: at most one template, with exactly one ``%d``; none (``[]``): every file arriving whose
+  name ends ``.h5``, its number the last run of digits in its name (``jobs.arrivals.RunFiles``);
 - ``backend``: derived, always ``local``: a live run is computed on the portal host;
 - ``schema_id``: ``wire-live/v1``.
 
@@ -33,11 +34,7 @@ from laueportal.core.params import (
     schema_id_param,
     shared_field,
 )
-from laueportal.files.inputs import (
-    normalize_filename_templates,
-    normalize_input_directory,
-    normalize_output_path_template,
-)
+from laueportal.files.inputs import normalize_input_directory, normalize_output_path_template
 from laueportal.reconstruction.wire.params import FILES, WireParamsV1
 
 SCHEMA_ID = "wire-live/v1"
@@ -62,11 +59,11 @@ class WireLiveParamsV1(ProgramParams):
         widget="filename-templates",
         hint="The wire-scan files' name: %d is each file's number, * any text (e.g. Si_%d.h5).",
         placeholder="Si_%d.h5",
-        min_length=1,
         max_length=1,
         description=(
-            "The arriving wire-scan files' name template: exactly one, with exactly one `%d`, each file's number; "
-            "wildcards are allowed; at most 255 characters."
+            "The arriving wire-scan files' name template: at most one, with exactly one `%d`, each file's number; "
+            "wildcards are allowed; at most 255 characters. None (`[]`): every file arriving whose name ends `.h5`, "
+            "its number the last run of digits in its name."
         ),
     )
     geometry_file: str = _wire("geometry_file")
@@ -108,7 +105,7 @@ class WireLiveParamsV1(ProgramParams):
     @field_validator("filename_prefixes")
     @classmethod
     def _filename_prefixes(cls, value: Sequence[str]) -> tuple[str, ...]:
-        return live_templates(normalize_filename_templates(value))
+        return live_templates(value)
 
     @field_validator("geometry_file")
     @classmethod

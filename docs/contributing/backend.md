@@ -399,7 +399,9 @@ one writer, `jobs.arrivals`' `ArrivalWriter.admit` (every source: the catalog th
 follower's thread through `admit_point`), under the `flock` on `arrivals.lock` (each acquisition a read-write descriptor
 of its own, as NFS needs; never share one), the stop flag read inside it; `notify` (a process per file) looks its path
 up in the run's admission index (`jobs.arrival_index`, SQLite beside the database, the ledger its source of truth),
-never reading the whole ledger under the lock (a test at 100,000 lines bounds the lines read); the acquisition hook's
+never reading the whole ledger under the lock (a test at 100,000 lines bounds the lines read), and a file it refuses
+for having no number (no template, `jobs.arrivals.NumberMissing`) is the open run's `arrival-status.json` line, the
+catalog thread's keys, written only when it changes (`record_number_missing`); the acquisition hook's
 SSH key runs notify alone, through the forced command `jobs.notify_hook` (standard library only: exactly
 `laueportal live notify <job id> <path> --complete`, its arguments checked, then `os.execve` with no shell and an
 environment of its own; deploy.md); the executor reads it from its offset (whole lines only; at most every
@@ -467,10 +469,16 @@ conversion behind an open live session is `held` (`JobSummary`, `JobDetail`, `Co
 `jobs.live.live_session_open`). The Live page's API (`jobs.live_session`, routes in `jobs/api.py`) is present while
 `[live] enabled` (`jobs.api.require_live`, a 404 otherwise; the routes stay in the contract): `GET /live/daqs` (the
 app's `DaqList`, `app.state.daq_list`, awaited: no thread held, no DM call unless asked; `kept_seconds`, the time the
-answer is still served, so the page asks no sooner; a failed answer a 503 `urn:laueportal:problem:dm-unavailable`),
+answer is still served, so the page asks no sooner; a failed answer a 503 `urn:laueportal:problem:dm-unavailable`;
+less a DAQ whose option, its experiment and its data directory's last two names (`live_session.shown_names`), holds
+one of `live.daq_name_exclude` (`live_session.excluded`; no blank entry), which the kept answer, Validate and Start
+still take),
 `GET /live/session` (`jobs.live_status`: the latest session, the newest live run by its queue identity and a follower's
 wire run first, an ended row only with `live.json` in its run directory, `is_live_run`'s rule, looked at once the rows
-are read; each run's status and counters from its job row and its `arrival-status.json`, and the Scan card as recorded,
+are read; each run's status and counters from its job row and its `arrival-status.json`, and `stopped_now` (phase
+`interrupted` and `state.stop_now_requested(job.messages)`: ended by its Stop now, `dispatch.end_stopped_now`),
+`stopped` (the source run's stop flag, kept once it has ended: the page then shows no session unless a run Failed
+other than by its Stop now), and the Scan card as recorded,
 from the source run's `live.json` and rows; rows read in a session closed before any file, each file through the probe,
 `jobs.summary.read_json_file`; the job page's `JobDetail.live` the same way: `live_status.live_row` in the job's
 session, then `job_live`: `live.json`, `arrivals.jsonl`'s whole lines (`jobs.summary.count_arrivals`: the last whole
@@ -576,7 +584,8 @@ decision.
 - changing a key means a new schema version, which needs a maintainer's decision.
 - the live schemas `wire-live/v1` and `lauego-live/v1` (`*/live_params.py`) have exactly the batch models' fields, in
   their order, each a copy of the batch model's (`core.params.shared_field`, normalized alike), but `scan_points`
-  (derived, `""`), `backend` (derived, `local`), `filename_prefixes` (one template, one `%d`), LaueGo's `output_xml` (a
+  (derived, `""`), `backend` (derived, `local`), `filename_prefixes` (at most one template, one `%d`; none, `[]`:
+  every file whose name ends `.h5`, `jobs.arrivals.RunFiles`), LaueGo's `output_xml` (a
   name in the run's folder) and `schema_id`; `live.json`'s model is `jobs.live` (`tests/jobs/test_live_params.py`,
   `test_live_document.py`). They are `jobs.programs.LIVE_PROGRAMS`, listed by `GET /programs` as `lauego-live` and
   `wire-live` while `[live] enabled` (`programs.MODELS` and `AnyProgramKind`: `fixed_values`, `form_defaults`,

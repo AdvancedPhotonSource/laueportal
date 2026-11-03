@@ -26,7 +26,8 @@ The scans then appear on the Scans page. A scan's own page lets you edit its cat
 3. **Find Matching Files** suggests the folder's filename templates; **Find Indices** fills the indices of the
    matching files.
 4. Set the parameters. **Restore Default** resets a section.
-5. Choose **Run on** (APS, or ALCF when it is set up).
+5. Choose **Run on** (APS, or ALCF when it is set up). Run on, **Validate** and **Submit** are beside the page's
+   title, with the validation summary under them; on a wide window they stay in view while you scroll.
 6. The form checks your values as you type; **Validate** checks them at once. Fix the red errors; read the amber
    warnings.
 7. Click **Submit**, and confirm if there are warnings. The new run's page (R…) opens; if the run could not be
@@ -57,9 +58,11 @@ Then set the parameters, choose **Run on**, and **Submit**, as for a reconstruct
 
 **Indexing results:** open an I… link (Indexations, a scan's page, or the job page).
 
-- **Parameters:** the run's values.
-- **Color Map:** the map in 8 colour modes, in 2D or 3D. Hover over a point for its values; click it for its
-  details. Adjust the colours on the colorbar: drag its handles, double-click a value to type it.
+- **Parameters:** the run's values, in the create form's sections and order.
+- **Color Map:** the map in 8 colour modes, in 2D or 3D. By default the 2D view plots X motor against H, and the 3D view
+  X lab, Y lab and Z lab, or X motor, Y motor and Z motor when the results have no depths (so no Z lab); choose other
+  axes in the sidebar. Hover over a point for its values; click it for its details. Adjust the colours on the colorbar:
+  drag its handles, double-click a value to type it.
 - **Pole Figure:** set the HKL and click **Update**. Click a pole to centre the colours on it; draw a lasso or box
   to see the misorientation statistics, highlighted on the map.
 - **Detector View:** a step's detector image with its overlays (detected, indexed, simulated peaks, hkl labels).
@@ -88,25 +91,42 @@ batch run or conversion starts: a batch run running at Start is stopped ("stoppe
 it by Clone), and queued ones wait until the session has ended.
 
 1. **Scan:** pick the **Source**: a DM DAQ from the list (it fills **Folder** with where the DAQ writes; its From and
-   To folders show beside it), or **Notifications**, where an acquisition hook runs
-   `laueportal live notify <job ID> <file> --complete` for each finished file. Enter **Scan Number**, **Author**,
-   **Folder** (where the files arrive), **Filename Template** (one `%d`, each file's number) and **Output Folder**
-   (the session's runs go in it as `rec_<ID>` and `index_<ID>`).
+   To folders show beside it; the list leaves out a DAQ whose option, its experiment and the last two folders of its
+   data folder, has `logs` or `current` in it, as the setting `[live] daq_name_exclude` says), or **Notifications**,
+   where an acquisition hook runs `laueportal live notify <job ID> <file> --complete` for each finished file. Enter
+   **Scan Number**, **Author**, **Folder** (where the files arrive; with a DAQ it may not exist yet, a warning: the
+   DAQ creates it when it writes), **Filename Template** (one `%d`, each file's number; empty: every file whose name
+   ends `.h5`, its number the last number in its name, so `Si_12_3.h5` is 3 and `Si_2_dark.h5` is 2; a `.h5` file
+   without a number is not taken, and the run's arrival status on this page says so, for a DAQ and for
+   notifications) and **Output Folder** (the session's runs go in it as `rec_<ID>` and `index_<ID>`; Start creates it
+   when it does not exist; one that holds anything but earlier sessions' `rec_<ID>` and `index_<ID>` folders is a
+   warning).
+
+   **Output Folder** follows **Folder** until you edit it: a Folder whose path has a `data` folder gives the same path
+   with the last `data` replaced by `analysis` (`/x/exp/data/scan_12` gives `/x/exp/analysis/scan_12`); a Folder
+   without one, or an empty one, gives the configured default. The button beside it, **From data folder**, sets it
+   from the Folder again after you edited it. A form filled from the last session keeps following when that
+   session's Output Folder was the one its Folder gave; one set by hand stays until you press the button.
 2. Switch on **Reconstruction**, **Indexing**, or both. Both: the indexing run indexes each reconstructed point as it
    completes (set its **Depth Indices**; a reconstruction of more than 100,000 depths cannot be followed: its
    indexing fails at the first point, and the reconstruction goes on); Indexing alone indexes each raw frame. Set
    their parameters as on the create forms; Indexing has its **Output XML**.
 3. **Validate** checks the form (the DAQ is checked with DM at Start), then **Start**. The form turns read-only and
    the header shows the session: its state, each run with its link and its job's, the files **Arrived**, **Done** and
-   **Failed**, and the arrival status (a DAQ's catalog: its last check or why files are not taken yet).
+   **Failed**, and the arrival status (a DAQ's catalog: its last check or why files are not taken yet; a file
+   without a number).
 4. **Stop** (it asks first) takes no new file and finishes those taken; the session shows **Stopping** until it ends
-   (with both runs, the indexing finishes the last reconstructed points after the reconstruction has ended), then
-   **Finished** (**Cancelled** when nothing arrived, **Failed** when a file failed). There is no Resume: the form then
-   holds the ended session's values (author and notes reset unless you typed them), so **Start** begins the next
-   session from them.
+   (with both runs, the indexing finishes the last reconstructed points after the reconstruction has ended). Once it
+   has ended, every run **Finished**, **Cancelled** (when nothing arrived) or ended by **Stop now**, the page shows no
+   session (**Idle**): its runs are in the Run Monitor and on their job pages. A session that ends without a Stop, or
+   with a run **Failed** otherwise (a file failed, the worker stopped, the indexing could not follow), stays shown with
+   its state until the next Start. There is no Resume: the form then holds the ended session's values (author and
+   notes reset unless you typed them), checked again, so **Start** begins the next session from them.
 5. While the session is **Stopping**, **Stop** becomes **Stop now** (it asks first): every run still open stops, and
-   a run already stopping is ended at once, **Failed**, keeping what it published. Use it when Stopping does not end:
-   hover **Stopping** to see what the session waits for (e.g. a reconstructed point the indexing cannot read).
+   a run already stopping is ended at once, **Failed** in the Run Monitor, keeping what it published; once every run
+   has ended the page shows no session, as after Stop (unless a file of that run had failed). Use it when Stopping
+   does not end: hover **Stopping** to see what the session waits for (a reconstructed point the indexing that follows
+   it cannot read).
 
 A restart of the portal's worker (an upgrade, a change of its settings) ends an open session: its runs end **Failed**,
 with what they published kept. There is no Resume: a new session on a DAQ takes the folder's files again from its
@@ -121,12 +141,13 @@ Index), as any other's.
   complete one in arrival order). Picking a point yourself turns it off.
 - **Indexing viewer:** it reads the new results by itself every few seconds; the step and the view you are on stay.
 - **Job page:** the **Live Run** card shows the run's **Source** (a DAQ, Notifications, or the reconstruction the
-  indexing follows, linked), its **Folder** and **Filename Template**, its **Arrivals** (the files taken so far; the
-  points, for the indexing that follows a reconstruction), and its arrival status when it has one: a DAQ's **Last
-  Check**, **Rows Seen** and **Error**; the following indexing's **Points Read** and what it is **Waiting** for. Its
-  **Stop Run** says what a live run's stop does: no new files are taken; the files taken are finished. On the
-  session's first run (the reconstruction, or an Indexing session's indexing) it stops the session, as the Live page's
-  Stop does; on the indexing that follows a reconstruction it stops only the indexing, and the reconstruction goes on.
+  indexing follows, linked), its **Folder** and **Filename Template** (— for none), its **Arrivals** (the files taken
+  so far; the points, for the indexing that follows a reconstruction), and its arrival status when it has one: a DAQ's
+  **Last Check**, **Rows Seen** and **Error**; the following indexing's **Points Read** and what it is **Waiting**
+  for; a notification run's **Error**, its last file without a number. Its **Stop Run** says what a live run's stop
+  does: no new files are taken; the files taken are finished. On the session's first run (the reconstruction, or an
+  Indexing session's indexing) it stops the session, as the Live page's Stop does; on the indexing that follows a
+  reconstruction it stops only the indexing, and the reconstruction goes on.
 
 ## Manage the queue
 
@@ -147,3 +168,17 @@ poller: OK, Late or Off), the queue with the next five runs or conversions it st
 two: a live run takes one; while a live run is queued or running, no local batch run or conversion starts, and a
 running one is stopped: a run ends Cancelled, re-run it by Clone; a conversion fails, convert again), and the active
 runs.
+
+Beside the portal's name, the navbar shows the worker's state as a link to the status page: a muted green dot while
+the worker runs, a grey ring until the API answers the first check, and a tinted label when the worker or the API is
+not working:
+
+- **Worker late:** the worker has shown no sign of life for over 45 s.
+- **Worker not running:** the worker is stopped; queued runs wait until it starts.
+- **Worker unknown:** the database does not answer, so the worker's state cannot be read.
+- **API unreachable:** the API does not answer: it is stopped or restarting, the network is down, or the check has
+  had no answer for 10 s.
+- **API error:** the API answers the check with an error.
+
+Its tooltip shows the details and the time of the last answer. In a window narrower than about 800 px, a label can
+drop its first word (Worker or API); the words of the state stay whole.

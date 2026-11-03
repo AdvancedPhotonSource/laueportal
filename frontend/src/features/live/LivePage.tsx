@@ -1,7 +1,8 @@
 // The Live page: one live session at a time from the form kit. The header strip shows the latest session
-// (its state, its runs' counters and arrival status, their links) with Validate, Start and Stop; the Scan
-// card and the program cards make the session's request. While a session is open the form is read-only and
-// shows it; once it has ended, the form is its clone, ready for the next Start (no Resume).
+// (its state, its runs' counters and arrival status, their links) with Validate, Start and Stop; once a session a
+// user stopped has ended it shows none. The Scan card and the program cards make the session's request. While a
+// session is open the form is read-only and shows it; once it has ended, the form is its clone, ready for the next
+// Start (no Resume).
 import { useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
@@ -46,17 +47,21 @@ import {
   blankScan,
   cardValuesOf,
   conflictJobs,
+  followedOutput,
   type LiveSpecs,
   type LiveValues,
   namedSessionEnded,
   openRuns,
+  outputFollows,
   type Part,
+  mirroredOutput,
   placeSessionIssues,
   qualified,
   scanValuesOf,
   sessionRequest,
   sessionState,
   sessionSwitches,
+  shownSession,
   sourceRun,
   splitQualified,
   summaryTitle,
@@ -162,6 +167,40 @@ function LiveForm({ specs }: { specs: LiveSpecs }) {
   const clones = useSessionClones(session)
   const daqs = useDaqList(ready && !open)
 
+  // Output Folder follows Folder (typed, browsed or filled from a DAQ: `followedOutput`) until the user edits it.
+  // A session's values applied count as an edit only when its Output Folder is not the one its Folder gives
+  // (`outputFollows`): a hand-set one stays, a mirrored one keeps following. From data folder follows again.
+  const outputEdited = useRef(false)
+  const scanForm = forms.scan
+  const configuredOutput = String(defaults.scan.output_folder ?? "")
+  const follow = useCallback(
+    (folder: string) => {
+      if (outputEdited.current) return
+      const output = followedOutput(folder, configuredOutput)
+      if (output !== scanForm.getValues("output_folder")) {
+        scanForm.setValue("output_folder", output, { shouldDirty: true })
+      }
+    },
+    [scanForm, configuredOutput]
+  )
+  useEffect(() => {
+    // A user's edit is a "change"; the page's own setValue and reset are not.
+    const subscription = scanForm.watch((values, { name, type }) => {
+      if (type !== "change") return
+      if (name === "output_folder") outputEdited.current = true
+      else if (name === "folder") follow(String(values.folder ?? ""))
+    })
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [scanForm, follow])
+  const fromDataFolder = () => {
+    const output = mirroredOutput(String(scanForm.getValues("folder")))
+    if (output === undefined) return
+    outputEdited.current = false
+    scanForm.setValue("output_folder", output, { shouldDirty: true })
+  }
+
   // The session's values: shown read-only while it is open (but this page's own Start, whose values are on
   // screen), applied as the kit's clone once it has ended (what the user typed beyond it stays: keptByUser;
   // for this page's own session, what was typed went into it, so it is the form's new baseline, not an edit).
@@ -202,6 +241,12 @@ function LiveForm({ specs }: { specs: LiveSpecs }) {
       }
       applied.current = { ...applied.current, [part]: next[part] }
     }
+    const scan = forms.scan.getValues()
+    outputEdited.current = !outputFollows(
+      String(scan.folder),
+      String(scan.output_folder),
+      String(defaults.scan.output_folder ?? "")
+    )
     // `forms` holds the same three forms on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, identity, clones, specs, defaults])
@@ -293,6 +338,14 @@ function LiveForm({ specs }: { specs: LiveSpecs }) {
   useEffect(() => {
     renew.current = submission.newSession
   }, [submission.newSession])
+  // An ended session, once applied to the form (the effect above, before this one): its values are checked again
+  // (`revalidate`), not the report from before Start, since its runs are now in the Output Folder.
+  const endedIdentity =
+    session && !session.open && clones.settled ? identity : null
+  const { revalidate } = submission
+  useEffect(() => {
+    if (endedIdentity !== null) revalidate()
+  }, [endedIdentity, revalidate])
   // A refusal of a session open elsewhere (409): read the session again, which shows it. Its message stays
   // while that session is open; once it has ended, the next Start is a new submission (a new key: the one
   // refused may belong to that session).
@@ -352,7 +405,9 @@ function LiveForm({ specs }: { specs: LiveSpecs }) {
     forms.reconstruction.formState.isDirty ||
     forms.indexing.formState.isDirty
   const busy = submission.submitState.status === "submitting"
-  const state = sessionState(session)
+  // The header's session: none once a session a user stopped has ended (the form still filled from it above).
+  const shown = shownSession(session)
+  const state = sessionState(shown)
   const count = submission.issues.warnings
   const warnings = `${String(count)} ${count === 1 ? "warning" : "warnings"}`
 
@@ -368,7 +423,7 @@ function LiveForm({ specs }: { specs: LiveSpecs }) {
   return (
     <>
       <LiveHeader
-        session={session ?? null}
+        session={shown}
         state={state}
         started={shownStart}
         message={conflictOver ? null : submission.message}
@@ -380,7 +435,7 @@ function LiveForm({ specs }: { specs: LiveSpecs }) {
         starting={busy || awaiting}
         canStop={open}
         stopNow={state === "stopping"}
-        waiting={waitingReason(session)}
+        waiting={waitingReason(shown)}
         onValidate={() => void submission.validateNow()}
         onStart={() => void submission.requestSubmit()}
         onStop={() => {
@@ -411,6 +466,8 @@ function LiveForm({ specs }: { specs: LiveSpecs }) {
           daqs={daqs.data?.daqs ?? []}
           daqError={open ? null : daqs.error}
           readOnly={open || !ready}
+          onFolderFilled={follow}
+          onFromDataFolder={fromDataFolder}
         />
         <ProgramCard
           part="reconstruction"

@@ -23,9 +23,11 @@ from sqlalchemy.orm import Session
 
 from laueportal import cli
 from laueportal.core.settings import get_settings
+from laueportal.files.inputs import resolve_inputs
+from laueportal.files.patterns import compile_filename_templates
 from laueportal.jobs import arrival_index, arrivals, controls
 from laueportal.jobs.arrival_index import index_path
-from laueportal.jobs.arrivals import MAX_POINT_DEPTHS, ArrivalRefused, ArrivalWriter, notify
+from laueportal.jobs.arrivals import MAX_POINT_DEPTHS, NO_TEMPLATE, ArrivalRefused, ArrivalWriter, RunFiles, notify
 from laueportal.jobs.dispatch import claim_run
 from laueportal.jobs.lifecycle import STOP_REASON_CANCELLED
 from laueportal.jobs.live import LiveFollows, read_live_document
@@ -134,6 +136,101 @@ def test_admission_refuses_what_is_not_one_of_the_run_s_files(engine, tmp_path, 
     with pytest.raises(ArrivalRefused, match=re.escape(reason)):
         _writer(engine, run).admit(path, source="catalog" if size else "notify", size=size)
     assert _ledger(run) == b""
+
+
+def test_with_no_template_every_h5_file_is_admitted_its_number_the_last_digits_before_h5(engine, tmp_path):
+    """A run with no file name template takes every file arriving directly in its folder whose name ends ``.h5``:
+    its scan point is the last run of digits before ``.h5`` (``.h5``'s own 5 never counts, leading zeros are dropped);
+    two files with the same number are two inputs, as two names a template's ``*`` matches are."""
+    run = create_live_wire_run(engine, tmp_path, template=False)
+    writer = _writer(engine, run)
+    names = ["Si_12_3.h5", "scan42.h5", "007.h5", "b_7.h5", "a_7.h5", ".hidden_9.h5"]
+    for name in names:
+        (run.folder / name).write_bytes(b"x")
+        assert writer.admit(run.folder / name, source="notify").admitted
+    assert [(os.path.basename(line["path"]), line["scan_point"]) for line in _lines(run)] == [
+        ("Si_12_3.h5", 3),
+        ("scan42.h5", 42),
+        ("007.h5", 7),
+        ("b_7.h5", 7),
+        ("a_7.h5", 7),
+        (".hidden_9.h5", 9),
+    ]
+
+
+@pytest.mark.parametrize("suffix_wildcard", [False, True], ids=["indexing a folder", "a wire run"])
+def test_a_batch_run_with_the_no_template_template_takes_the_same_files_with_the_same_numbers(
+    tmp_path, suffix_wildcard
+):
+    """``NO_TEMPLATE`` (``*%d.h5``), the Filename a batch form cloned from a live run with no template gets
+    (``jobs.prefill``): a batch run's input resolution on the folder (``files.inputs.resolve_inputs``; a wire run adds
+    a ``*`` after each template) takes the files the live rule takes (``RunFiles(None)``), each with the same number:
+    the last of several runs of digits, leading zeros dropped, a name of digits only, a hidden file. Neither takes a
+    name without a number or one that does not end ``.h5``. The one difference, pinned: a name whose last number does
+    not end it before ``.h5`` (``Si_2_dark.h5``), which the live rule numbers and the template does not take."""
+    names = ["Si_12_3.h5", "Si_12_0004.h5", "007.h5", "scan42.h5", "a1b2.h5", ".hidden_9.h5", "12.h5"]
+    others = ["Si_dark.h5", "x.h5", "notes.txt", "Si_5.hdf5", "Si_6.H5"]
+    folder = tmp_path / "frames"
+    folder.mkdir()
+    for name in [*names, *others, "Si_2_dark.h5"]:
+        (folder / name).write_bytes(b"")
+    rule = RunFiles(None)
+    live = {name: rule.number(name) for name in names}
+    for name in others:
+        with pytest.raises(ArrivalRefused):
+            rule.number(name)
+
+    assert live == {
+        "Si_12_3.h5": 3,
+        "Si_12_0004.h5": 4,
+        "007.h5": 7,
+        "scan42.h5": 42,
+        "a1b2.h5": 2,
+        ".hidden_9.h5": 9,
+        "12.h5": 12,
+    }
+    numbers = sorted(set(live.values()))
+    batch = resolve_inputs(folder, [NO_TEMPLATE], numbers, append_suffix_wildcard=suffix_wildcard)
+    assert {(os.path.basename(entry.path), entry.scan_point) for entry in batch} == set(live.items())
+    assert rule.number("Si_2_dark.h5") == 2
+    assert (
+        compile_filename_templates([NO_TEMPLATE], append_suffix_wildcard=suffix_wildcard).match("Si_2_dark.h5") is None
+    )
+
+
+@pytest.mark.parametrize(
+    ("name", "reason"),
+    [
+        ("Si.h5", "'Si.h5' has no number in its name"),
+        ("x.h5", "'x.h5' has no number in its name"),  # the 5 of .h5 is not a number
+        (".h5", "'.h5' has no number in its name"),
+        ("Si_1.hdf5", "'Si_1.hdf5' is not a .h5 file (the run has no file name template)"),
+        ("Si_1.h5.part", "'Si_1.h5.part' is not a .h5 file"),
+        ("Si_1.H5", "'Si_1.H5' is not a .h5 file"),
+    ],
+)
+def test_with_no_template_a_file_not_h5_or_without_a_number_is_refused(engine, tmp_path, name, reason):
+    """Refused, as a file the template does not match is with one: the reason is ``notify``'s one line, and the
+    catalog thread reports a ``.h5`` file without a number among the files refused (``test_catalog.py``)."""
+    run = create_live_wire_run(engine, tmp_path, template=False)
+    (run.folder / name).write_bytes(b"x")
+    with pytest.raises(ArrivalRefused, match=re.escape(reason)):
+        _writer(engine, run).admit(run.folder / name, source="notify")
+    assert _lines(run) == []
+
+
+def test_notify_admits_a_numbered_h5_file_into_a_run_with_no_template_and_refuses_one_without_a_number(
+    configured, tmp_path, capsys
+):
+    run = create_live_wire_run(configured, tmp_path, template=False)
+    (run.folder / "Si_00012.h5").write_bytes(b"x")
+    (run.folder / "Si_dark.h5").write_bytes(b"x")
+    assert cli.main(["live", "notify", str(run.job_id), os.fspath(run.folder / "Si_00012.h5"), "--complete"]) == 0
+    assert cli.main(["live", "notify", str(run.job_id), os.fspath(run.folder / "Si_dark.h5"), "--complete"]) == 1
+    out, err = capsys.readouterr()
+    assert json.loads(out)["n"] == 0
+    assert err == "laueportal live notify: refused: 'Si_dark.h5' has no number in its name\n"
+    assert [line["scan_point"] for line in _lines(run)] == [12]
 
 
 def test_the_same_file_again_is_a_no_op_and_a_changed_one_is_refused_and_logged(engine, tmp_path, caplog):

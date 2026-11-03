@@ -8,7 +8,8 @@ limits, source and form metadata: ``core.params.shared_field``), normalized as `
 
 - ``scan_points``: derived, always empty: a live run's inputs are the files (or, following a live wire run, the
   points) that arrive while it runs;
-- ``filename_prefixes``: exactly one template with exactly one ``%d``;
+- ``filename_prefixes``: at most one template, with exactly one ``%d``; none (``[]``): every file arriving whose
+  name ends ``.h5``, its number the last run of digits in its name (``jobs.arrivals.RunFiles``);
 - ``output_xml``: a file name in the run's folder, not a path;
 - ``backend``: derived, always ``local``: a live run is computed on the portal host;
 - ``schema_id``: ``lauego-live/v1``.
@@ -43,7 +44,6 @@ from laueportal.core.params import (
 from laueportal.files.inputs import (
     WorkflowValidationError,
     count_optional_integer_range,
-    normalize_filename_templates,
     normalize_input_directory,
     normalize_optional_integer_range,
     normalize_output_path_template,
@@ -87,11 +87,11 @@ class LaueGoLiveParamsV1(ProgramParams):
         widget="filename-templates",
         hint="The frame files' name: %d is each file's number, * any text (e.g. Si_%d.h5).",
         placeholder=TEMPLATE_PLACEHOLDER,
-        min_length=1,
         max_length=1,
         description=(
-            "The arriving frame files' name template, or the followed wire run's: exactly one, with exactly one "
-            "`%d`, each file's number; wildcards are allowed; at most 255 characters."
+            "The arriving frame files' name template, or the followed wire run's: at most one, with exactly one "
+            "`%d`, each file's number; wildcards are allowed; at most 255 characters. None (`[]`): every file "
+            "arriving whose name ends `.h5`, its number the last run of digits in its name."
         ),
     )
     threshold: int | None = _lauego("threshold")
@@ -166,7 +166,7 @@ class LaueGoLiveParamsV1(ProgramParams):
     @field_validator("filename_prefixes")
     @classmethod
     def _filename_prefixes(cls, value: Sequence[str]) -> tuple[str, ...]:
-        return live_templates(normalize_filename_templates(value))
+        return live_templates(value)
 
     @field_validator("depth_range")
     @classmethod
@@ -181,7 +181,7 @@ class LaueGoLiveParamsV1(ProgramParams):
     @field_validator("crystal_file")
     @classmethod
     def _crystal_file(cls, value: str) -> str:
-        return required_path(value, "Crystal file")
+        return required_path(value, "Structures file")
 
     @field_validator("mask_file")
     @classmethod

@@ -39,6 +39,7 @@ export function FieldShell({
   hint,
   issues,
   className,
+  orientation,
   children,
 }: {
   /** The control's ID (the label points at it); the issues are `${id}-issues`. */
@@ -47,10 +48,13 @@ export function FieldShell({
   hint?: string
   issues?: readonly FormIssue[]
   className?: string
+  /** "horizontal": the label beside the control. */
+  orientation?: "vertical" | "horizontal"
   children: ReactNode
 }) {
   return (
     <Field
+      orientation={orientation}
       data-invalid={hasError(issues) || undefined}
       className={cn("gap-1.5", className)}
     >

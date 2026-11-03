@@ -212,7 +212,8 @@ test("a worker not running or late is shown clearly", async ({ page }) => {
     /^2026-10-2[45] \d\d:00:00$/
   )
   await expect(state(worker, "Dispatcher")).toHaveText("Off")
-  await expect(indicator).toHaveText("Worker: not running")
+  await expect(indicator).toHaveAccessibleName("Worker not running")
+  await expect(indicator).toHaveAttribute("data-tone", "error")
 
   // Late: no alert; the late thread says when it counts as late.
   const [dispatcher, reconciler, poller] = makeWorker().threads
@@ -237,7 +238,8 @@ test("a worker not running or late is shown clearly", async ({ page }) => {
   )
   await expect(definition(worker, "Dispatcher")).toContainText("1 min 15 s ago")
   await expect(page.getByRole("alert")).toHaveCount(0)
-  await expect(indicator).toHaveText("Worker: late")
+  await expect(indicator).toHaveAccessibleName("Worker late")
+  await expect(indicator).toHaveAttribute("data-tone", "warning")
 })
 
 test("the database down is shown clearly", async ({ page }) => {
@@ -262,9 +264,12 @@ test("the database down is shown clearly", async ({ page }) => {
   )
   await expect(region(page, "Worker")).toHaveText("WorkerUnknown")
   await expect(region(page, "Queue")).toContainText("Unknown")
-  await expect(
-    page.getByRole("group", { name: "Live system status" }).getByRole("link")
-  ).toHaveText("Worker: unknown")
+  // The navbar's pill is an error, as the alert: no run can be read or queued.
+  const indicator = page
+    .getByRole("group", { name: "Live system status" })
+    .getByRole("link")
+  await expect(indicator).toHaveAccessibleName("Worker unknown")
+  await expect(indicator).toHaveAttribute("data-tone", "error")
 })
 
 test("the status page reports the API stopped, keeps saying so through the polls, and recovers on Retry", async ({

@@ -35,7 +35,7 @@ const GROUPS: readonly { title: string; fields: readonly Field[] }[] = [
       ["scan_points", "Scan Indices"],
       ["depth_range", "Depth Indices"],
       ["geometry_file", "Geometry File"],
-      ["crystal_file", "Crystal Structure File"],
+      ["crystal_file", "Structures File"],
       ["output_path", "Output Path"],
       ["output_xml", "Output XML"],
     ],

@@ -33,6 +33,13 @@
   --color-canvas: var(--canvas);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  /* The navbar's worker dot while it runs: the success colour desaturated toward the muted text, so a healthy
+     state stays quiet. Mixed where it is used, so it follows each theme's tokens. */
+  --color-success-quiet: color-mix(
+    in oklab,
+    var(--success) 60%,
+    var(--muted-foreground)
+  );
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-link: var(--link);

@@ -115,7 +115,7 @@ export const SCAN_INDEXING_COLUMNS: GridColumn<IndexingRunSummary>[] = [
   { field: "box_size", header: "Box", type: "number", width: 72 },
   {
     field: "crystal_file",
-    header: "Structure File",
+    header: "Structures File",
     type: "text",
     flex: 1,
     minWidth: 132,

@@ -34,6 +34,7 @@ The answer is bounded like a problem's errors (``core.problems.bounded``), at mo
 from __future__ import annotations
 
 import os
+import re
 import stat
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -353,16 +354,23 @@ def _inside(issues: Issues, settings: Settings, loc: Sequence[str | int], label:
         return None
 
 
-def _status(issues: Issues, loc: Sequence[str | int], label: str, path: Path) -> os.stat_result | None:
+def _status(
+    issues: Issues, loc: Sequence[str | int], label: str, path: Path, *, raise_missing: bool = False
+) -> os.stat_result | None:
     """``path``'s status, through ``files.probe``, or ``None`` and an error: ``not_found``, ``unreadable`` when the
     server cannot reach it (a folder on its way that the server may not open: ``Path.is_file`` and ``is_dir`` raise
-    then, since Python 3.12; ``files.browser`` reads it the same way), or ``not_responding``."""
+    then, since Python 3.12; ``files.browser`` reads it the same way), or ``not_responding``. ``raise_missing``: a
+    path that is not there raises ``FileNotFoundError`` for the caller to report."""
 
     try:
         return probe.bounded(path, path.stat, requested=True)
     except probe.NotResponding:
         _not_responding(issues, loc, label)
-    except (FileNotFoundError, NotADirectoryError):
+    except FileNotFoundError:
+        if raise_missing:
+            raise
+        issues.error(loc, "not_found", f"{label} not found")
+    except NotADirectoryError:
         issues.error(loc, "not_found", f"{label} not found")
     except OSError as error:
         issues.error(loc, "unreadable", f"{label} is not accessible ({error.strerror or type(error).__name__})")
@@ -394,20 +402,64 @@ def check_file(issues: Issues, settings: Settings, checked: Checked, name: str) 
     return None
 
 
-def check_folder(issues: Issues, settings: Settings, loc: Sequence[str | int], label: str, path: str) -> Path | None:
+def check_folder(
+    issues: Issues,
+    settings: Settings,
+    loc: Sequence[str | int],
+    label: str,
+    path: str,
+    *,
+    missing: str | None = None,
+) -> Path | None:
     """A folder a run takes its files from as they arrive (a live run's): inside the roots and an existing folder, which
-    may still be empty. Its real path, or ``None`` after an error."""
+    may still be empty. Its real path, or ``None`` after an error. ``missing``: a folder that is not there yet is this
+    warning (``not_found``) instead of an error, and its real path is still returned, resolved through its nearest
+    existing folder (``files.roots.resolve_inside_roots``, so no link on its way leads it out of the roots): a DAQ
+    makes its folder when it first writes (``jobs.live_session``)."""
 
     real = inside_roots(issues, settings, loc, label, path)
     if real is None:
         return None
-    status = _status(issues, loc, label, real)
+    try:
+        status = _status(issues, loc, label, real, raise_missing=missing is not None)
+    except FileNotFoundError:
+        assert missing is not None
+        issues.warning(loc, "not_found", missing)
+        return real
     if status is None:
         return None
     if not stat.S_ISDIR(status.st_mode):
         issues.error(loc, "not_a_folder", f"{label} must be a folder")
         return None
     return real
+
+
+def check_not_empty(
+    issues: Issues, loc: Sequence[str | int], label: str, folder: Path, *, ignored: re.Pattern[str] | None = None
+) -> None:
+    """An existing folder that holds an entry (a file, a folder, a hidden one) is a warning (``not_empty``); but a
+    folder whose name ``ignored`` matches whole: a live session's output folder may hold earlier sessions' run folders
+    (``rec_<ID>``, ``index_<ID>``, unique by ID), so only something else warns that runs could mix. The entries are
+    read through ``files.probe``, up to the first that warns. A missing folder is no issue (run creation makes it, its
+    parents too); one that is a file or lies under one is ``check_output``'s error, and one the server cannot read is
+    left to the creation."""
+
+    def holds_an_entry() -> bool:
+        with os.scandir(folder) as entries:
+            for entry in entries:
+                if ignored is None or not (ignored.fullmatch(entry.name) and entry.is_dir(follow_symlinks=False)):
+                    return True
+        return False
+
+    try:
+        holds = probe.bounded(folder, holds_an_entry, requested=True)
+    except probe.NotResponding:
+        _not_responding(issues, loc, label)
+        return
+    except OSError:
+        return
+    if holds:
+        issues.warning(loc, "not_empty", "Not empty")
 
 
 InputKind = Literal["folder", "catalog"]

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { CreatedRun } from "@/api"
 import { cleanup, renderWithRouter } from "@/test/render"
-import { SubmitBar } from "./submission-views"
+import { SubmitMessage } from "./submission-views"
 import type { RunSubmission } from "./use-run-submission"
 
 const EXISTING: CreatedRun = {
@@ -15,7 +15,7 @@ const EXISTING: CreatedRun = {
 
 afterEach(cleanup)
 
-describe("SubmitBar", () => {
+describe("SubmitMessage", () => {
   it("shows a 409's message with the run its key created and New Submission", async () => {
     const submission = {
       submitState: { status: "idle" },
@@ -28,12 +28,7 @@ describe("SubmitBar", () => {
       newSession: vi.fn(),
     } as unknown as RunSubmission
     const page = await renderWithRouter(
-      <SubmitBar
-        target={undefined}
-        control={undefined as never}
-        issuesOf={() => undefined}
-        submission={submission}
-      />
+      <SubmitMessage submission={submission} />
     )
     const links = Array.from(page.querySelectorAll("a"), (link) => [
       link.textContent,

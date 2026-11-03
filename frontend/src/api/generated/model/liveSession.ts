@@ -17,4 +17,12 @@ export interface LiveSession {
   runs: LiveSessionRun[];
   /** Null when its source run's `live.json` could not be read. */
   scan: LiveSessionScan | null;
+  /**
+     * A user stopped it: its first run's stop was requested (the Live page's Stop or Stop now, or Stop Run on that
+     * run's job page or in the Run Monitor), whether or not it has ended. The Live page shows no session once a stopped
+     * one has ended with no run Failed of its own (a run ended by its Stop now with no failed file, `stopped_now`, does
+     * not count; it still fills the next session's form from it); one that ended without a Stop, or with a run Failed
+     * otherwise, stays shown.
+     */
+  stopped: boolean;
 }

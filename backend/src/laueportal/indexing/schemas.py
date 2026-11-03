@@ -43,7 +43,7 @@ class IndexingRunSummary(_ApiModel):
     box_size: int | None
     """The peak search box."""
     crystal_file: str | None
-    """The structure file (the card's Structure File)."""
+    """The structure file (the card's Structures File)."""
     author: str | None
     notes: str | None
     created_at: UTCTimestamp

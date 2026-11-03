@@ -2,8 +2,8 @@
 // (an empty Scan picker: an unlinked run); a reconstruction (LaueGo) sets its scan; a clone sets its scan,
 // its reconstruction and its values. A scan or a reconstruction fills only its data fields (`SOURCE_FIELDS`,
 // as backend jobs/prefill.py derives them), a clone the form; a kind change resets the data fields
-// (`CLEARED_FIELDS`). The crystal file, the Output XML (and the geometry on a kind change) stay like the
-// parameters.
+// (`CLEARED_FIELDS`). The Structures File, the Output XML (and the Geometry File on a kind change) stay like
+// the parameters.
 import type { ProgramKind } from "@/api"
 import type { CreatePrefill } from "@/lib/prefill"
 import { CLONE_SOURCE } from "./source-search"

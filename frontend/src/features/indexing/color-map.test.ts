@@ -220,6 +220,60 @@ describe("the plotted axes", () => {
     ).toEqual(["H", "F", "Xlab"])
     expect(resolveAxes(["X", "Y", "Z"], choices("H", "F"), "3d")).toBeNull()
   })
+
+  // lauelab's axes in its order (`AXIS_OPTIONS`); results without depths have no depth, Zlab, Hlab or Flab.
+  const WITH_DEPTHS = choices(
+    "X",
+    "Y",
+    "Z",
+    "H",
+    "F",
+    "depth",
+    "Xlab",
+    "Ylab",
+    "Zlab",
+    "Hlab",
+    "Flab"
+  )
+  const WITHOUT_DEPTHS = choices("X", "Y", "Z", "H", "F", "Xlab", "Ylab")
+
+  it("default to the lab X, Y, Z in 3D, and to X × H in 2D", () => {
+    expect(DEFAULT_MAP.axes3d).toEqual(["Xlab", "Ylab", "Zlab"])
+    expect(resolveAxes(DEFAULT_MAP.axes3d, WITH_DEPTHS, "3d")).toEqual([
+      "Xlab",
+      "Ylab",
+      "Zlab",
+    ])
+    expect(DEFAULT_MAP.axes2d).toEqual(["X", "H"])
+    for (const available of [WITH_DEPTHS, WITHOUT_DEPTHS]) {
+      expect(resolveAxes(DEFAULT_MAP.axes2d, available, "2d")).toEqual([
+        "X",
+        "H",
+      ])
+    }
+  })
+
+  it("fall back to the motors' X, Y, Z in 3D for results without depths, by name", () => {
+    expect(resolveAxes(DEFAULT_MAP.axes3d, WITHOUT_DEPTHS, "3d")).toEqual([
+      "X",
+      "Y",
+      "Z",
+    ])
+    // Not the first three the results list.
+    expect(
+      resolveAxes(
+        DEFAULT_MAP.axes3d,
+        choices("Xlab", "Ylab", "H", "F", "X", "Y", "Z"),
+        "3d"
+      )
+    ).toEqual(["X", "Y", "Z"])
+    // A choice the results have stays.
+    expect(resolveAxes(["Ylab", "Xlab", "H"], WITHOUT_DEPTHS, "3d")).toEqual([
+      "Ylab",
+      "Xlab",
+      "H",
+    ])
+  })
 })
 
 it("captions the legends", () => {

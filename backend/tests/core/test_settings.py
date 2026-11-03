@@ -309,6 +309,21 @@ def test_the_live_settings_defaults(tmp_path: Path) -> None:
         make_settings(tmp_path, live={"dm_ssh_host": "-oProxyCommand=x"})
 
 
+def test_daq_name_exclude_entries_are_stripped_and_a_blank_one_refused_at_load(
+    tmp_path: Path, clean_env: pytest.MonkeyPatch
+) -> None:
+    """``[live] daq_name_exclude``: each entry stripped; a blank or white-space entry would leave out every DAQ (or every
+    one with a space in what its option shows), so the settings refuse it when they load, naming the key."""
+    assert make_settings(tmp_path).live.daq_name_exclude == ["logs", "current"]
+    stripped = make_settings(tmp_path, live={"daq_name_exclude": [" logs ", "Current"]})
+    assert stripped.live.daq_name_exclude == ["logs", "Current"]
+    assert make_settings(tmp_path, live={"daq_name_exclude": []}).live.daq_name_exclude == []
+    for entries in ('[""]', '["logs", "   "]'):
+        config = write_config(tmp_path, MINIMAL_TOML + f"\n[live]\ndaq_name_exclude = {entries}\n")
+        with pytest.raises(ConfigError, match=r"live\.daq_name_exclude: .*an entry is blank"):
+            load_settings(config)
+
+
 def test_settings_are_immutable(tmp_path: Path) -> None:
     settings = make_settings(tmp_path)
     with pytest.raises(ValidationError):

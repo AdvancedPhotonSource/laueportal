@@ -525,8 +525,21 @@ class LiveSettings(_Section):
     daq_list_seconds: float = Field(default=30.0, gt=0)
     """The api's DAQ list: one answer shared by every browser, at most one DM call this often, and only while one is
     asked for (``jobs.daq.DaqList``)."""
+    daq_name_exclude: list[str] = Field(default_factory=lambda: ["logs", "current"])
+    """The Live page's DAQ list (``GET /live/daqs``) leaves out a DAQ whose option shows one of these, ignoring case:
+    its experiment name, or its data directory's last two names (``jobs.live_session.excluded``); Validate and Start
+    still take it. Each entry is stripped, and a blank one is refused (it would match every DAQ, or one with a space).
+    Empty: every DAQ."""
 
     _optional_text = field_validator("dm_ssh_host", mode="before")(_empty_to_none)
+
+    @field_validator("daq_name_exclude")
+    @classmethod
+    def _daq_names(cls, values: list[str]) -> list[str]:
+        stripped = [value.strip() for value in values]
+        if not all(stripped):
+            raise ValueError("an entry is blank: remove it, or give the text to leave out")
+        return stripped
 
     @field_validator("dm_ssh_host")
     @classmethod

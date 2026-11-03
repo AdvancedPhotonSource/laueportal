@@ -7,8 +7,9 @@
 import type { FileState } from './fileState';
 
 /**
- * A live run's `arrival-status.json`: how its source of arrivals is doing (a
- * DAQ's catalog thread, or a follower waiting for a point). Its keys as written, unchecked.
+ * A live run's `arrival-status.json`: how its source of arrivals is doing (a DAQ's catalog thread, a follower
+ * waiting for a point, or a `notify` run's last file refused for having no number). Its keys as written,
+ * unchecked.
  */
 export interface LiveArrivalStatus {
   /** The last look's time (UTC, to the second). */

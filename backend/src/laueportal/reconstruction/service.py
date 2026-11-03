@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 from laueportal.core.paging import GridField, GridSpec, fetch_page
 from laueportal.core.settings import Settings
 from laueportal.files.inputs import ProgressCallback, WorkflowValidationError, format_output_path, resolve_inputs
-from laueportal.jobs.live import LiveDocument
+from laueportal.jobs.live import LiveDocument, live_template
 from laueportal.jobs.models import Job
 from laueportal.jobs.progress import RUN_PROGRESS_FIELDS, active_or_changed_since, grid_progress_columns
 from laueportal.jobs.records import new_job, publish_live_run, publish_run_inputs, publishing
@@ -145,7 +145,7 @@ def create_live_reconstruction(
     if (
         live.source == "run"
         or live.folder != request.input_path
-        or live.filename_template != request.filename_prefixes[0]
+        or live.filename_template != live_template(request.filename_prefixes)
     ):
         raise WorkflowValidationError("A live reconstruction takes the files of its live.json's folder and file name")
 

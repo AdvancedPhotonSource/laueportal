@@ -675,5 +675,5 @@ print(run.id, enqueue_run(run.job_id, engine=engine, remote=remote))  # DM's job
 ```
 
 An indexing run is the same with `"lauego"` and `create_indexing` (`laueportal.indexing.service`); its form also
-takes `reconstruction_id`, the geometry and crystal files (unless `[indexing.defaults]` sets them) and, for a
+takes `reconstruction_id`, `geometry_file` and `crystal_file` (unless `[indexing.defaults]` sets them) and, for a
 reconstruction's frames, `depth_range`.

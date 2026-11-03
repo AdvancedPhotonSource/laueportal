@@ -2,15 +2,15 @@
 ``jobs.api``'s, present while ``[live] enabled``.
 
 **The form** (``POST /live-runs/validate``, ``POST /live-runs``): ``scan``, the Scan card (``source``: ``daq`` with
-its ``daq_id``, or ``notify``; ``folder``; ``filename_template``; ``output_folder``; ``scan_number``; ``author``), and
-``reconstruction`` and/or ``indexing``, each the live schema's form fields (``wire-live/v1``, ``lauego-live/v1``) but
-those the Scan card sets, or null. The Scan card sets each run's identity and paths: ``scan_number``,
-``author``, ``input_path`` (the folder's real path, which ``live.json`` names too),
-``filename_prefixes`` (the template), ``output_path_template`` (``<output_folder>/rec_%d``,
-``<output_folder>/index_%d``) and ``reconstruction_id``: a LaueGo run alone indexes the folder's raw frames
-(``reconstruction_id`` null); beside a wire run it follows it, its ``input_path`` the wire run's catalog and its
-``reconstruction_id`` the wire run, set once that run exists (``jobs.creation.create_live_session``). A program part
-that sends one of those keys is refused (``set_by_scan``), so the pair has one scan number.
+its ``daq_id``, or ``notify``; ``folder``; ``filename_template``, optional: blank or null, every file whose name ends
+``.h5``; ``output_folder``; ``scan_number``; ``author``), and ``reconstruction`` and/or ``indexing``, each the live
+schema's form fields (``wire-live/v1``, ``lauego-live/v1``) but those the Scan card sets, or null. The Scan card sets
+each run's identity and paths: ``scan_number``, ``author``, ``input_path`` (the folder's real path, which ``live.json``
+names too), ``filename_prefixes`` (the template, ``[]`` with none; ``live.json``'s null), ``output_path_template``
+(``<output_folder>/rec_%d``, ``<output_folder>/index_%d``) and ``reconstruction_id``: a LaueGo run alone indexes the
+folder's raw frames (``reconstruction_id`` null); beside a wire run it follows it, its ``input_path`` the wire run's
+catalog and its ``reconstruction_id`` the wire run, set once that run exists (``jobs.creation.create_live_session``).
+A program part that sends one of those keys is refused (``set_by_scan``), so the pair has one scan number.
 
 **The validation** (:func:`validate`; reads only, and never asks DM): issues as a batch form's
 (``jobs.validation``: ``{loc, severity, code, message}``), each ``loc`` starting with its part (``["scan",
@@ -19,8 +19,11 @@ on the Scan card's field, and none when that field has an error of its own). The
 model's rules (``check_form`` with the live kind); the batch checks that apply to a live run (the files inside the
 roots and existing, the output folder taking the run ID, the wire depths and skips); and the live create
 checks: one scan number for the pair (the Scan card's), ``depth_range`` only for a follower, the folder exists (it
-may be empty: the files arrive later), the geometry (and the crystal) load (``science.calibration``; a file over
-1 MiB is refused unread, ``too_large``). A DAQ source's
+may be empty: the files arrive later; for a DAQ source a missing one is a warning, since the DAQ makes it when it
+first writes, and it is still resolved inside the roots through its nearest existing folder), the output folder is
+inside the roots (a missing one is no issue: Start makes it, its parents too; an existing one that holds anything
+but earlier sessions' run folders, ``rec_<ID>`` and ``index_<ID>``, is a warning, ``not_empty``), the geometry (and the crystal) load (``science.calibration``; a file over 1 MiB is refused
+unread, ``too_large``). A DAQ source's
 DAQ is DM's to check, once per live create: Start makes the bind check (``jobs.daq.bind_daq``,
 one DM call, once nothing else is wrong: a refusal is an error on ``daq_id``, DM's silence a 503). Validate makes no
 call (the form validates as it is edited): with the DAQ's record in the DAQ list the api keeps (``jobs.daq.DaqList``,
@@ -44,6 +47,7 @@ from __future__ import annotations
 import logging
 import math
 import os
+import re
 import threading
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -82,7 +86,7 @@ from laueportal.jobs.daq import (
     inside_destination,
 )
 from laueportal.jobs.idempotency import Claim, IdempotencyStore
-from laueportal.jobs.live import LiveDaq, LiveDocument, LiveSessionOpen, check_one_live_session
+from laueportal.jobs.live import LiveDaq, LiveDocument, LiveSessionOpen, check_one_live_session, live_template
 from laueportal.jobs.schemas import (
     CreatedLiveRuns,
     LiveDaqEntry,
@@ -100,6 +104,7 @@ from laueportal.jobs.validation import (
     check_file,
     check_folder,
     check_form,
+    check_not_empty,
     check_output,
     finish,
     inside_roots,
@@ -109,6 +114,7 @@ from laueportal.jobs.validation import (
 from laueportal.reconstruction.models import ReconstructionRun
 from laueportal.reconstruction.validation import check_depths, check_skips
 from laueportal.reconstruction.wire.live_params import WireLiveParamsV1
+from laueportal.remote.dm import DaqRecord
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +144,11 @@ SCAN_SETS: dict[str, str | None] = {
 a follower's ``reconstruction_id``, which no form field sets)."""
 RUN_FOLDERS: dict[programs.ProgramKind, str] = {"wire": "rec_%d", "lauego": "index_%d"}
 """Each run's folder in the session's output folder."""
+RUN_FOLDER_NAMES = re.compile("|".join(re.escape(name).replace("%d", "[0-9]+") for name in RUN_FOLDERS.values()))
+"""The names of the session's run folders (``rec_<ID>``, ``index_<ID>``): an output folder holding only these is not
+"not empty" (``jobs.validation.check_not_empty``)."""
+DAQ_MAKES_FOLDER = "Not found yet: the DAQ creates it"
+"""The warning on a DAQ source's Folder that is not there yet (for notifications it is an error)."""
 
 Source = Literal["daq", "notify"]
 
@@ -147,7 +158,7 @@ SCAN_FIELDS: dict[str, tuple[str, TypeAdapter[Any]]] = {
     "source": ("Source", TypeAdapter(Source)),
     "daq_id": ("DAQ", TypeAdapter(Optional[Annotated[str, Field(max_length=MAX_DAQ_ID_LENGTH)]])),  # noqa: UP045
     "folder": ("Folder", _TEXT),
-    "filename_template": ("Filename", _TEXT),
+    "filename_template": ("Filename", _OPTIONAL_TEXT),
     "output_folder": ("Output folder", _TEXT),
     "scan_number": (
         "Scan Number",
@@ -156,7 +167,9 @@ SCAN_FIELDS: dict[str, tuple[str, TypeAdapter[Any]]] = {
     "author": ("Author", _OPTIONAL_TEXT),
 }
 """The Scan card's fields: each one's label (for the messages that name it) and type."""
-SCAN_REQUIRED = ("source", "folder", "filename_template", "output_folder", "author")
+SCAN_REQUIRED = ("source", "folder", "output_folder", "author")
+SCAN_OPTIONAL = ("filename_template",)
+"""The Scan card's fields a blank value leaves out (null): no template."""
 
 
 @dataclass
@@ -265,6 +278,8 @@ def _check_scan(issues: Issues, settings: Settings, engine: Engine, part: Any) -
             issues.error([SCAN, name], "missing", REQUIRED)
             scan.failed.add(name)
             continue
+        if name in SCAN_OPTIONAL and not _given(value):
+            continue
         try:
             setattr(scan, name, adapter.validate_python(value))
         except ValidationError as error:
@@ -278,7 +293,8 @@ def _check_scan(issues: Issues, settings: Settings, engine: Engine, part: Any) -
         issues.error([SCAN, "daq_id"], "not_for_source", "Only for a DAQ source")
         scan.failed.add("daq_id")
     if scan.folder is not None:
-        scan.real_folder = check_folder(issues, settings, [SCAN, "folder"], "Folder", scan.folder)
+        missing = DAQ_MAKES_FOLDER if scan.source == "daq" else None  # the DAQ makes its folder when it first writes
+        scan.real_folder = check_folder(issues, settings, [SCAN, "folder"], "Folder", scan.folder, missing=missing)
         if scan.real_folder is None:
             scan.failed.add("folder")
     template = scan.filename_template
@@ -287,18 +303,20 @@ def _check_scan(issues: Issues, settings: Settings, engine: Engine, part: Any) -
         if problem is not None:
             issues.error([SCAN, "filename_template"], problem[0], problem[1])
             scan.failed.add("filename_template")
-    if scan.output_folder is not None and (
-        inside_roots(issues, settings, [SCAN, "output_folder"], "Output folder", scan.output_folder) is None
-    ):
-        scan.failed.add("output_folder")
+    if scan.output_folder is not None:
+        output = inside_roots(issues, settings, [SCAN, "output_folder"], "Output folder", scan.output_folder)
+        if output is None:
+            scan.failed.add("output_folder")
+        else:
+            check_not_empty(issues, [SCAN, "output_folder"], "Output folder", output, ignored=RUN_FOLDER_NAMES)
     if "scan_number" not in scan.failed:
         _check_scan_number(issues, engine, scan.scan_number)
     return scan
 
 
 def _template_problem(template: str) -> tuple[str, str] | None:
-    """Why ``template`` is not a live run's file name template (``live.json``'s rule, ``jobs.live``): white space at
-    its ends, a path, not exactly one ``%d``."""
+    """Why ``template`` (given: a blank one is none) is not a live run's file name template (``live.json``'s rule,
+    ``jobs.live``): white space at its ends, a path, not exactly one ``%d``."""
     if padded(template):
         return "path_not_allowed", "Has white space at its start or end: remove it"
     if "/" in template:
@@ -343,7 +361,7 @@ def _scan_values(scan: _Scan, kind: programs.ProgramKind) -> dict[str, Any]:
         "scan_number": scan.scan_number,
         "author": scan.author,
         "input_path": folder or "",
-        "filename_prefixes": [scan.filename_template or ""],
+        "filename_prefixes": [] if scan.filename_template is None else [scan.filename_template],
         "output_path_template": os.path.join(output, RUN_FOLDERS[kind]) if output.strip() else "",
     }
     if kind == "lauego":
@@ -475,7 +493,7 @@ def _plan(issues: Issues, scan: _Scan, daq: LiveDaq | None, runs: Mapping[str, C
             source=scan.source,
             daq=daq,
             folder=os.fspath(scan.real_folder),
-            filename_template=first.filename_prefixes[0],
+            filename_template=live_template(first.filename_prefixes),
         )
     except ValidationError as error:  # the Scan card's own checks hold live.json's rules; never a 500
         issues.error([SCAN], "invalid", field_message(error.errors()[0]))
@@ -604,8 +622,24 @@ def _other_body(answer: Mapping[str, Any] | None) -> ProblemError:
 # The DAQ list
 
 
-def daq_list(answer: DaqListAnswer, *, time_left: float) -> LiveDaqList:
-    """The DAQ list's shared answer (``jobs.daq.DaqList``) as ``GET /live/daqs`` sends it, with the time it is still
+def shown_names(record: DaqRecord) -> tuple[str, str]:
+    """What the Live page's option shows of DAQ ``record`` (``daqLabel``, ``frontend/src/features/live/live-form.ts``):
+    its experiment, and its data directory's last two names (``e1/raw`` for ``/detector/current/e1/raw``)."""
+    names = [name for name in (record.data_directory or "").split("/") if name]
+    return record.experiment, "/".join(names[-2:])
+
+
+def excluded(record: DaqRecord, exclude: Sequence[str]) -> bool:
+    """Whether ``GET /live/daqs`` leaves the DAQ ``record`` out: what its option shows (``shown_names``) contains one
+    of ``exclude`` (``[live] daq_name_exclude``, no blank entry), ignoring case; a name in a folder its option does
+    not show never counts. The kept answer (``DaqList``), Validate's check and Start's bind check still take it."""
+    shown = [text.casefold() for text in shown_names(record)]
+    return any(word.casefold() in text for word in exclude for text in shown)
+
+
+def daq_list(answer: DaqListAnswer, *, time_left: float, exclude: Sequence[str] = ()) -> LiveDaqList:
+    """The DAQ list's shared answer (``jobs.daq.DaqList``) as ``GET /live/daqs`` sends it, but the DAQs ``exclude``
+    leaves out (``excluded``), with the time it is still
     kept (``time_left``: the page asks again only after it); a failed call's is a 503
     ``urn:laueportal:problem:dm-unavailable`` with its reason, ``Retry-After`` the time before DM may be asked again
     (``time_left``, ``DaqList.time_left``: a failure is kept as long as an answer, twice as long for each failure in a
@@ -630,6 +664,7 @@ def daq_list(answer: DaqListAnswer, *, time_left: float) -> LiveDaqList:
                 destination=destination(record),
             )
             for record in answer.daqs
+            if not excluded(record, exclude)
         ],
         failed=list(answer.failed),
         checked_at=answer.checked_at,

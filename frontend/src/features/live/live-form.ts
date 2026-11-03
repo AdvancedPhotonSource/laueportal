@@ -100,7 +100,7 @@ function scanField(
  * number and author are the runs' own fields; the paths are the session's.
  */
 export function scanFields(wire: ProgramSpec): Record<string, FieldSpec> {
-  const { scan_number, author, input_path, filename_prefixes } = wire.fields
+  const { scan_number, author, input_path } = wire.fields
   const output = wire.fields.output_path_template
   const fields = [
     scanField(undefined, {
@@ -136,8 +136,9 @@ export function scanFields(wire: ProgramSpec): Record<string, FieldSpec> {
     scanField(undefined, {
       name: "filename_template",
       title: "Filename Template",
-      hint: "The files' name, %d each file's number",
-      placeholder: filename_prefixes?.placeholder,
+      hint: "The files' name: %d is each file's number, * any text (e.g. Si_%d.h5). Empty: every .h5 file, its number the last number in its name.",
+      required: false,
+      placeholder: EVERY_H5,
     }),
     scanField(undefined, {
       name: "output_folder",
@@ -152,6 +153,59 @@ export function scanFields(wire: ProgramSpec): Record<string, FieldSpec> {
     }),
   ]
   return Object.fromEntries(fields.map((field) => [field.name, field]))
+}
+
+/** The Filename Template's placeholder: what a blank one takes. */
+export const EVERY_H5 = "Every .h5 file"
+
+/** The Output Folder's button that mirrors the Folder again (its tooltip and label). */
+export const FROM_DATA_FOLDER = "From data folder"
+
+/**
+ * The Output Folder a Folder mirrors: the Folder with its last path component that is exactly `data` swapped for
+ * `analysis` (`/x/exp/data/scan_12` → `/x/exp/analysis/scan_12`), the rest as typed (the server normalizes a
+ * doubled or a trailing slash, and refuses a `..`); undefined when it has no such component.
+ */
+export function mirroredOutput(folder: string): string | undefined {
+  const parts = folder.split("/")
+  const index = parts.lastIndexOf("data")
+  if (index < 0) return undefined
+  parts[index] = "analysis"
+  return parts.join("/")
+}
+
+/**
+ * The Output Folder that follows the Folder while the user has not edited it: its mirror; `configured` (the
+ * configured default) for a Folder with nothing to mirror, a blank one too, never an earlier Folder's mirror.
+ */
+export function followedOutput(folder: string, configured: string): string {
+  return mirroredOutput(folder) ?? configured
+}
+
+/**
+ * Whether a form filled from a session (its Scan card's values) still follows its Folder: its Output Folder is the
+ * one the Folder gives (`followedOutput`), or its components from its last `analysis` on are the Folder's from its
+ * last `data` on (the session records its Folder by its real path but its Output Folder as typed, so a link above
+ * them differs: `/r/beamline/exp/data/s7` and `/r/link/exp/analysis/s7` follow). Then the next Folder or DAQ gives its
+ * own; one set by hand counts as edited and stays.
+ */
+export function outputFollows(
+  folder: string,
+  output: string,
+  configured: string
+): boolean {
+  if (output === followedOutput(folder, configured)) return true
+  const folderParts = folder.split("/").filter(Boolean)
+  const outputParts = output.split("/").filter(Boolean)
+  const data = folderParts.lastIndexOf("data")
+  const analysis = outputParts.lastIndexOf("analysis")
+  if (data < 0 || analysis < 0) return false
+  const below = folderParts.slice(data + 1)
+  const outputBelow = outputParts.slice(analysis + 1)
+  return (
+    below.length === outputBelow.length &&
+    below.every((name, index) => name === outputBelow[index])
+  )
 }
 
 /** A program card's spec: the live program's fields but those the Scan card sets. */
@@ -355,6 +409,23 @@ export function summaryTitle(
   return field ? `${PART_TITLES[at.part]} · ${field.title}` : undefined
 }
 
+/**
+ * The session the header shows: none once a session a user stopped has ended with no run Failed of its own (its runs
+ * stay in the Run Monitor and on their job pages; the form still fills from it). A run its Stop now ended
+ * (`stopped_now`: Failed, killed) with no failed file is the Stop's end, not a failure. One that ended without a Stop,
+ * or with a run Failed otherwise (a file failed, a worker stop, a run-level error), stays shown until the next Start:
+ * a failure never vanishes.
+ */
+export function shownSession(
+  session: LiveSession | null | undefined
+): LiveSession | null {
+  if (!session) return null
+  const failed = session.runs.some(
+    (run) => run.status === "failed" && !(run.stopped_now && run.n_failed === 0)
+  )
+  return session.stopped && !session.open && !failed ? null : session
+}
+
 /** The session's state, for its badge: none yet, or its runs' together. */
 export type SessionState = "none" | RunStatus | "stopping"
 
@@ -401,16 +472,20 @@ export function openRuns(session: LiveSession): LiveSessionRun[] {
 }
 
 /**
- * Why an open session waits: the waiting reason of an open run's arrival status (a follower held by a point it
- * cannot read, or a DAQ's catalog error), for the Stopping badge's tooltip; none otherwise.
+ * Why an open session waits, for the Stopping badge's tooltip: its follower's arrival error (a reconstructed point it
+ * cannot read holds it); none otherwise. A DAQ's or a notify run's arrival error (a catalog failure, a file refused
+ * for good, a file without a number) never holds a Stop: the run is sealed and drains what it took, so the error
+ * stays in the runs table and is never what the session waits for.
  */
 export function waitingReason(
   session: LiveSession | null | undefined
 ): string | undefined {
   if (!session?.open) return undefined
+  const follows = session.runs.some((run) => run.run?.kind === "reconstruction")
   for (const run of openRuns(session)) {
     const arrival = run.arrival
-    if (arrival?.state === "available" && arrival.error) {
+    const follower = follows && run.run?.kind === "indexing"
+    if (follower && arrival?.state === "available" && arrival.error) {
       return `${run.run?.label ?? `Job ${String(run.job_id)}`}: ${arrival.error}`
     }
   }
@@ -470,7 +545,7 @@ export function scanValuesOf(
     scan_number: scan.scan_number === null ? "" : String(scan.scan_number),
     author: session.open ? (scan.author ?? "") : (blank.author ?? ""),
     folder: scan.folder,
-    filename_template: scan.filename_template,
+    filename_template: scan.filename_template ?? "",
     output_folder: scan.output_folder ?? blank.output_folder ?? "",
   }
 }

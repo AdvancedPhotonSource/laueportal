@@ -287,6 +287,32 @@ describe("a live run's card", () => {
     ])
   })
 
+  it("shows a notify run's file without a number as its Error, with no catalog's rows", () => {
+    const refused = makeJobLive({
+      filename_template: null,
+      arrival: {
+        state: "available",
+        checked_at: null,
+        rows_seen: null,
+        error: "Not taken: 'Si_dark.h5' has no number in its name",
+        error_at: "2026-10-27T09:59:00+00:00",
+      },
+    })
+    expect(rows(refused).slice(4)).toEqual([
+      ["Error", "Not taken: 'Si_dark.h5' has no number in its name", "warning"],
+      ["Error Since", formatDateTime("2026-10-27T09:59:00+00:00")],
+    ])
+  })
+
+  it("shows a live run with no file name template's Filename Template as none", () => {
+    const none = makeJobLive({ filename_template: null })
+    expect(rows(none).slice(0, 3)).toEqual([
+      ["Source", "Notifications"],
+      ["Folder", none.folder],
+      ["Filename Template", ""],
+    ])
+  })
+
   it("says a live run has no inputs yet, or none arrived, where a batch run selected none", () => {
     expect(noInputsText(makeJobDetail())).toBe("This job selected no inputs.")
     expect(noInputsText(makeJobDetail({ live: makeJobLive() }))).toBe(

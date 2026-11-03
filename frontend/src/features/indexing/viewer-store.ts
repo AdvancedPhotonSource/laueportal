@@ -1,6 +1,7 @@
 // The indexing viewer's settings: one Zustand store, persisted to localStorage under
-// laueportal:view:indexing-viewer:v<version>. A stored value of another version is discarded (no
-// migrations); a stored field that is not valid falls back to its default.
+// laueportal:view:indexing-viewer:v<schema version>. A stored value of an earlier store version is
+// migrated (`migrateStored`: version 1's motor X, Y, Z become the lab X, Y, Z, the 3D default), one
+// of any other version discarded; a stored field that is not valid falls back to its default.
 //
 // Each tab adds its settings as a slice: a field of IndexingViewerSettings, its default in
 // DEFAULT_SETTINGS, its reader in readSettings (so a stored or linked value is checked), and its
@@ -20,6 +21,7 @@ import {
   DEFAULT_DETECTOR,
   DEFAULT_MAP,
   DEFAULT_POLE,
+  MOTOR_AXES_3D,
   readDetector,
   readMap,
   readPole,
@@ -30,9 +32,18 @@ import {
   type ScalarMode,
 } from "./viewer-slices"
 
-/** The schema version of the stored settings and of copied links. */
+/**
+ * The schema version of the settings' shape: in the storage key and in copied links, which a value of another
+ * version cannot be read by (docs/contributing/frontend.md, "State placement").
+ */
 export const VIEWER_SCHEMA_VERSION = 1
 export const VIEWER_STORE_KEY = `laueportal:view:indexing-viewer:v${String(VIEWER_SCHEMA_VERSION)}`
+/**
+ * The stored value's version (the persist middleware's), under the same key: a changed default that browsers which
+ * stored the old one must take bumps it, with its step in `migrateStored`. Links keep `VIEWER_SCHEMA_VERSION`: a link
+ * holds the view it was copied from.
+ */
+export const VIEWER_STORE_VERSION = 2
 
 /** The scope bar: which records every tab reads. */
 export interface ScopeSettings {
@@ -120,6 +131,24 @@ export function readSettings(value: unknown): IndexingViewerSettings {
     pole: readPole(pole),
     detector: readDetector(detector),
   }
+}
+
+/**
+ * The settings of a value stored by an earlier store version. Version 1 held the 3D axes' default of then, the motors'
+ * X, Y, Z, as it held a choice: those become the lab X, Y, Z (the default since version 2), and every other setting
+ * stays. A value of any other version is discarded.
+ */
+export function migrateStored(
+  stored: unknown,
+  version: number
+): IndexingViewerSettings {
+  if (version !== 1) return DEFAULT_SETTINGS
+  const settings = readSettings(stored)
+  const { axes3d } = settings.map
+  const motors = MOTOR_AXES_3D.every((axis, index) => axes3d[index] === axis)
+  return motors
+    ? { ...settings, map: { ...settings.map, axes3d: DEFAULT_MAP.axes3d } }
+    : settings
 }
 
 export interface IndexingViewerState extends IndexingViewerSettings {
@@ -228,11 +257,11 @@ export function createIndexingViewerStore(
       }),
       {
         name: VIEWER_STORE_KEY,
-        version: VIEWER_SCHEMA_VERSION,
+        version: VIEWER_STORE_VERSION,
         storage: createJSONStorage(() => storage),
         partialize: settingsOf,
-        // Another version's value is discarded, not migrated.
-        migrate: () => DEFAULT_SETTINGS,
+        // The migrated value is stored again with this version, so a choice made after it is kept as made.
+        migrate: migrateStored,
         merge: (stored, current) => {
           const read = readSettings(stored)
           return { ...current, ...read, appliedScope: read.scope }

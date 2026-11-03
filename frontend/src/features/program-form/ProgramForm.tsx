@@ -1,6 +1,8 @@
 // The program form scaffold: a page passes the program kind (and the prefill's values) and gets the
 // sections from GET /programs' `x-layout`, each field drawn by its widget, the live validation and its
-// summary, the "Run on" choice with Validate and Submit, and the submission's answer. A new prefill
+// summary, the "Run on" choice with Validate and Submit, a refused submission's message, and the submission's
+// answer; the page's `layout` places these parts, inside the form element (Submit remains the form's submit
+// button). A new prefill
 // (another source) replaces the fields it derives from the source and keeps the ones the user changed; a
 // scan's or a reconstruction's fills only its data fields and the source IDs. A run created and queued
 // opens its page; one created that could not be queued stays in the Submitted panel.
@@ -24,13 +26,6 @@ import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard"
 import { ErrorState } from "@/components/ErrorState"
 import { LoadingState } from "@/components/LoadingState"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { FilenamePatternField, IndicesField } from "./file-helpers"
 import {
@@ -65,11 +60,15 @@ import {
   SOURCE_ID_WIDGETS,
   sourceIdsOf,
 } from "./program-spec"
-import { sectionIdentity } from "./section-identity"
-import { SectionIcon } from "./SectionIcon"
+import { SectionCard } from "./SectionCard"
 import type { SourceOption } from "./source-search"
 import { SourceField } from "./SourcePicker"
-import { SubmitAnswer, SubmitBar, ValidationSummary } from "./submission-views"
+import {
+  SubmitAnswer,
+  SubmitBar,
+  SubmitMessage,
+  ValidationSummary,
+} from "./submission-views"
 import { useRunSubmission } from "./use-run-submission"
 
 /** A source chosen in the form (its scan or reconstruction field): the page's prefill hears it. */
@@ -89,6 +88,40 @@ export interface SourceSlot {
 /** The fields a new prefill fills besides the source IDs; undefined: every field (a clone). */
 export type PrefillFills = readonly string[] | undefined
 
+/** The form's parts, which the page's layout places. */
+export interface FormParts {
+  /** Run on, Validate and Submit; none while the program loads or when it fails to. */
+  actions?: ReactNode
+  /** Why the last submission was refused or failed (nothing otherwise). */
+  message?: ReactNode
+  /** The validation summary. */
+  summary?: ReactNode
+  /** The submission's answer (the Submitted panel, once a run is created). */
+  answer?: ReactNode
+  /** The section cards, or the program's loading or error state. */
+  sections: ReactNode
+}
+
+/** Places the form's parts on the page. */
+export type FormLayout = (parts: FormParts) => ReactNode
+
+/** Without a page's layout: the actions, the message and the summary above the sections. */
+const stacked: FormLayout = ({
+  actions,
+  message,
+  summary,
+  answer,
+  sections,
+}) => (
+  <div className="flex flex-col gap-4">
+    {actions}
+    {message}
+    {summary}
+    {answer}
+    {sections}
+  </div>
+)
+
 export interface ProgramFormProps {
   kind: ProgramKind
   /**
@@ -104,6 +137,8 @@ export interface ProgramFormProps {
    * section: the create page's Source switch. Without it, each is a source picker.
    */
   source?: (slot: SourceSlot) => ReactNode
+  /** Places the form's parts (default: the actions and the summary above the sections). */
+  layout?: FormLayout
 }
 
 /** The program's form: loads GET /programs, then shows its sections. */
@@ -113,21 +148,25 @@ export function ProgramForm({
   fills,
   onSourceChange,
   source,
+  layout = stacked,
 }: ProgramFormProps) {
   const programs = useListPrograms()
   const spec = useMemo(() => {
     const program = programs.data?.programs.find(isProgram(kind))
     return program ? programSpec(program) : undefined
   }, [programs.data, kind])
-  if (programs.isPending) return <LoadingState variant="cards" count={3} />
+  if (programs.isPending)
+    return layout({ sections: <LoadingState variant="cards" count={3} /> })
   if (programs.isError || !spec) {
-    return (
-      <ErrorState
-        error={programs.error ?? new Error(`No ${kind} program`)}
-        onRetry={() => void programs.refetch()}
-        retrying={programs.isFetching}
-      />
-    )
+    return layout({
+      sections: (
+        <ErrorState
+          error={programs.error ?? new Error(`No ${kind} program`)}
+          onRetry={() => void programs.refetch()}
+          retrying={programs.isFetching}
+        />
+      ),
+    })
   }
   return (
     <ProgramFormBody
@@ -136,6 +175,7 @@ export function ProgramForm({
       fills={fills}
       onSourceChange={onSourceChange}
       source={source}
+      layout={layout}
     />
   )
 }
@@ -147,12 +187,14 @@ export function ProgramFormBody({
   fills,
   onSourceChange,
   source,
+  layout = stacked,
 }: {
   spec: ProgramSpec<ProgramKind>
   values?: RequestValues
   fills?: PrefillFills
   onSourceChange?: SourceChange
   source?: (slot: SourceSlot) => ReactNode
+  layout?: FormLayout
 }) {
   const initial = useMemo(() => formValuesOf(spec, values), [spec, values])
   const form = useForm<FormValues>({ defaultValues: initial })
@@ -262,47 +304,63 @@ export function ProgramFormBody({
   return (
     <form
       noValidate
-      className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault()
         void submission.requestSubmit()
       }}
     >
-      {spec.sections.map((section) => (
-        <ProgramSection
-          key={section.group}
-          spec={spec}
-          section={section}
-          control={form.control}
-          setValue={form.setValue}
-          watched={{ ...initial, ...watched } as FormValues}
-          issuesOf={issuesOf}
-          onSourceChange={onSourceChange}
-          source={source}
-        />
-      ))}
-      <ValidationSummary
-        issues={submission.issues}
-        shown={submission.shown}
-        checking={submission.checking}
-        failed={submission.checkFailed}
-        titleOf={titleOf}
-        onFocusField={(name) => {
-          form.setFocus(name)
-        }}
-      />
-      <SubmitBar
-        target={spec.target}
-        control={form.control}
-        issuesOf={issuesOf}
-        submission={submission}
-      />
+      {layout({
+        actions: (
+          <SubmitBar
+            target={spec.target}
+            control={form.control}
+            issuesOf={issuesOf}
+            submission={submission}
+          />
+        ),
+        message: <SubmitMessage submission={submission} />,
+        summary: (
+          <ValidationSummary
+            issues={submission.issues}
+            shown={submission.shown}
+            checking={submission.checking}
+            failed={submission.checkFailed}
+            titleOf={titleOf}
+            onFocusField={(name) => {
+              form.setFocus(name)
+            }}
+            // Under the page's sticky actions: a long list scrolls in its own box.
+            className="[&_ul]:max-h-32 [&_ul]:overflow-y-auto"
+          />
+        ),
+        answer: (
+          <SubmitAnswer
+            state={submission.submitState}
+            targetLabels={targetLabels}
+            onNewSession={submission.newSession}
+            // Below the page's sticky header when it scrolls into view.
+            className="scroll-mt-[calc(var(--form-header,0px)+4rem)]"
+          />
+        ),
+        sections: (
+          <div className="flex flex-col gap-4">
+            {spec.sections.map((section) => (
+              <ProgramSection
+                key={section.group}
+                spec={spec}
+                section={section}
+                control={form.control}
+                setValue={form.setValue}
+                watched={{ ...initial, ...watched } as FormValues}
+                issuesOf={issuesOf}
+                onSourceChange={onSourceChange}
+                source={source}
+              />
+            ))}
+          </div>
+        ),
+      })}
       <UnsavedChangesGuard when={unsaved} />
-      <SubmitAnswer
-        state={submission.submitState}
-        targetLabels={targetLabels}
-        onNewSession={submission.newSession}
-      />
       <ConfirmDialog
         open={submission.confirming}
         onOpenChange={(open) => {
@@ -424,48 +482,43 @@ function ProgramSection({
   }
 
   return (
-    // Below the sticky navbar (h-12) when the page's sidebar scrolls to it, and focused (tabIndex -1).
-    <Card
+    // Below the sticky navbar (h-12) and the page's sticky header (`--form-header`, its height) when the
+    // page's sidebar scrolls to it, and focused (tabIndex -1).
+    <SectionCard
       id={sectionAnchor(section.group)}
       tabIndex={-1}
-      className={cn("scroll-mt-16", sectionIdentity(section.group).stripe)}
+      title={section.group}
+      className="scroll-mt-[calc(var(--form-header,0px)+4rem)]"
+      action={
+        section.restorable && (
+          <Button type="button" variant="outline" size="sm" onClick={restore}>
+            Restore Default
+          </Button>
+        )
+      }
+      contentClassName="grid items-start gap-4 md:grid-cols-3"
     >
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <SectionIcon title={section.group} className="size-4.5" />
-          {section.group}
-        </CardTitle>
-        {section.restorable && (
-          <CardAction>
-            <Button type="button" variant="outline" size="sm" onClick={restore}>
-              Restore Default
-            </Button>
-          </CardAction>
-        )}
-      </CardHeader>
-      <CardContent className="grid items-start gap-4 md:grid-cols-3">
-        {sourceBlock && (
-          <div className="md:col-span-2">
-            {source({ control, values: watched, issuesOf })}
-          </div>
-        )}
-        {blocksOf(fields).map((block) => (
-          <div
-            key={blockKey(block)}
-            className={cn(
-              (block.kind === "indices" ||
-                (block.kind === "field" && WIDE.has(block.field.widget))) &&
-                "md:col-span-3",
-              block.kind === "field" &&
-                block.field.widget === "checkbox" &&
-                "md:self-end"
-            )}
-          >
-            {render(block)}
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+      {sourceBlock && (
+        <div className="md:col-span-2">
+          {source({ control, values: watched, issuesOf })}
+        </div>
+      )}
+      {blocksOf(fields).map((block) => (
+        <div
+          key={blockKey(block)}
+          className={cn(
+            (block.kind === "indices" ||
+              (block.kind === "field" && WIDE.has(block.field.widget))) &&
+              "md:col-span-3",
+            block.kind === "field" &&
+              block.field.widget === "checkbox" &&
+              "md:self-end"
+          )}
+        >
+          {render(block)}
+        </div>
+      ))}
+    </SectionCard>
   )
 }
 

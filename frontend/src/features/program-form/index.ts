@@ -16,9 +16,15 @@ export {
   ToggleField,
 } from "./fields"
 export { FilenamePatternField, IndicesField } from "./file-helpers"
+export { SectionCard } from "./SectionCard"
 export { SectionIcon } from "./SectionIcon"
 export { sectionIdentity } from "./section-identity"
-export { SubmitAnswer, SubmitBar, ValidationSummary } from "./submission-views"
+export {
+  SubmitAnswer,
+  SubmitBar,
+  SubmitMessage,
+  ValidationSummary,
+} from "./submission-views"
 export { blocksOf, isProgram, programSpec, sectionAnchor } from "./program-spec"
 export type {
   FieldBlock,

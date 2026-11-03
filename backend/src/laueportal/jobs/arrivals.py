@@ -4,12 +4,15 @@ ledger's only writer), and the executor's reading and seal.
 **The ledger.** ``arrivals.jsonl`` holds one compact JSON line per admitted input, in arrival order: ``n`` (0, 1, 2,
 …), ``path`` (absolute, in ``live.json``'s folder), the file's identity when it was admitted (``size``, ``mtime_ns``,
 ``inode``, ``device``), ``source`` (``catalog``, ``notify`` or ``run``), ``admitted_at`` (aware UTC to the second)
-and ``scan_point`` (the template's ``%d``); a follower's line names a point and adds ``point_id`` and ``n_depths``.
-It and an empty ``arrivals.lock`` are made with the run (``create_ledger``); the lock is never removed.
+and ``scan_point`` (the file's number, ``RunFiles``); a follower's line names a point and adds ``point_id`` and
+``n_depths``. It and an empty ``arrivals.lock`` are made with the run (``create_ledger``); the lock is never removed.
 
 **Admission** (every source writes through it, so either the catalog or ``notify`` can go without the other or the
-compute). The file must be a regular file directly in the run's folder whose name matches the run's template
-(one number, its scan point); the catalog's must have the catalog's size. A follower's point (``admit_point``, source
+compute). The file must be a regular file directly in the run's folder and one of the run's files, with a number, its
+scan point (``RunFiles``: with ``live.json``'s template, a name it matches, the number its ``%d`` reads; with none, a
+name that ends ``.h5``, the number the last run of digits before it; a name without one is refused). Two files with
+the same number are two inputs, as two names a template's ``*`` matches are (the run's scan points at its end list the
+number once). The catalog's must have the catalog's size. A follower's point (``admit_point``, source
 ``run``, from its thread: ``jobs.follower``) is its point file, a regular file inside the followed run's directory
 (by its text and by its real path), with the scan point, ``point_id`` and ``n_depths`` of its line in that run's
 ``completed.jsonl``: its ``point_id`` the file's stem and no other admitted file's, at most ``MAX_POINT_DEPTHS``
@@ -54,6 +57,7 @@ import fcntl
 import json
 import logging
 import os
+import re
 import sqlite3
 import stat
 from collections.abc import Iterator
@@ -70,7 +74,14 @@ from laueportal.jobs import state
 from laueportal.jobs.arrival_index import ArrivalIndex, IndexStale, index_path
 from laueportal.jobs.live import LiveDocument, inside, live_queue_id, read_live_document
 from laueportal.jobs.models import Job
-from laueportal.jobs.rundir import ARRIVALS_FILENAME, ARRIVALS_LOCK_FILENAME, CompletedPoint, write_empty_file
+from laueportal.jobs.rundir import (
+    ARRIVAL_STATUS_FILENAME,
+    ARRIVALS_FILENAME,
+    ARRIVALS_LOCK_FILENAME,
+    CompletedPoint,
+    write_empty_file,
+    write_json_file,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +104,57 @@ at validation, which would need lauelab's count)."""
 
 class ArrivalRefused(Exception):
     """A file that was not admitted; ``str()`` is the one-line reason."""
+
+
+H5_SUFFIX = ".h5"
+"""With no file name template, a live run takes the files whose name ends with this."""
+_DIGITS = re.compile(r"\d+")
+"""A run of digits, as a template's ``%d`` reads one (``files.patterns``)."""
+NO_TEMPLATE = "*%d.h5"
+"""The file name template a batch form cloned from a live run with no template gets (``jobs.prefill``): a name ending
+``.h5`` whose number ends it (a ``*`` right before ``%d`` never takes the number's digits). It takes the files that run
+took with the same numbers, but for a name whose last number is not right before ``.h5`` (``Si_2_dark.h5``), which
+the live rule numbers (2) and no template of the batch forms can (``tests/jobs/test_arrivals.py``)."""
+
+
+class RunFiles:
+    """Which files of its folder a live run takes, and each one's number (its scan point), by ``live.json``'s
+    ``filename_template``: with a template, the names it matches, the number its ``%d`` reads; with none, every name
+    that ends ``.h5``, the number the last run of digits before ``.h5`` (``Si_12_3.h5``: 3; ``007.h5``: 7;
+    ``Si_2_dark.h5``: 2; ``.h5``'s own 5 never counts), a name without one refused (``NumberMissing``). Admission
+    (``ArrivalWriter``) and the catalog thread (``jobs.catalog``) read files by it."""
+
+    def __init__(self, template: str | None) -> None:
+        self.template = template
+        self._matcher = None if template is None else compile_filename_templates([template])
+
+    def takes(self, name: str) -> bool:
+        """Whether ``name`` is of the run's files: the template matches it, or, with none, it ends ``.h5``. The
+        catalog thread passes over another file of the folder; one of the run's files may still be refused for its
+        number (``number``)."""
+        if self._matcher is None:
+            return name.endswith(H5_SUFFIX)
+        return self._matcher.match(name) is not None
+
+    def number(self, name: str) -> int:
+        """``name``'s number; ``ArrivalRefused`` with the reason when it is not one of the run's files or has no
+        number (``NumberMissing``)."""
+        if self._matcher is not None:
+            match = self._matcher.match(name)
+            if match is None or len(match.indices) != 1:
+                raise ArrivalRefused(f"{quoted(name)} does not match the run's file name {self.template}")
+            return match.indices[0]
+        if not name.endswith(H5_SUFFIX):
+            raise ArrivalRefused(f"{quoted(name)} is not a {H5_SUFFIX} file (the run has no file name template)")
+        digits = _DIGITS.findall(name[: -len(H5_SUFFIX)])
+        if not digits:
+            raise NumberMissing(f"{quoted(name)} has no number in its name")
+        return int(digits[-1])
+
+
+class NumberMissing(ArrivalRefused):
+    """One of the run's files (no template: a name ending ``.h5``) whose name has no number: refused for good, and
+    shown on the Live page (the catalog's ``arrival-status.json`` error; ``notify``'s ``record_number_missing``)."""
 
 
 class ArrivalNotReady(ArrivalRefused):
@@ -291,7 +353,7 @@ class ArrivalWriter:
         self._job_id = job_id
         self._directory = os.fspath(run_directory)
         self._live = live
-        self._matcher = compile_filename_templates([live.filename_template])
+        self._files = RunFiles(live.filename_template)
         self._quiet = quiet
         self._offset = 0
         self._count = 0
@@ -419,17 +481,14 @@ class ArrivalWriter:
 
     def _candidate(self, text: str) -> tuple[str, int]:
         """The path as the ledger records it (in ``live.json``'s folder) and its scan point; refused when the path is
-        not one of the run's files."""
+        not one of the run's files or its name has no number (``RunFiles``)."""
         if "\0" in text or not os.path.isabs(text):
             raise ArrivalRefused(f"{quoted(text)} is not an absolute path")
         directory, name = os.path.split(os.path.normpath(text))
         folder = self._live.folder
         if directory != folder and os.path.realpath(directory) != os.path.realpath(folder):
             raise ArrivalRefused(f"{quoted(text)} is not directly in the run's folder {folder}")
-        match = self._matcher.match(name)
-        if match is None or len(match.indices) != 1:
-            raise ArrivalRefused(f"{quoted(name)} does not match the run's file name {self._live.filename_template}")
-        return os.path.join(folder, name), match.indices[0]
+        return os.path.join(folder, name), self._files.number(name)
 
     @contextmanager
     def _ledger(self) -> Iterator[int | None]:
@@ -553,7 +612,9 @@ def notify(engine: Engine, job_id: int, path: str | os.PathLike[str]) -> Admissi
     open live run whose source is ``notify`` (``ArrivalRefused`` with the one-line reason otherwise). A file admitted
     before with the same identity is a no-op (before the run's state is looked at). The
     admission looks the path up in the run's admission index beside the database (``jobs.arrival_index``), so its
-    cost does not grow with the ledger (an engine on no database file reads the ledger whole)."""
+    cost does not grow with the ledger (an engine on no database file reads the ledger whole). One of the run's files
+    refused for having no number (``NumberMissing``) is also the run's line on the Live page, while the run is open
+    (``record_number_missing``)."""
     row = _job_row(engine, job_id)
     if row is None:
         raise ArrivalRefused(f"job {job_id} does not exist")
@@ -569,4 +630,33 @@ def notify(engine: Engine, job_id: int, path: str | os.PathLike[str]) -> Admissi
     database = engine.url.database
     index = None if not database or database == ":memory:" else index_path(database, job_id)
     writer = ArrivalWriter(engine, job_id, run_directory, live, quiet=True, index=index)
-    return writer.admit(os.path.abspath(path), source="notify")
+    try:
+        return writer.admit(os.path.abspath(path), source="notify")
+    except NumberMissing as refused:
+        status, phase, cancel_requested_at = row[0], row[1], row[2]
+        if status not in state.TERMINAL_STATUSES and phase not in state.TERMINAL_PHASES and not cancel_requested_at:
+            record_number_missing(run_directory, refused)
+        raise
+
+
+def record_number_missing(run_directory: str, refused: NumberMissing) -> None:
+    """A ``notify`` run's line on the Live page for a file refused for having no number: its ``arrival-status.json``
+    (the catalog thread's keys, ``jobs.catalog``: ``error`` "Not taken: <the reason>", ``error_at`` when that error was
+    first written; ``checked_at`` and ``rows_seen`` null, as nothing looks at a catalog). Replaced only when the error
+    changes, so the same file notified again leaves it as it is, and kept until another such file replaces it. A
+    status that cannot be read or written is logged, never the refusal's (``notify`` still answers it)."""
+    path = os.path.join(run_directory, ARRIVAL_STATUS_FILENAME)
+    error = f"Not taken: {refused}"
+    try:
+        with open(path, encoding="utf-8") as handle:
+            if json.load(handle).get("error") == error:
+                return
+    except FileNotFoundError:
+        pass
+    except (OSError, ValueError, AttributeError) as failure:
+        logger.warning("%s cannot be read: %s", path, failure)
+    now = datetime.now(UTC).replace(microsecond=0).isoformat()
+    try:
+        write_json_file(path, {"checked_at": None, "rows_seen": None, "error": error, "error_at": now}, overwrite=True)
+    except OSError as failure:
+        logger.warning("%s cannot be written: %s", path, failure)

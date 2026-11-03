@@ -44,10 +44,12 @@ rows in all (5,000), and, after the first request, none that the longest so far 
 
 **Admission** goes through ``jobs.arrivals``' ``ArrivalWriter.admit`` only, source ``catalog``, with the
 catalog's size. A row's checks, in order: its DAQ, its experiment and its path (relative, without ``..``,
-directly in the run's folder: else it is not used, and reported); then the run's file name template (another file of
-the folder is passed over: never admitted, its size never read and its time only bounding a provisional cursor, so it
-is never in the status's error; ``rows_seen`` counts it); then its size (a positive whole number, else not admitted,
-and reported) and its time (else the file is admitted but its time not used for the cursor, and reported). The file
+directly in the run's folder: else it is not used, and reported); then whether it is one of the run's files
+(``jobs.arrivals.RunFiles.takes``: the template matches its name, or, with none, its name ends ``.h5``; another file
+of the folder is passed over: never admitted, its size never read and its time only bounding a provisional cursor, so
+it is never in the status's error; ``rows_seen`` counts it); then its size (a positive whole number, else not
+admitted, and reported) and its time (else the file is admitted but its time not used for the cursor, and reported).
+A run's file whose name has no number (no template) is refused for good by admission, so it is reported. The file
 is the storage directory joined to the row's ``experimentFilePath``. A file not there yet or without the catalog's
 size is held back (``ArrivalNotReady``) and tried again at each cycle, by its own stat (no DM call), until it
 matches; a file refused for good (changed since it was admitted, not a regular file) is not tried again.
@@ -83,8 +85,7 @@ from typing import Any, Protocol
 from sqlalchemy import Engine
 
 from laueportal.core.settings import LiveSettings
-from laueportal.files.patterns import compile_filename_templates
-from laueportal.jobs.arrivals import ArrivalNotReady, ArrivalRefused, ArrivalsClosed, ArrivalWriter
+from laueportal.jobs.arrivals import ArrivalNotReady, ArrivalRefused, ArrivalsClosed, ArrivalWriter, RunFiles
 from laueportal.jobs.contract import RunRequest
 from laueportal.jobs.daq import DM_ERRORS, DaqUnavailable, describe, live_client
 from laueportal.jobs.live import LiveDaq, LiveDocument
@@ -182,7 +183,7 @@ class CatalogReader:
         self._client = client
         self._wall = wall
         self._writer = ArrivalWriter(engine, job_id, run_directory, live)
-        self._matcher = compile_filename_templates([live.filename_template])
+        self._files = RunFiles(live.filename_template)
         self._status_path = status_path(run_directory)
         self._incremental: _Query | None = None
         self._full: _Query | None = None
@@ -341,7 +342,7 @@ class CatalogReader:
             self._log_once(row.path, "Job %s: %s", refused)
             return 0
         self._seen.add(path)
-        if self._matcher.match(os.path.basename(path)) is None:
+        if not self._files.takes(os.path.basename(path)):
             return 0  # another file of the folder: never the run's
         if row.processing_time is None:
             problems.append(f"catalog row {row.path}: fileProcessingTime is not a time")

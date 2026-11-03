@@ -423,13 +423,17 @@ Queued and Running rows, `is_live_run` for any row).
 - **The Live page's API** (`jobs.live_session`, routes in `jobs/api.py`), present while `[live] enabled`
   (`jobs.api.require_live`: a 404 otherwise; `GET /programs` then lists `lauego-live` and `wire-live` after the batch
   programs, so their presence says the page is on). A session's form is the Scan card (`source` `daq` with its `daq_id`,
-  or `notify`; `folder`, `filename_template`, `output_folder`, `scan_number`, `author`) and `reconstruction` and/or
-  `indexing`, each its live schema's form fields but those the Scan card sets (each run's `scan_number`, `author`,
+  or `notify`; `folder`, `filename_template` (optional: none takes every file whose name ends `.h5`, its number the
+  last run of digits in its name, `jobs.arrivals.RunFiles`; `filename_prefixes` `[]`, `live.json`'s null),
+  `output_folder`, `scan_number`, `author`) and `reconstruction` and/or `indexing`, each its live schema's form fields
+  but those the Scan card sets (each run's `scan_number`, `author`,
   `input_path` the folder's real path, `filename_prefixes`, `output_path_template` `<output_folder>/rec_%d` or
   `index_%d`; with both, the LaueGo run follows the wire run: its catalog and its ID). `POST /live-runs/validate`
   answers the issues (each `loc` under its part; the batch checks that apply, through `jobs.validation.check_form` with
-  the live kind, and the live create checks: one scan number, `depth_range` only for a follower, the folder exists, the
-  geometry and crystal load (`science.calibration`; over 1 MiB, refused unread, by the stat and by the read); no DM
+  the live kind, and the live create checks: one scan number, `depth_range` only for a follower, the folder exists (a
+  DAQ source's missing one is a warning: the DAQ makes it), the output folder inside the roots (a missing one Start
+  makes; one holding anything but earlier sessions' `rec_<ID>` and `index_<ID>` folders a warning), the geometry and
+  crystal load (`science.calibration`; over 1 MiB, refused unread, by the stat and by the read); no DM
   call: a DAQ source's folder against the DAQ's destination as the kept DAQ list saw it, `DaqList.last_seen`, else a
   warning that Start checks the DAQ). `POST /live-runs` (Start) claims its `Idempotency-Key` (route `createLiveRuns`),
   validates, then makes the DAQ bind check, the one DM call per live create (a 422; DM's silence a 503
@@ -439,12 +443,16 @@ Queued and Running rows, `is_live_run` for any row).
   `jobs.queue.enqueue_live_runs`: the dispatcher sees both or neither, so a wire run is never claimed alone with the
   whole share; it checks again for an open live run, so one session holds in the database whatever process starts it;
   all or nothing: a run that fails leaves the others Failed and none queued). Validate and Start run in the folder-read
-  turn, in a worker thread (Start's DM call off the event loop). `GET /live/daqs` awaits the app's `DaqList`
+  turn, in a worker thread (Start's DM call off the event loop). `GET /live/daqs` (less a DAQ whose option, its
+  experiment and its data directory's last two names, holds one of `[live] daq_name_exclude`, for the list alone)
+  awaits the app's `DaqList`
   (`app.state.daq_list`: no DM call until a request asks; `kept_seconds`, the answer's time left; a failed call a 503
   `dm-unavailable`). `GET /live/session` (`jobs.live_status`) answers the latest session: the newest live run by its
   queue identity (a follower's wire run first; an ended run only with its `live.json`, as `is_live_run` reads one), each
-  run's status, counters and stop from its job row and its `arrival-status.json` (through the probe), `open`, and the
-  Scan card as recorded (the source run's `live.json` and rows). Stop is the job API's cancel on the source run. Tests:
+  run's status, counters and stop from its job row and its `arrival-status.json` (through the probe) and whether its
+  Stop now ended it (`stopped_now`: Failed, phase `interrupted` and its job's message line "Stop now requested"),
+  `open`, `stopped` (the source run's stop flag, kept once it has ended) and the Scan card as recorded (the source
+  run's `live.json` and rows). Stop is the job API's cancel on the source run. Tests:
   `backend/tests/jobs/test_live_api.py` (the race and the Both rule through real concurrent requests and the real
   dispatcher).
 
@@ -452,11 +460,20 @@ Queued and Running rows, `is_live_run` for any row).
   the fields the Scan card sets), one session-level request through the kit's `useSubmission`, its issues placed by
   their part. It polls `GET /live/session` every 5 s while a session is open (then its cards are read-only and show it),
   asks `GET /live/daqs` only while its form is open and never sooner than `kept_seconds`, and once a session has ended
-  applies its clone (the Scan card as recorded and each run's `GET /programs/{kind}/prefill` clone) for the next Start.
-  A session is Stopping from its first run's stop or end until it ends (a follower drains after its wire run); meanwhile
+  applies its clone (the Scan card as recorded and each run's `GET /programs/{kind}/prefill` clone) for the next Start;
+  its header shows no session once a session a user stopped has ended with no run Failed of its own
+  (`LiveSession.stopped`; a run ended by its Stop now with no failed file, `stopped_now`, is the Stop's end), while
+  one that ended without a Stop, or with a run Failed otherwise, stays shown until the next Start; the ended
+  session's values are checked again. The Scan card's Output Folder follows its Folder (the last `data` component made
+  `analysis`; the configured default for a Folder without one) until the user edits it, a session's values counting
+  as an edit only when its Output Folder is not the one its Folder gives (or, below its last `analysis`, the names
+  below the Folder's last `data`: a Folder recorded by its real path), and From data folder sets it from the Folder
+  again. A session is Stopping from its first run's stop or end until it ends (a follower drains after its wire run);
+  meanwhile
   Stop is Stop now (`POST /jobs/{id}/stop-now` on every open run: one not stopped yet is stopped, one already stopping
   is killed by the worker's dispatcher and ends Failed/interrupted, what it published kept), and the Stopping badge's
-  tooltip is why it waits (an open run's arrival-status error, e.g. a follower's held point). A queued batch run or
+  tooltip is why it waits (a follower's arrival-status error: a point it cannot read; a DAQ's or a notify run's error
+  never holds a Stop). A queued batch run or
   conversion an open session holds says so (`JobSummary.held`, `JobDetail.held`, `ConversionJob.held`: the Run Monitor's
   "Held", the job page, the artifact bar). The navbar shows "Live" while `GET /programs` lists the live programs.
 - **The viewers and the job page of a live run**: both viewers' artifacts say `live_open` (an open live run). The wire

@@ -1,12 +1,19 @@
 import {
   appendFileSync,
   copyFileSync,
+  existsSync,
   mkdirSync,
   readFileSync,
   statSync,
 } from "node:fs"
 
-import { expect, test, type Page } from "@playwright/test"
+import {
+  type APIRequestContext,
+  expect,
+  type Locator,
+  test,
+  type Page,
+} from "@playwright/test"
 
 import type {
   CreatedLiveRuns,
@@ -28,10 +35,13 @@ import {
 // The Live page on the seeded stack (`make e2e`, nothing mocked; deploy/supervisor/e2e.sh turns `[live]` on with a
 // stand-in DM that fails every call until a test switches it on, so the DAQ list is unavailable and the source is
 // notifications): an Indexing session on the demo's synthetic frames, started from the page, its frames admitted with
-// `laueportal live notify`, its counters moving, stopped from the page (sealed and drained: Finished), and the form
-// then the session's clone for the next Start. With LIVE_SHOTS set to a folder, the page's three states are saved
-// there, light and dark. Then a Both session on the demo's wire scan: Stop, and the session Stopping (Stop now in
-// Stop's place) while the follower drains after its wire run has ended, until both have ended. Then the viewers and the
+// `laueportal live notify`, its counters moving, stopped from the page (sealed and drained: Finished; the page then
+// shows no session), and the form then the session's clone for the next Start. With LIVE_SHOTS set to a folder, the
+// page's three states are saved there, light and dark. Then a Both session on the demo's wire scan: Stop, and the
+// session Stopping (Stop now in Stop's place) while the follower drains after its wire run has ended, until both have
+// ended. Then a session on a Folder whose path has a `data` folder: its Output Folder the mirror (From data folder),
+// missing until Start makes it, no Filename Template, and after Stop a second session on the same folders that starts
+// with no confirmation, then the form following a new Folder. Then the viewers and the
 // job page of live runs (after those two, whose first needs no session before it): the wire viewer's "Follow newest
 // point" on a live wire run whose stacks arrive one by one, the indexing viewer of a live LaueGo run updating as it
 // publishes, and the job page of a live run and of its follower (their screenshots too, with LIVE_SHOTS). Last (its
@@ -57,6 +67,32 @@ async function shots(page: Page, name: string) {
   await page.emulateMedia({ colorScheme: null })
 }
 
+/** The Scan card alone (`LIVE_SHOTS`), light and dark. */
+async function cardShots(card: Locator, name: string) {
+  const folder = process.env.LIVE_SHOTS
+  if (!folder) return
+  const page = card.page()
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme })
+    await page.mouse.move(0, 0)
+    await card.screenshot({ path: `${folder}/${name}-${colorScheme}.png` })
+  }
+  await page.emulateMedia({ colorScheme: null })
+}
+
+/** The latest session as the API answers it (the page shows none once a stopped one has ended). */
+async function latestSession(
+  request: APIRequestContext
+): Promise<LiveSessionState["session"]> {
+  const answer = await request.get("/api/v1/live/session")
+  return ((await answer.json()) as LiveSessionState).session
+}
+
+/** An output folder of its own for a session (an existing one that is not empty is a warning). */
+function outputFolder(name: string): string {
+  return `${configuredRunsRoot()}/live/${name}-${String(Date.now())}`
+}
+
 /** Stop a session a failed test left open: an open live run holds every batch run of the later specs. */
 test.afterEach(async ({ request }) => {
   const response = await request.get("/api/v1/live/session")
@@ -79,7 +115,7 @@ test.afterEach(async ({ request }) => {
     .toBe(false)
 })
 
-test("a live session: Start, notified frames counted, Stop to Finished, and Start again prefilled", async ({
+test("a live session: Start, notified frames counted, Stop to Finished and no session shown, and Start again prefilled", async ({
   page,
   request,
 }) => {
@@ -89,7 +125,7 @@ test("a live session: Start, notified frames counted, Stop to Finished, and Star
   await untilLocalRunsEnd(request)
   const root = configuredRunsRoot()
   const folder = `${root}/inputs/synthetic-indexing`
-  const output = `${root}/live`
+  const output = outputFolder("indexing")
 
   await page.goto("/live")
   await expect(page).toHaveTitle("Live · 3DMN Portal")
@@ -154,18 +190,24 @@ test("a live session: Start, notified frames counted, Stop to Finished, and Star
     "No new files are taken; the files taken are finished."
   )
   await dialog.getByRole("button", { name: "Stop" }).click()
+  // Once it has ended the page shows no session (Idle, no runs table); the run, Finished, is the API's.
   const badge = session.locator('[data-slot="card-title"] [data-status]')
-  await expect(badge).toHaveAttribute("data-status", "finished", {
+  await expect(badge).toHaveAttribute("data-status", "idle", {
     timeout: 120_000,
   })
-  await expect(count("done")).toHaveText("3")
-  await expect(count("failed")).toHaveText("0")
+  await expect(row).toHaveCount(0)
+  await expect(session).toContainText("No live session")
+  const ended = await latestSession(request)
+  expect(ended?.stopped).toBe(true)
+  expect(
+    ended?.runs.map((run) => [run.status, run.n_succeeded, run.n_failed])
+  ).toEqual([["finished", 3, 0]])
 
   // Start again: the form is the ended session's clone, editable (no Resume).
   await expect(folderField).toBeEnabled()
   await expect(folderField).toHaveValue(/\/inputs\/synthetic-indexing$/)
   await expect(scan.getByLabel("Filename Template")).toHaveValue("frame_%d.h5")
-  await expect(scan.getByLabel("Output Folder")).toHaveValue(/\/live$/)
+  await expect(scan.getByLabel("Output Folder")).toHaveValue(output)
   await expect(scan.getByLabel("Scan Number")).toHaveValue("990001")
   await expect(
     page.getByRole("switch", { name: "Reconstruction" })
@@ -197,7 +239,7 @@ test("a Both session is Stopping, Stop now in Stop's place, from Stop until its 
   }
   await folderField.fill(folder)
   await scan.getByLabel("Filename Template").fill("wire_%d.h5")
-  await scan.getByLabel("Output Folder").fill(`${root}/live`)
+  await scan.getByLabel("Output Folder").fill(outputFolder("both"))
   await scan.getByLabel("Scan Number").fill("990001")
   await scan.getByLabel("Author").fill("e2e")
   await session.getByRole("button", { name: "Validate" }).click()
@@ -241,7 +283,8 @@ test("a Both session is Stopping, Stop now in Stop's place, from Stop until its 
   // Stopping: Stop is Stop now (not pressed here: the follower drains by itself).
   await expect(stopNow).toBeEnabled()
 
-  const ended = /^(finished|failed|cancelled)$/
+  // Ended: no session shown (a stopped one), Idle.
+  const ended = /^(idle|finished|failed|cancelled)$/
   const samples: { state: string; stopNow: boolean; pair: string }[] = []
   await expect
     .poll(
@@ -268,9 +311,140 @@ test("a Both session is Stopping, Stop now in Stop's place, from Stop until its 
     samples.filter((sample) => sample.state !== "stopping" || !sample.stopNow)
   ).toEqual([])
   expect(samples.map((sample) => sample.pair)).toContain("finished/running")
-  await expect(badge).toHaveAttribute("data-status", "finished")
+  await expect(badge).toHaveAttribute("data-status", "idle")
+  expect((await latestSession(request))?.runs.map((run) => run.status)).toEqual(
+    ["finished", "finished"]
+  )
   await expect(session.getByRole("button", { name: "Start" })).toBeEnabled()
   await expect(stop).toBeDisabled()
+})
+
+test("Output Folder mirrors a data Folder: the session's runs go in it, made at Start, and a second session there starts unasked", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(300_000)
+  await checkStackDatabase(request)
+  await untilLocalRunsEnd(request)
+  const root = configuredRunsRoot()
+  const base = `${root}/inputs/mirror-${String(Date.now())}`
+  const folder = `${base}/data/scan_12`
+  const mirrored = `${base}/analysis/scan_12`
+  mkdirSync(folder, { recursive: true })
+
+  await page.goto("/live")
+  const session = page.getByRole("region", { name: "Session" })
+  const scan = page.getByRole("region", { name: "Scan" })
+  const folderField = scan.getByLabel("Folder", { exact: true })
+  const output = scan.getByLabel("Output Folder")
+  const fromData = scan.getByRole("button", { name: "From data folder" })
+  await expect(folderField).toBeEnabled()
+  // The form fills from the last session (its switches too) once its clones have answered: wait for it.
+  const last = (await latestSession(request))?.scan
+  if (last) await expect(folderField).toHaveValue(last.folder)
+  for (const [name, wanted] of [
+    ["Reconstruction", false],
+    ["Indexing", true],
+  ] as const) {
+    const part = page.getByRole("switch", { name })
+    if ((await part.isChecked()) !== wanted) await part.click()
+  }
+  // A form filled from the last session keeps its Output Folder (an edit) until From data folder mirrors the Folder
+  // (`…/data/scan_12` to `…/analysis/scan_12`); with none before, Output Folder follows the Folder at once.
+  const before = await output.inputValue()
+  await folderField.fill(folder)
+  await expect(output).toHaveValue(last ? before : mirrored)
+  await expect(fromData).toBeEnabled()
+  await fromData.click()
+  await expect(output).toHaveValue(mirrored)
+  // No Filename Template: every .h5 file, its number the last in its name.
+  await scan.getByLabel("Filename Template").fill("")
+  await scan.getByLabel("Scan Number").fill("990001")
+  await scan.getByLabel("Author").fill("e2e")
+  await session.getByRole("button", { name: "Validate" }).click()
+  await expect(page.getByRole("region", { name: "Validation" })).toContainText(
+    "No issues",
+    { timeout: 15_000 }
+  )
+  // The e2e root's path is long: the shot shows the Output Folder's end, its mirrored part.
+  await output.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth
+  })
+  await cardShots(scan, "live-scan-mirrored")
+
+  const started = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/v1/live-runs" &&
+      response.request().method() === "POST"
+  )
+  await session.getByRole("button", { name: "Start" }).click()
+  const answer = await started
+  expect(answer.status()).toBe(201)
+  const [run] = ((await answer.json()) as CreatedLiveRuns).runs
+  const id = run?.run.id ?? -1
+  // Its folder in the mirrored Output Folder, which Start made.
+  const detail = (await (
+    await request.get(`/api/v1/indexing-runs/${String(id)}`)
+  ).json()) as { output_path: string }
+  expect(detail.output_path).toBe(`${mirrored}/index_${String(id)}`)
+  expect(existsSync(detail.output_path)).toBe(true)
+  const row = session.locator(`[data-job="${String(run?.job_id)}"]`)
+  copyFileSync(
+    `${root}/inputs/synthetic-indexing/frame_1.h5`,
+    `${folder}/Si_00012.h5`
+  )
+  notifyLive(run?.job_id ?? -1, `${folder}/Si_00012.h5`)
+  await expect(row.locator('[data-count="arrived"]')).toHaveText("1", {
+    timeout: 30_000,
+  })
+
+  await session.getByRole("button", { name: "Stop" }).click()
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Stop" })
+    .click()
+  await expect(
+    session.locator('[data-slot="card-title"] [data-status]')
+  ).toHaveAttribute("data-status", "idle", { timeout: 120_000 })
+  await expect(row).toHaveCount(0)
+  // The next form: the session's values, checked again (its run's folder is now in the Output Folder: no issue).
+  const validation = page.getByRole("region", { name: "Validation" })
+  await expect(output).toHaveValue(mirrored)
+  await expect(scan.getByLabel("Filename Template")).toHaveValue("")
+  await expect(validation).toContainText("No issues", { timeout: 15_000 })
+  await shots(page, "live-after-stop")
+
+  // A second session on the same data folder and mirrored Output Folder: Start asks no confirmation.
+  const again = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/v1/live-runs" &&
+      response.request().method() === "POST"
+  )
+  await session.getByRole("button", { name: "Start" }).click()
+  const second = await again
+  expect(second.status()).toBe(201)
+  await expect(page.getByRole("alertdialog")).toHaveCount(0)
+  const [next] = ((await second.json()) as CreatedLiveRuns).runs
+  const nextDetail = (await (
+    await request.get(`/api/v1/indexing-runs/${String(next?.run.id)}`)
+  ).json()) as { output_path: string }
+  expect(nextDetail.output_path).toBe(
+    `${mirrored}/index_${String(next?.run.id)}`
+  )
+  const nextRow = session.locator(`[data-job="${String(next?.job_id)}"]`)
+  await expect(nextRow).toBeVisible()
+  await session.getByRole("button", { name: "Stop" }).click()
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Stop" })
+    .click()
+  await expect(
+    session.locator('[data-slot="card-title"] [data-status]')
+  ).toHaveAttribute("data-status", "idle", { timeout: 120_000 })
+
+  // The form filled from it keeps following the Folder (its Output Folder is the Folder's mirror).
+  await folderField.fill(`${base}/data/scan_13`)
+  await expect(output).toHaveValue(`${base}/analysis/scan_13`)
 })
 
 /** Start a live session from the Live page (its parts switched as asked); its runs, the wire run first. */
@@ -297,7 +471,7 @@ async function startSession(
   }
   await folderField.fill(options.folder)
   await scan.getByLabel("Filename Template").fill(options.template)
-  await scan.getByLabel("Output Folder").fill(`${configuredRunsRoot()}/live`)
+  await scan.getByLabel("Output Folder").fill(outputFolder("session"))
   await scan.getByLabel("Scan Number").fill("990001")
   await scan.getByLabel("Author").fill("e2e")
   await session.getByRole("button", { name: "Validate" }).click()
@@ -583,7 +757,7 @@ test.describe("a DAQ session", () => {
       await page.getByRole("switch", { name: "Reconstruction" }).click()
     }
     await scan.getByLabel("Filename Template").fill("frame_%d.h5")
-    await scan.getByLabel("Output Folder").fill(`${configuredRunsRoot()}/live`)
+    await scan.getByLabel("Output Folder").fill(outputFolder("daq"))
     await scan.getByLabel("Scan Number").fill("990001")
     await scan.getByLabel("Author").fill("e2e")
     await session.getByRole("button", { name: "Validate" }).click()
@@ -635,12 +809,19 @@ test.describe("a DAQ session", () => {
     catalogue(4)
     const stoppedAt = Date.now() / 1000
     await dialog.getByRole("button", { name: "Stop" }).click()
+    // Ended: no session shown; its run, Finished with every file, is the API's.
     await expect(
       session.locator('[data-slot="card-title"] [data-status]')
-    ).toHaveAttribute("data-status", "finished", { timeout: 120_000 })
-    await expect(count("arrived")).toHaveText("3")
-    await expect(count("done")).toHaveText("3")
-    await expect(count("failed")).toHaveText("0")
+    ).toHaveAttribute("data-status", "idle", { timeout: 120_000 })
+    const ended = await latestSession(request)
+    expect(
+      ended?.runs.map((run) => [
+        run.status,
+        run.n_inputs,
+        run.n_succeeded,
+        run.n_failed,
+      ])
+    ).toEqual([["finished", 3, 3, 0]])
     // DM's catalog was read after the Stop (the last read; no regular cycle follows the run's stop).
     expect(fakeDMCatalogCalls().some((at) => at > stoppedAt)).toBe(true)
   })

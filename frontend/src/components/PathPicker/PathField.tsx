@@ -1,5 +1,5 @@
 import { FolderOpenIcon } from "lucide-react"
-import { useState, type Ref } from "react"
+import { type ReactNode, useState, type Ref } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,6 +34,8 @@ export interface PathFieldProps {
   placeholder?: string
   disabled?: boolean
   className?: string
+  /** More controls after Browse, in its row (the Live page's From data folder). */
+  actions?: ReactNode
 }
 
 /**
@@ -58,6 +60,7 @@ export function PathField({
   placeholder,
   disabled = false,
   className,
+  actions,
 }: PathFieldProps) {
   const [open, setOpen] = useState(false)
   return (
@@ -92,6 +95,7 @@ export function PathField({
         <FolderOpenIcon data-icon="inline-start" aria-hidden />
         Browse
       </Button>
+      {actions}
       <PathPickerDialog
         open={open}
         onOpenChange={setOpen}

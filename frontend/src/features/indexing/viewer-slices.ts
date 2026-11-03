@@ -71,7 +71,13 @@ export const RODRIGUES_REFERENCES = ["lab", "step", "custom"] as const
 export type RodriguesReference = (typeof RODRIGUES_REFERENCES)[number]
 
 export const DEFAULT_AXES_2D = ["X", "H"] as const
-export const DEFAULT_AXES_3D = ["X", "Y", "Z"] as const
+/** The lab frame's X, Y and Z (lauelab's "X lab", "Y lab", "Z lab"). */
+export const DEFAULT_AXES_3D = ["Xlab", "Ylab", "Zlab"] as const
+/**
+ * The sample motors' X, Y and Z: the 3D axes of results without depths, which have no Zlab (`resolveAxes`), and the
+ * 3D default that version 1 of the stored settings holds (`migrateStored`).
+ */
+export const MOTOR_AXES_3D = ["X", "Y", "Z"] as const
 
 export const MARKER_SIZE_RANGE = [1, 75] as const
 

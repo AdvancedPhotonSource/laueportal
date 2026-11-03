@@ -1,7 +1,7 @@
 // The form kit's field components: shadcn Field with React Hook Form's Controller, labelled, limited and
 // hinted from GET /programs (program-spec.ts). The form holds text and booleans (form-values.ts); what is
 // sent is the server's to check.
-import { type ComponentProps, useId } from "react"
+import { type ComponentProps, type ReactNode, useId } from "react"
 import { type Control, useController } from "react-hook-form"
 import { PathField, type PickerMode } from "@/components/PathPicker"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -300,8 +300,11 @@ export function SelectField({
   control,
   issues,
   className,
+  orientation,
   onPick,
 }: KitFieldProps & {
+  /** "horizontal": the label beside the control (the create page's header). */
+  orientation?: "vertical" | "horizontal"
   /** The user picked an option (its value already set); a value set from outside is no pick. */
   onPick?: (value: string) => void
 }) {
@@ -320,6 +323,7 @@ export function SelectField({
       hint={fieldHint(field)}
       issues={issues}
       className={className}
+      orientation={orientation}
     >
       <Select
         items={labels}
@@ -404,7 +408,13 @@ export function PathPickerField({
   className,
   mode,
   template = false,
-}: KitFieldProps & { mode: PickerMode; template?: boolean }) {
+  actions,
+}: KitFieldProps & {
+  mode: PickerMode
+  template?: boolean
+  /** More controls after Browse, in its row (`PathField`'s). */
+  actions?: ReactNode
+}) {
   const id = useId()
   const {
     field: { name, ref, value, onChange, onBlur },
@@ -433,6 +443,7 @@ export function PathPickerField({
         describedBy={issues?.length ? `${id}-issues` : undefined}
         placeholder={field.placeholder}
         dialogTitle={`Choose the ${field.title}`}
+        actions={actions}
       />
     </FieldShell>
   )

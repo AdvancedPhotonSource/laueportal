@@ -7,6 +7,7 @@ import {
   SCOPE_APPLY_DELAY_MS,
   scopeParams,
   VIEWER_STORE_KEY,
+  VIEWER_STORE_VERSION,
 } from "./viewer-store"
 import { DEFAULT_DETECTOR, DEFAULT_MAP, DEFAULT_POLE } from "./viewer-slices"
 
@@ -27,6 +28,16 @@ function memoryStorage(entries: Record<string, string> = {}) {
 const stored = (state: unknown, version: number) =>
   JSON.stringify({ state, version })
 
+/** The stored value's version and its settings. */
+function storedValue(storage: ReturnType<typeof memoryStorage>) {
+  return JSON.parse(storage.values.get(VIEWER_STORE_KEY) ?? "null") as {
+    state: typeof DEFAULT_SETTINGS
+    version: number
+  } | null
+}
+const storedVersion = (storage: ReturnType<typeof memoryStorage>) =>
+  storedValue(storage)?.version
+
 afterEach(() => {
   vi.useRealTimers()
 })
@@ -42,6 +53,7 @@ describe("the indexing viewer's store", () => {
       pattern0Only: false,
       skipPeaksAtMost: 0,
     })
+    expect(storedVersion(storage)).toBe(2)
   })
 
   it("discards a stored value of another schema version", () => {
@@ -54,13 +66,85 @@ describe("the indexing viewer's store", () => {
     expect(createIndexingViewerStore(storage).getState().scope).toEqual(
       DEFAULT_SETTINGS.scope
     )
+    // A later version's (another build's) too.
+    const later = memoryStorage({
+      [VIEWER_STORE_KEY]: stored(
+        { scope: { pattern0Only: false, skipPeaksAtMost: 9 } },
+        VIEWER_STORE_VERSION + 1
+      ),
+    })
+    expect(createIndexingViewerStore(later).getState().scope).toEqual(
+      DEFAULT_SETTINGS.scope
+    )
+  })
+
+  it("migrates a version 1 value: its motor X, Y, Z become the lab X, Y, Z, and every other setting stays", () => {
+    const settings = {
+      scope: { pattern0Only: false, skipPeaksAtMost: 9 },
+      map: {
+        ...DEFAULT_MAP,
+        axes2d: ["Y", "F"],
+        axes3d: ["X", "Y", "Z"],
+        markerSize: 12,
+      },
+      pole: { ...DEFAULT_POLE, radius: 30 },
+      detector: { ...DEFAULT_DETECTOR, colormap: "inferno" },
+    }
+    const storage = memoryStorage({
+      [VIEWER_STORE_KEY]: stored(settings, 1),
+    })
+    const state = createIndexingViewerStore(storage).getState()
+    const expected = {
+      ...settings,
+      map: { ...settings.map, axes3d: ["Xlab", "Ylab", "Zlab"] },
+    }
+    expect({
+      scope: state.scope,
+      map: state.map,
+      pole: state.pole,
+      detector: state.detector,
+    }).toEqual(expected)
+    // Stored again as version 2, under the same key (as JSON: an automatic range's NaN is null).
+    expect(storedValue(storage)).toEqual(
+      JSON.parse(JSON.stringify({ state: expected, version: 2 }))
+    )
+  })
+
+  it("keeps a version 1 value's other 3D axes", () => {
+    for (const axes3d of [
+      ["Y", "X", "Z"],
+      ["X", "Y", "H"],
+      ["Xlab", "Ylab", "Zlab"],
+    ]) {
+      const storage = memoryStorage({
+        [VIEWER_STORE_KEY]: stored({ map: { axes3d } }, 1),
+      })
+      expect(createIndexingViewerStore(storage).getState().map.axes3d).toEqual(
+        axes3d
+      )
+    }
+  })
+
+  it("keeps the motors' X, Y, Z when chosen after the migration", () => {
+    const storage = memoryStorage({
+      [VIEWER_STORE_KEY]: stored({ map: { axes3d: ["X", "Y", "Z"] } }, 1),
+    })
+    const store = createIndexingViewerStore(storage)
+    expect(store.getState().map.axes3d).toEqual(["Xlab", "Ylab", "Zlab"])
+    store.getState().setMap({ axes3d: ["X", "Y", "Z"] })
+    expect(createIndexingViewerStore(storage).getState().map.axes3d).toEqual([
+      "X",
+      "Y",
+      "Z",
+    ])
+    expect(storedVersion(storage)).toBe(2)
   })
 
   it("falls back to the default of each stored field that is not valid", () => {
     const storage = memoryStorage({
       [VIEWER_STORE_KEY]: stored(
         { scope: { pattern0Only: false, skipPeaksAtMost: -2 } },
-        1
+        VIEWER_STORE_VERSION
       ),
     })
     expect(createIndexingViewerStore(storage).getState().scope).toEqual({
@@ -181,7 +265,7 @@ describe("the indexing viewer's store", () => {
           },
           pole: { radius: 0, scheme: "ipf", reference: { indexingId: 1 } },
         },
-        1
+        VIEWER_STORE_VERSION
       ),
     })
     const { map, pole } = createIndexingViewerStore(storage).getState()
@@ -233,7 +317,7 @@ describe("the indexing viewer's store", () => {
             showImage: false,
           },
         },
-        1
+        VIEWER_STORE_VERSION
       ),
     })
     expect(createIndexingViewerStore(invalid).getState().detector).toEqual({

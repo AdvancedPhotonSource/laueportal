@@ -2,9 +2,10 @@ import { expect, test, type Page } from "@playwright/test"
 
 import type { IndexingRunDetail } from "@/api"
 
-// The indexing viewer on the seeded stack (`make e2e`, nothing mocked): I1 opened with its header
-// links, a tab in the URL, the scope kept across a reload, a copied link opening the same view, and
-// back/forward changing only the tab and the step.
+// The indexing viewer on the seeded stack (`make e2e`, nothing mocked but long values on a narrow window): I1
+// opened with its header links, its Parameters tab (the create form's section cards, one column), a tab in the
+// URL, the scope kept across a reload, a copied link opening the same view, and back/forward changing only the tab
+// and the step.
 
 const I1 = "/indexing/1"
 
@@ -56,9 +57,7 @@ test("I1 opens with its job and scan, its parameters, and its tab in the URL", a
   await expect(
     page.getByRole("heading", { name: "Peak Search Parameters" })
   ).toBeVisible()
-  const crystal = page
-    .getByRole("term")
-    .filter({ hasText: "Crystal Structure File" })
+  const crystal = page.getByRole("term").filter({ hasText: "Structures File" })
   await expect(crystal.locator("xpath=following-sibling::dd[1]")).toHaveText(
     run.parameters?.crystal_file ?? ""
   )
@@ -87,6 +86,83 @@ test("I1 opens with its job and scan, its parameters, and its tab in the URL", a
   await expect(
     page.getByRole("link", { name: "I1", exact: true })
   ).toBeVisible()
+})
+
+/** The Parameters tab's cards. */
+const parameterCards = (page: Page) =>
+  page.getByRole("tabpanel").locator('[data-slot="card"]')
+
+/** The texts of the cards and values that are wider than their box (clipped or overflowing). */
+function overflowing(page: Page) {
+  return page.getByRole("tabpanel").evaluate((panel) =>
+    Array.from(panel.querySelectorAll('[data-slot="card"], dd'))
+      .filter((element) => element.scrollWidth > element.clientWidth + 1)
+      .map((element) => element.textContent.slice(0, 60))
+  )
+}
+
+const LONG_FOLDER =
+  "/net/s34data/export/s34data1/2026-3/Some_User_Experiment_With_A_Long_Name_And_No_Break/data"
+
+test("the Parameters tab shows the create form's section cards in one column; long values wrap on a narrow window", async ({
+  page,
+}) => {
+  await page.goto(I1)
+  const titles = [
+    "Identity",
+    "File Paths",
+    "Peak Search Parameters",
+    "Indexing Parameters",
+    "Notes",
+    "Other recorded values",
+  ]
+  const cards = parameterCards(page)
+  await expect(cards.getByRole("heading", { level: 2 })).toHaveText(titles)
+  const boxes = await Promise.all(
+    titles.map((_, index) => cards.nth(index).boundingBox())
+  )
+  // One column: each card under the one before, as wide and as far left.
+  for (const [index, box] of boxes.entries()) {
+    const first = boxes[0]
+    const before = boxes[index - 1]
+    expect(box && first && [box.x, box.width]).toEqual(
+      first && [first.x, first.width]
+    )
+    if (box && before) expect(box.y).toBeGreaterThan(before.y + before.height)
+  }
+
+  await page.route(
+    (url) => url.pathname === "/api/v1/indexing-runs/1",
+    async (route) => {
+      const response = await route.fetch()
+      const run = (await response.json()) as IndexingRunDetail
+      if (!run.parameters) throw new Error("I1 has no parameters")
+      await route.fulfill({
+        response,
+        json: {
+          ...run,
+          input_path: `${LONG_FOLDER}/scan_990001_with_a_long_suffix`,
+          notes: `${"A note with words. ".repeat(12)}\nSecond line: ${"x".repeat(90)}`,
+          parameters: {
+            ...run.parameters,
+            filename_prefixes: [
+              "Ni_sample_with_a_long_prefix_%d.h5",
+              "Ni_sample_b_with_a_long_prefix_%d.h5",
+            ],
+            geometry_file: `${LONG_FOLDER}/calibration/geometry_with_a_long_name.xml`,
+          },
+        },
+      })
+    }
+  )
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.reload()
+  await expect(cards.getByRole("heading", { level: 2 })).toHaveText(titles)
+  const folder = page.getByRole("term").filter({ hasText: "Folder Path" })
+  await expect(folder.locator("xpath=following-sibling::dd[1]")).toHaveText(
+    `${LONG_FOLDER}/scan_990001_with_a_long_suffix`
+  )
+  expect(await overflowing(page)).toEqual([])
 })
 
 test("the scope stays across a reload", async ({ page }) => {

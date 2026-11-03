@@ -602,10 +602,11 @@ export function liveRows(live: JobLive): LiveRow[] {
   if (live.folder !== null) {
     rows.push({ label: "Folder", text: live.folder, mono: true })
   }
-  if (live.filename_template !== null) {
+  // Once live.json was read, a run with no template (every .h5 file) shows none ("—").
+  if (live.source !== null) {
     rows.push({
       label: "Filename Template",
-      text: live.filename_template,
+      text: live.filename_template ?? "",
       mono: true,
     })
   }
@@ -627,15 +628,20 @@ export function liveRows(live: JobLive): LiveRow[] {
     return rows
   }
   const follower = live.source === "run"
+  // A notify run's status is its last file refused for having no number: no catalog is looked at.
+  if (live.source !== "notify") {
+    rows.push(
+      {
+        label: "Last Check",
+        text: arrival.checked_at ? formatDateTime(arrival.checked_at) : "",
+      },
+      {
+        label: follower ? "Points Read" : "Rows Seen",
+        text: arrival.rows_seen === null ? "" : formatCount(arrival.rows_seen),
+      }
+    )
+  }
   rows.push(
-    {
-      label: "Last Check",
-      text: arrival.checked_at ? formatDateTime(arrival.checked_at) : "",
-    },
-    {
-      label: follower ? "Points Read" : "Rows Seen",
-      text: arrival.rows_seen === null ? "" : formatCount(arrival.rows_seen),
-    },
     {
       label: follower ? "Waiting" : "Error",
       text: arrival.error ?? "",

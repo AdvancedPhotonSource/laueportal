@@ -13,7 +13,9 @@ configured ones), with the source's over them:
   file-name templates, scan points and geometry file; the scan is the reconstruction's;
 - **a clone** (an indexing run on the LaueGo form, a reconstruction on the wire form): the run's saved parameters, its
   input folder, scan and reconstruction, with the author and notes reset to the configured defaults. Only form fields
-  are copied: no config or derived value. A mapping applies to values the models refuse: an empty ``frame_skip`` or
+  are copied: no config or derived value. A live run with no file name template (``filename_prefixes`` ``[]``) gives
+  ``*%d.h5`` (``jobs.arrivals.NO_TEMPLATE``: the files it took, with the same numbers, but for a name whose last
+  number does not end it), here and as a reconstruction's templates on the LaueGo form, never a blank Filename. A mapping applies to values the models refuse: an empty ``frame_skip`` or
   ``wire_skip`` becomes 1, a ``threshold_ratio`` of 0 or less becomes null; and a ``depth`` of ``nan`` (a migrated
   run's: 49 of 75 LaueGo runs) becomes null (automatic, as compute read it). The target is the run's when this
   deployment still offers it.
@@ -40,6 +42,7 @@ from laueportal.files.probe import NotResponding, bounded
 from laueportal.files.roots import is_file_here
 from laueportal.indexing.models import IndexingRun
 from laueportal.jobs import programs
+from laueportal.jobs.arrivals import NO_TEMPLATE
 from laueportal.jobs.models import Job
 from laueportal.jobs.rundir import reconstruction_catalog_path
 from laueportal.jobs.schemas import ProgramPrefill, RunKind, RunReference
@@ -104,6 +107,13 @@ def _templates(value: Any) -> list[str]:
     return [str(item) for item in value]
 
 
+def _run_templates(value: Any) -> list[str]:
+    """A run's file-name templates for a form (``_templates``); none, a live run's with no template, is
+    ``NO_TEMPLATE``, which takes the files that run took with the same numbers (but a name whose last number does not
+    end it)."""
+    return _templates(value) or [NO_TEMPLATE]
+
+
 def _target(job: Job | None, settings: Settings) -> str:
     """The clone's target: its run's when this deployment still offers it, else the default (the first offered)."""
     offered = [option["value"] for option in programs.execution_targets(settings)]
@@ -127,7 +137,7 @@ def _copied(saved: object, values: Mapping[str, Any]) -> dict[str, Any]:
 
 def _clone_lauego(run: IndexingRun, values: dict[str, Any]) -> dict[str, Any]:
     copied = _copied(run.lauego_parameters, values)
-    copied["filename_prefixes"] = _templates(copied.get("filename_prefixes"))
+    copied["filename_prefixes"] = _run_templates(copied.get("filename_prefixes"))
     ratio = copied.get("threshold_ratio")
     if ratio is not None and ratio <= 0:  # a migrated run's -1: "automatic", as compute read it
         copied["threshold_ratio"] = None
@@ -139,7 +149,7 @@ def _clone_lauego(run: IndexingRun, values: dict[str, Any]) -> dict[str, Any]:
 
 def _clone_wire(run: ReconstructionRun, values: dict[str, Any]) -> dict[str, Any]:
     copied = _copied(run.wire_parameters, values)
-    copied["filename_prefixes"] = _templates(copied.get("filename_prefixes"))
+    copied["filename_prefixes"] = _run_templates(copied.get("filename_prefixes"))
     for name in ("frame_skip", "wire_skip"):
         if copied.get(name) is None:  # an empty skip: the default
             copied[name] = DEFAULT_SKIP
@@ -153,7 +163,7 @@ def _reconstruction_input(run: ReconstructionRun) -> dict[str, Any]:
     parameters = run.wire_parameters
     if parameters is not None:
         values |= {
-            "filename_prefixes": _templates(parameters.filename_prefixes),
+            "filename_prefixes": _run_templates(parameters.filename_prefixes),
             "scan_points": parameters.scan_points,
             "geometry_file": parameters.geometry_file,
         }

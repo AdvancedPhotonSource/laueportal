@@ -2,8 +2,9 @@ import { expect, test, type Page, type Request } from "@playwright/test"
 
 // The Color Map tab on the seeded stack (`make e2e`, nothing mocked): every colour mode on I1, a scalar
 // mode's colorbar recolouring without fetching the map again, the hover readout and the click details
-// card, a failed product keeping the last plot as stale, the 2D/3D switch, and (also in the `no-gpu`
-// project) I2's (the demo's map) 3D hover tooltip or the "needs WebGL" message.
+// card, a failed product keeping the last plot as stale, the 2D/3D switch (I1's frames have no depths, so 3D plots
+// the motors' X, Y, Z), and (also in the `no-gpu` project) I2's (the demo's map, with depths) 3D view on the lab X,
+// Y, Z with its hover tooltip, or the "needs WebGL" message.
 
 const STORE_KEY = "laueportal:view:indexing-viewer:v1"
 
@@ -280,6 +281,7 @@ test("the 2D/3D switch changes the view and its axes, and the URL", async ({
   const threeD = mapResponse(page, "cubic_ipf")
   await page.getByRole("button", { name: "3D" }).click()
   const answer = await threeD
+  // The default, the lab X, Y, Z, needs depths (Zlab): without, the motors' X, Y, Z.
   expect(new URL(answer.url()).searchParams.get("axes")).toBe("X,Y,Z")
   await expect(page).toHaveURL(/view=3d/)
   await expect(plot3d(page)).toBeVisible()
@@ -295,14 +297,22 @@ test("I2 in 3D: with WebGL the hover tooltip shows the point and its coordinates
   page,
 }, testInfo) => {
   test.setTimeout(120_000)
-  await page.goto("/indexing/2?tab=map&view=3d")
   if (testInfo.project.name === "no-gpu") {
+    await page.goto("/indexing/2?tab=map&view=3d")
     await expect(page.getByText("3D needs WebGL")).toBeVisible()
     // The 2D view stays available.
     await page.getByRole("button", { name: "2D" }).click()
     await expect(plot2d(page)).toBeVisible({ timeout: 60_000 })
     return
   }
+  const map = page.waitForResponse((response) =>
+    isMapRequest(response.request())
+  )
+  await page.goto("/indexing/2?tab=map&view=3d")
+  // I2's map has depths: the default lab X, Y, Z.
+  expect(new URL((await map).url()).searchParams.get("axes")).toBe(
+    "Xlab,Ylab,Zlab"
+  )
   const cloud = plot3d(page)
   await expect(cloud).toBeVisible({ timeout: 60_000 })
   await expect(page.getByText("Loading the 3D view")).toHaveCount(0, {
@@ -311,7 +321,7 @@ test("I2 in 3D: with WebGL the hover tooltip shows the point and its coordinates
   const box = await cloud.boundingBox()
   if (!box) throw new Error("the 3D view has no box")
   // The camera fits the cloud, whose middle is the view's: look for a point around the centre.
-  const tooltip = page.getByRole("term").filter({ hasText: /^Z motor/ })
+  const tooltip = page.getByRole("term").filter({ hasText: /^Z lab/ })
   let found = false
   for (const [dx, dy] of [
     [0, 0],
@@ -338,6 +348,6 @@ test("I2 in 3D: with WebGL the hover tooltip shows the point and its coordinates
   expect(found).toBe(true)
   await expect(readout(page)).toBeVisible()
   await expect(
-    page.getByRole("term").filter({ hasText: /^X motor/ })
+    page.getByRole("term").filter({ hasText: /^X lab/ })
   ).toBeVisible()
 })

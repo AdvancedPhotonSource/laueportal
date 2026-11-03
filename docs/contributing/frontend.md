@@ -94,13 +94,16 @@ Server data comes only from the Orval hooks re-exported by `src/api/index.ts`.
   (`src/features/indexing/NumberField.tsx`: applies on Enter or blur); the tabs' sidebar rows are the shared `Choice`,
   `Control`, `Section` and `Note` (`src/features/indexing/controls.tsx`). Changing a slice's shape so that old values
   cannot be read bumps `VIEWER_SCHEMA_VERSION` (old values and links are then discarded); a field added with a default
-  the reader falls back to does not (the clicked pole's `previousColor`). Every product query takes the scope from
-  `useScopeParams()` (the applied scope: a typed N applies after 300 ms or on Enter/blur), never from the stored
-  `scope`. A typed numeric value that changes a server query applies on Enter/blur or after a pause, not on every
-  keystroke. A selector that returns several fields wraps it in `useShallow` (`zustand/shallow`; zustand 5 re-renders
-  forever on a new object each render), or selects each field alone. The store is a module singleton persisted to
-  jsdom's localStorage, so a test that renders the viewer calls `resetIndexingViewerStore()` (`src/test/indexing.ts`)
-  after each test;
+  the reader falls back to does not (the clicked pole's `previousColor`). To make browsers that stored the old default
+  take a new one, bump `VIEWER_STORE_VERSION` (the persisted value's version, under the same key) and add a step to
+  `migrateStored`. The persist middleware applies the step once and stores the value again, so a later choice of the old
+  value stays; links keep their version and their values (version 2: a stored 3D `axes3d` of the motors' X, Y, Z becomes
+  the lab X, Y, Z, the default). Every product query takes the scope from `useScopeParams()` (the applied scope: a typed
+  N applies after 300 ms or on Enter/blur), never from the stored `scope`. A typed numeric value that changes a server
+  query applies on Enter/blur or after a pause, not on every keystroke. A selector that returns several fields wraps it
+  in `useShallow` (`zustand/shallow`; zustand 5 re-renders forever on a new object each render), or selects each field
+  alone. The store is a module singleton persisted to jsdom's localStorage, so a test that renders the viewer calls
+  `resetIndexingViewerStore()` (`src/test/indexing.ts`) after each test;
 - transient interaction state stays in components.
 
 ## Tables
@@ -155,23 +158,28 @@ stable: a new one applies a new prefill, which replaces the fields it derives fr
 the configured default, and keeps what the user changed otherwise, such as Author, Notes and parameters: `keptByUser`;
 `fills`, the field names a scan's or a reconstruction's prefill or a cleared source sets (`source-mode.ts`), applies
 only those and the source IDs and keeps every other field on screen: `applyPrefill`; `source`, the page's source block
-drawn instead of the `scan`/`reconstruction` fields; without it each is a picker, `onSourceChange`): it loads
-`GET /programs` (which also lists the live programs, `lauego-live` and `wire-live`, while live processing is on:
-`@/api`'s `ProgramKind` is the create forms' two, `LiveProgramKind` the Live page's, `ListedProgramKind` every listed
-one; `isProgram(kind)` finds any listed program and `programSpec` reads it as a `ProgramSpec<K>`, a create form's a
-`ProgramSpec<ProgramKind>`) and draws `x-layout`'s sections as cards (`sectionAnchor(group)` ids for a sidebar; each
-card's accent stripe, a bar that takes no layout space, and `SectionIcon` from `sectionIdentity(title)`,
-`section-identity.ts`: one mapping for the create forms, their sidebar and the Live page's cards, the accents the
-`--section-*` tokens; `section-identity.test.ts` fails for a title the programs use without an entry; Restore Default on
-a section of several fields that all have a default), each field by its `x-widget` (`scan`/`reconstruction` source
-pickers, which show a value set from outside as its ID; `folder`/`file` path pickers, a file's listing filtered by
-`x-extensions`; `output-folder`, whose Browse picks a folder and keeps the template's part from its `%d` on;
-`filename-templates` with Find Matching Files, consecutive `indices` with Find Indices (both off while the input is an
-HDF5 file, a reconstruction's scan.h5, the reason in their tooltip), consecutive `hkl` as one row, numbers with their
-`x-unit`, nullable ones blank for automatic, `select` from `x-options`, `checkbox`, `text`, `textarea`), the validation
-summary, Run on (`backend`'s `x-options`) with Validate and Submit, and the answer. Titles are labels; a field's
-`x-hint` (the user's words; the `description` is the API's, for developers) and its limits are the label's tooltip; a
-placeholder is at most a terse value pattern (`x-placeholder`). The form stores text and booleans (`form-values.ts`; a
+drawn instead of the `scan`/`reconstruction` fields; without it each is a picker, `onSourceChange`): it loads `GET
+/programs` (which also lists the live programs, `lauego-live` and `wire-live`, while live processing is on: `@/api`'s
+`ProgramKind` is the create forms' two, `LiveProgramKind` the Live page's, `ListedProgramKind` every listed one;
+`isProgram(kind)` finds any listed program and `programSpec` reads it as a `ProgramSpec<K>`, a create form's a
+`ProgramSpec<ProgramKind>`) and draws `x-layout`'s sections as cards (`SectionCard`, also the Live page's cards and
+the viewers' Parameters tabs, one column of read-only values in the form's order; `sectionAnchor(group)` ids for a
+sidebar; each card's accent stripe, a bar that takes no layout space, and `SectionIcon` from
+`sectionIdentity(title)`, `section-identity.ts`: one mapping for the create forms, their sidebar, the Live page's
+cards and the Parameters tabs (their "Other recorded values" neutral), the accents the `--section-*` tokens; the
+sidebar's icons are `SectionIcon muted`, in the muted text colour, so only the cards show the accents;
+`section-identity.test.ts` fails for a title the programs use without an entry; Restore Default on a section of
+several fields that all have a default), each field by its `x-widget` (`scan`/`reconstruction` source pickers, which
+show a value set from outside as its ID; `folder`/`file` path pickers, a file's listing filtered by `x-extensions`;
+`output-folder`, whose Browse picks a folder and keeps the template's part from its `%d` on; `filename-templates`
+with Find Matching Files, consecutive `indices` with Find Indices (both off while the input is an HDF5 file, a
+reconstruction's scan.h5, the reason in their tooltip), consecutive `hkl` as one row, numbers with their `x-unit`,
+nullable ones blank for automatic, `select` from `x-options`, `checkbox`, `text`, `textarea`), the validation summary,
+Run on (`backend`'s `x-options`) with Validate and Submit (`SubmitBar`), and the answer; the page's `layout`
+(`FormLayout`, given the `FormParts`: `actions`, `message`, `summary`, `answer`, `sections`) places them inside the form
+element, so Submit remains the form's submit button and Enter in a field submits. Titles are labels; a field's `x-hint`
+(the user's words; the `description` is the API's, for developers) and its limits are the label's tooltip; a placeholder
+is at most a terse value pattern (`x-placeholder`). The form stores text and booleans (`form-values.ts`; a
 comma-separated Filename; a number that does not parse or is not finite is sent as typed); the server is the only
 validator and words its messages without the field's label (`core.problems.field_message`): live validation calls
 `…/validate` 500 ms after the last change (a check in flight for other values is aborted, Submit shares the one for its
@@ -185,61 +193,86 @@ after the render that ends the unsaved state, while one with a `failure` stays i
 Submission; a 409 offers New Submission, the values kept, beside the run and job the key created when it did
 (`KeyConflict.created`, a problem of type `urn:laueportal:problem:key-created`, `KEY_CREATED`: an answer lost, then the
 values edited); a key from `crypto.getRandomValues` where `crypto.randomUUID` is missing, plain HTTP on a host name); a
-refused or failed submission's message is in the Submit bar while its values are on screen (a 409's until New
-Submission). The rule is in `useRunSubmission` (`touched`, `onBlocked`), so a page that composes its own layout from the
-field components gets it too; `useSubmission(requests, body, options)` is the same rule for other requests
-(`SubmissionRequests`: `validate`, `create` with its key, `place` the issues on the page's fields; `onCreated` after a
-201), the Live page's session-level validate and create; `CloneField` is the labelled clone picker ("Clone of": an
-indexing run on the LaueGo form, a reconstruction on the wire form). A create page is
-`<CreateRunPage kind title search />` (the route's `validateCreatePrefill` search; the page removes it from the URL
-itself, with replace; `/reconstructions/new`, `/indexing/new`): the sidebar of section anchors (a link scrolls to its
-card and focuses it), Identity's source block (`SourceBlock`: the "Source" switch, the shadcn `ToggleGroup`, with Scan
-and Clone on the wire form and Scan, Reconstruction and Clone on the LaueGo form, Scan by default (`source-mode.ts`);
-one picker for the chosen kind (`SourceField` or `CloneField`; an empty Scan is an unlinked run); the IDs the source
-sets read-only, as links: a reconstruction's scan, a clone's scan and reconstruction), and the prefill of one source
-context: `useConsumedPrefill` (`src/lib/prefill.ts`) takes the URL's `scan`/`reconstruction`/`indexing` once (a later
-link with others too) and removes them; `useProgramPrefill` reads GET `/programs/{kind}/prefill` once per source and
-keeps the last one loaded while another loads or fails; the form stays mounted while a prefill loads once it has been
-shown (a skeleton only for the URL's first source), so every new source keeps the user's edits; a source picked is the
-new context and its kind follows each new context (`sourceModeOf`: the URL's reconstruction opens Reconstruction on the
-LaueGo form and Clone on the wire form, an indexing run Clone); a clone fills the form, a scan or a reconstruction its
-data fields and IDs (`SOURCE_FIELDS`: a scan Folder Path, Filename, Output Path; a reconstruction also Scan Indices,
-Depth Indices, Geometry File); another kind (also one set from outside: a later link), a cleared picker or a refused
-prefill clears the source, its IDs and the data fields (`CLEARED_FIELDS`: Folder Path, Filename, Scan Indices, Depth
-Indices, Output Path; a typed value stays) before anything applies, so the form never mixes two sources; the crystal
-file, the Output XML and the parameters stay; Clone of shows none for a refused source; a refused source gets the API's
-message (`PrefillAlert`); a URL parameter that is not one ID is dropped (`validateCreatePrefill`). Tests
-read the `/programs` fixture `src/test/programs.json` (`specOf`, `fieldOf`); `backend/tests/jobs/test_programs.py`
-checks it against the served schema (all but the defaults), so refresh it from the API when the models change.
+refused or failed submission's message (`SubmitMessage`) is on its own line under the header's row, above the summary,
+while its values are on screen (a 409's until New Submission). The rule is in `useRunSubmission` (`touched`,
+`onBlocked`), so a page that composes its own layout from the field components gets it too; `useSubmission(requests,
+body, options)` is the same rule for other requests (`SubmissionRequests`: `validate`, `create` with its key, `place`
+the issues on the page's fields; `onCreated` after a 201), the Live page's session-level validate and create;
+`CloneField` is the labelled clone picker ("Clone of": an indexing run on the LaueGo form, a reconstruction on the wire
+form). A create page is `<CreateRunPage kind title search />` (the route's `validateCreatePrefill` search; the page
+removes it from the URL itself, with replace; `/reconstructions/new`, `/indexing/new`): the header (the title with Run
+on, Validate and Submit beside it, a refused submission's message under them, then the validation summary), sticky below
+the navbar from `md` up (its height is `--form-header`, which the sidebar's sticky offset and the scroll margins of the
+cards and of every focusable element below it (the Submitted answer's, the form's column's) add, so a card or a focused
+element is never under it; when the header grows over the focused element, that element scrolls to below it again, and
+nothing else moves the page (a header that shrinks, an element the user scrolled under it); a long summary scrolls in
+its own box), the Submitted answer under the header (scrolled into view when it appears), the sidebar of section anchors
+(a link scrolls to its card and focuses it), Identity's source block (`SourceBlock`: the "Source" switch, the shadcn
+`ToggleGroup`, with Scan and Clone on the wire form and Scan, Reconstruction and Clone on the LaueGo form, Scan by
+default (`source-mode.ts`); one picker for the chosen kind (`SourceField` or `CloneField`; an empty Scan is an unlinked
+run); the IDs the source sets read-only, as links: a reconstruction's scan, a clone's scan and reconstruction), and the
+prefill of one source context: `useConsumedPrefill` (`src/lib/prefill.ts`) takes the URL's
+`scan`/`reconstruction`/`indexing` once (a later link with others too) and removes them; `useProgramPrefill` reads GET
+`/programs/{kind}/prefill` once per source and keeps the last one loaded while another loads or fails; the form stays
+mounted while a prefill loads once it has been shown (a skeleton only for the URL's first source), so every new source
+keeps the user's edits; a source picked is the new context and its kind follows each new context (`sourceModeOf`: the
+URL's reconstruction opens Reconstruction on the LaueGo form and Clone on the wire form, an indexing run Clone); a clone
+fills the form, a scan or a reconstruction its data fields and IDs (`SOURCE_FIELDS`: a scan Folder Path, Filename,
+Output Path; a reconstruction also Scan Indices, Depth Indices, Geometry File); another kind (also one set from outside:
+a later link), a cleared picker or a refused prefill clears the source, its IDs and the data fields (`CLEARED_FIELDS`:
+Folder Path, Filename, Scan Indices, Depth Indices, Output Path; a typed value stays) before anything applies, so the
+form never mixes two sources; the Structures File, the Output XML and the parameters stay; Clone of shows none for a
+refused source; a refused source gets the API's message (`PrefillAlert`); a URL parameter that is not one ID is dropped
+(`validateCreatePrefill`). Tests read the `/programs` fixture `src/test/programs.json` (`specOf`, `fieldOf`);
+`backend/tests/jobs/test_programs.py` checks it against the served schema (all but the defaults), so refresh it from the
+API when the models change.
 
 ## The Live page
 
 The Live page (`src/features/live`, `/live`): the navbar shows "Live" only while `GET /programs` lists the live programs
 (`useLiveEnabled`; `[live] enabled`; a failed read again keeps the last answer, there and on the page), as the Menu's
-first item below 1024 px (so the Worker label fits at 768 px, `e2e/shell.spec.ts`). The page reads the latest session
+first item below 1024 px. Below 1024 px the main links also have 5.4 px of padding a side instead of 9 px, so that at
+768 px the Worker indicator's dot keeps its 75.6 px link and a pill shows its state's words whole; its subject (Worker,
+API) is dropped first, below about 800 px (`e2e/shell.spec.ts`).
+
+The page reads the latest session
 (`GET /live/session`, `useLiveSession`: every 5 s while it is open, as `polling.ts` backs off; once read, a failed read
 again keeps the last answer and the form, with the header's one-line error and Retry), and the DM DAQ list only while
 its form is open (no session open) and never sooner than the answer is kept (`useDaqList`: `kept_seconds`, or a 503's
 `Retry-After`, plus a second). Its form is the kit's: three React Hook Form forms (the Scan card's fields, `scanFields`,
 and the two program cards, the live programs' fields but those the Scan card sets, `cardSpec`/`SCAN_SETS`, the LaueGo
 card's Depth Indices only while it follows the reconstruction), drawn with the kit's field components; a DAQ the user
-picks fills Folder (the kit's `SelectField onPick`: never when the page applies a session's values); one request
-(`sessionRequest`: `scan`, each part switched on, else null) through `useSubmission`, its issues placed by their part
-(`placeSessionIssues`: qualified names, `scan.folder`, `indexing.geometry_file`; a DAQ's on Source). While a session is
+picks fills Folder (the kit's `SelectField onPick`: never when the page applies a session's values); Output Folder
+follows Folder (`followedOutput`: its mirror, `mirroredOutput`, the last `data` component made `analysis`; the
+configured default for a Folder without one, a blank one too) until the user edits it (a `watch` of the Scan form's
+`change` events: the page's own `setValue` and `reset` have none; a session's values applied count as an edit only when
+their Output Folder is not the one their Folder gives, nor its names below its last `analysis` the Folder's below its
+last `data`, `outputFollows`: the session records its Folder by its real path), and
+its From data folder button (`PathPickerField actions`, its tooltip on a wrapper since a disabled button takes no
+pointer events) mirrors it again; one request (`sessionRequest`: `scan`, each part switched on, else null) through
+`useSubmission`, its issues placed by their part (`placeSessionIssues`: qualified names, `scan.folder`,
+`indexing.geometry_file`; a DAQ's on Source). While a session is
 open the cards are in a disabled `fieldset` (Base UI's switch and checkbox are not native controls: they get `disabled`
 themselves, the kit's `ToggleField disabled`) and show the session (its Scan card as recorded, `LiveSession.scan`, and
 each run's clone, the kit's prefill `GET /programs/{wire,lauego}/prefill`), but for this page's own Start, whose values
 stay; once it has ended the clone applies with the kit's `applyPrefill` (what the user typed beyond it stays; for the
 page's own session as the form's new baseline, not an unsaved edit) and Start is a new submission (a new key). A Start's
 409 has a session (`conflictJobs`: the open run, or the runs its key created); its message shows until that session
-has ended, then the submission is renewed (a new key). Stop asks, then cancels the session's first run
-(`POST /jobs/{id}/cancel`; its dialog and report show `LIVE_STOP_EXPLANATION`, as a live run's Stop on its job page and
-in the Run Monitor does: `JobRef.live`, from `JobSummary.live` in the Run Monitor, `stopExplanation`; the job page's
-Live Run card from `JobDetail.live`, `liveRows`); the session is Stopping from then or from that run's end until the
+has ended, then the submission is renewed (a new key). The header shows no session once a session a user stopped has
+ended with no run Failed of its own (`shownSession`, `LiveSession.stopped`; a run with `stopped_now` and no failed
+file is the Stop's end; the form still fills from it), while one that ended without a Stop, or with a run Failed
+otherwise, stays shown until the next Start; an ended session applied to the form has its values checked again
+(`revalidate`, the kit's `useSubmission`: it marks the report stale, never reused by a flush, and the debounced check
+runs after the next render, for the values then on screen: one request). Stop
+asks, then cancels the session's first run (`POST /jobs/{id}/cancel`; its dialog
+and report show `LIVE_STOP_EXPLANATION`, as a live run's Stop on its job page and in the Run Monitor does:
+`JobRef.live`, from `JobSummary.live` in the Run Monitor, `stopExplanation`; the job page's Live Run card from
+`JobDetail.live`, `liveRows`); the session is Stopping from then or from that run's end until the
 session ends (a follower drains after its wire run), and Stop is then Stop now (`LIVE_STOP_NOW_EXPLANATION`, a one-line
 confirm): `stopJobNow` on every open run (`openRuns`: one not stopped yet is stopped, one stopping killed, Failed), and
-the Stopping badge's tooltip is why the session waits (`waitingReason`: an open run's arrival-status error, a follower's
-held point). A queued batch run behind an open session has "Held" beside its status in the Run Monitor (`StatusCell`,
+the Stopping badge's tooltip is why the session waits (`waitingReason`: the follower's arrival-status error, a point it
+cannot read; a DAQ's or a notify run's error never holds a Stop). A queued batch run behind an open session has "Held"
+beside its status in the Run Monitor (`StatusCell`,
 `JobSummary.held`, its tooltip `HELD_HINT`) and on its job page; the artifact bar shows a held conversion as held. The
 rules are pure functions in `live-form.ts` (`live-form.test.ts`), the page's states in `LivePage.test.tsx`, sessions end
 to end in `e2e/live.spec.ts` (the e2e stack has `[live]` on with a stand-in DM, `deploy/supervisor/e2e.sh`:

@@ -53,6 +53,8 @@ export interface Submission<Created> {
   canSubmit: boolean
   /** Check the current values now (Validate), not after the pause, and show every issue. */
   validateNow: () => Promise<void>
+  /** Check the current values again, the server's answer for them changed (`LiveValidation.revalidate`). */
+  revalidate: () => void
   /** Submit as the button does: check, then send, or ask to confirm the warnings. */
   requestSubmit: () => Promise<void>
   /** The warnings' confirmation is open. */
@@ -191,6 +193,7 @@ export function useSubmission<Created>(
       setRevealed(true)
       await flush()
     },
+    revalidate: validation.revalidate,
     requestSubmit,
     confirming: confirming !== null,
     confirm,

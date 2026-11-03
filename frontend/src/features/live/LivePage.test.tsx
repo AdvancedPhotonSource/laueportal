@@ -38,6 +38,8 @@ interface Api {
   programsFail: (() => Response) | null
   daqs: LiveDaqList
   issues: unknown[]
+  /** A validation's answer waits for this, while set (its issues read then). */
+  validateHold: Promise<void> | null
   start: () => Response
   calls: { method: string; path: string; body: unknown; key: string | null }[]
 }
@@ -51,6 +53,7 @@ function run(values: Partial<LiveSession["runs"][number]> = {}) {
     n_succeeded: 3,
     n_failed: 1,
     stop_requested: false,
+    stopped_now: false,
     arrival: null,
     ...values,
   }
@@ -59,6 +62,7 @@ function run(values: Partial<LiveSession["runs"][number]> = {}) {
 function makeSession(values: Partial<LiveSession> = {}): LiveSession {
   return {
     open: true,
+    stopped: false,
     runs: [
       run({
         arrival: {
@@ -126,6 +130,7 @@ async function openLive(changes: Partial<Api> = {}) {
       kept_seconds: 30,
     },
     issues: [],
+    validateHold: null,
     start: () => problem(500, "Internal Server Error", "unexpected"),
     calls: [],
     ...changes,
@@ -170,6 +175,9 @@ async function openLive(changes: Partial<Api> = {}) {
         as_of: "2026-10-27T10:00:00Z",
       })
     }
+    if (path === "/api/v1/live-runs/validate" && api.validateHold) {
+      return api.validateHold.then(() => Response.json({ issues: api.issues }))
+    }
     return Promise.resolve(answer())
   })
   vi.spyOn(window, "scrollTo").mockImplementation(() => undefined)
@@ -209,6 +217,13 @@ function badge(): string | null | undefined {
   return region("Session")
     .querySelector('[data-slot="card-title"] [data-status]')
     ?.getAttribute("data-status")
+}
+
+/** Let `ms` pass (the validation's 500 ms pause, an answer that should not come). */
+async function settle(ms: number) {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, ms))
+  })
 }
 
 async function until(check: () => void) {
@@ -318,6 +333,23 @@ describe("the Live page", () => {
     await until(() => {
       expect(asked(api, "/api/v1/live/daqs")).toHaveLength(1)
     })
+  })
+
+  it("titles every card with a heading, the Session card's first, its badge beside it", async () => {
+    await openLive()
+    await until(() => {
+      expect(form().disabled).toBe(false)
+    })
+    const titles = Array.from(document.querySelectorAll("h2"), (heading) =>
+      heading.textContent.trim()
+    )
+    expect(titles[0]).toBe("Session")
+    expect(titles).toEqual(
+      expect.arrayContaining(["Scan", "Reconstruction", "Indexing"])
+    )
+    const title = region("Session").querySelector('[data-slot="card-title"]')
+    expect(title?.querySelector("h2")?.textContent).toBe("Session")
+    expect(title?.querySelector("[data-status]")).not.toBeNull()
   })
 
   it("each program card's switch comes first in its header, before its title", async () => {
@@ -852,18 +884,404 @@ describe("the Live page", () => {
     })
     expect(asked(api, "/api/v1/jobs/7/stop-now", "POST")).toHaveLength(0)
 
-    // Both ended: the session's end state, Start on, Stop off.
-    api.session = both({ status: "finished" }, { status: "failed" }, false)
+    // Both ended, the session stopped (its wire run's Stop), the follower Failed by its Stop now (killed, no failed
+    // file): the Stop's end, so no session shown; Start on, Stop off.
+    api.session = {
+      ...both(
+        { status: "finished" },
+        { status: "failed", stopped_now: true, n_failed: 0 },
+        false
+      ),
+      stopped: true,
+    }
     await readAgain()
     await until(() => {
-      expect(badge()).toBe("failed")
+      expect(badge()).toBe("idle")
     })
+    expect(region("Session").querySelector("[data-job]")).toBeNull()
     expect([button("Start").disabled, button("Stop").disabled]).toEqual([
       false,
       true,
     ])
     expect(asked(api, "/api/v1/jobs/7/cancel", "POST")).toHaveLength(1)
     expect(asked(api, "/api/v1/jobs/8/cancel", "POST")).toHaveLength(0)
+  })
+
+  it("after Stop, once every run has ended, the page shows no session (Idle, no runs table), the form its values", async () => {
+    const api = await openLive({ session: makeSession() })
+    await until(() => {
+      expect(button("Stop").disabled).toBe(false)
+    })
+    await click(button("Stop"))
+    api.session = makeSession({
+      stopped: true,
+      runs: [run({ stop_requested: true }), run({ job_id: 8 })],
+    })
+    await click(byRole("button", "Stop", byRole("alertdialog")[0])[0])
+    await until(() => {
+      expect(badge()).toBe("stopping")
+    })
+    expect(region("Session").querySelectorAll("[data-job]")).toHaveLength(2)
+
+    api.session = makeSession({
+      open: false,
+      stopped: true,
+      runs: [
+        run({ status: "finished" }),
+        run({ job_id: 8, status: "finished" }),
+      ],
+    })
+    await readAgain()
+    await until(() => {
+      expect(badge()).toBe("idle")
+    })
+    expect(region("Session").textContent).toContain("No live session")
+    expect(region("Session").querySelector("table")).toBeNull()
+    // The form still fills from it, for the next Start.
+    await until(() => {
+      expect(form().disabled).toBe(false)
+    })
+    expect(input("Scan", "folder").value).toBe("/data/live")
+    expect(input("Scan", "output_folder").value).toBe("/data/out")
+    expect(input("Reconstruction", "depth_start").value).toBe("-12")
+    expect([button("Start").disabled, button("Stop").disabled]).toEqual([
+      false,
+      true,
+    ])
+  })
+
+  it("a session that ended without a Stop (a run failed) stays shown, its runs and its state", async () => {
+    await openLive({
+      session: makeSession({
+        open: false,
+        runs: [
+          run({ status: "failed" }),
+          run({ job_id: 8, status: "finished" }),
+        ],
+      }),
+    })
+    await until(() => {
+      expect(badge()).toBe("failed")
+    })
+    expect(region("Session").querySelectorAll("[data-job]")).toHaveLength(2)
+    expect(region("Session").textContent).not.toContain("No live session")
+  })
+
+  it("Output Folder follows the Folder's mirror until it is edited; From data folder mirrors it again", async () => {
+    await openLive()
+    await until(() => {
+      expect(form().disabled).toBe(false)
+    })
+    const output = () => input("Scan", "output_folder").value
+    const fromData = () => {
+      const [found] = byRole("button", "From data folder", region("Scan"))
+      if (!(found instanceof HTMLButtonElement))
+        throw new Error("no From data folder")
+      return found
+    }
+    // The configured default at first; the button off with nothing to mirror, its tooltip on a wrapper.
+    expect(output()).toBe("/data/runs/analysis")
+    expect(fromData().disabled).toBe(true)
+    expect(fromData().parentElement?.getAttribute("title")).toBe(
+      "From data folder"
+    )
+    expect(fromData().textContent).toBe("")
+
+    await enterText(input("Scan", "folder"), "/x/exp/data/scan_12")
+    expect(output()).toBe("/x/exp/analysis/scan_12")
+    expect(fromData().disabled).toBe(false)
+    // A folder with no data component gives the configured default, never the earlier Folder's mirror; so does a
+    // blank one.
+    await enterText(input("Scan", "folder"), "/x/exp/raw/scan_12")
+    expect(output()).toBe("/data/runs/analysis")
+    expect(fromData().disabled).toBe(true)
+    await enterText(input("Scan", "folder"), "/x/exp/data/scan_12")
+    expect(output()).toBe("/x/exp/analysis/scan_12")
+    await enterText(input("Scan", "folder"), "")
+    expect(output()).toBe("/data/runs/analysis")
+
+    // Edited: it stays, whatever the Folder; From data folder mirrors it again, and it follows from then on.
+    await enterText(input("Scan", "folder"), "/x/exp/data/scan_12")
+    await enterText(input("Scan", "output_folder"), "/y/out")
+    await enterText(input("Scan", "folder"), "/z/data/scan_2")
+    expect(output()).toBe("/y/out")
+    await click(fromData())
+    expect(output()).toBe("/z/analysis/scan_2")
+    await enterText(input("Scan", "folder"), "/z/data/scan_3")
+    expect(output()).toBe("/z/analysis/scan_3")
+  })
+
+  it("a DAQ picked fills Folder and Output Folder its mirror", async () => {
+    await openLive({
+      daqs: {
+        daqs: [
+          {
+            id: "d1",
+            experiment: "e1",
+            status: "Running",
+            data_directory: "/detector/e1/raw",
+            storage_directory: "/data/e1",
+            dest_directory: "34ide/data/scan_5",
+            destination: "/data/e1/34ide/data/scan_5",
+          },
+        ],
+        failed: [],
+        checked_at: "2026-10-27T10:00:00Z",
+        kept_seconds: 30,
+      },
+    })
+    await until(() => {
+      expect(form().disabled).toBe(false)
+    })
+    await click(region("Scan").querySelector('[data-slot="select-trigger"]'))
+    await click(byRole("option")[1])
+    await until(() => {
+      expect(input("Scan", "folder").value).toBe("/data/e1/34ide/data/scan_5")
+    })
+    expect(input("Scan", "output_folder").value).toBe(
+      "/data/e1/34ide/analysis/scan_5"
+    )
+  })
+
+  it("a form filled from the last session keeps its Output Folder (an edit) until From data folder", async () => {
+    const scan = makeSession().scan
+    await openLive({
+      session: makeSession({
+        open: false,
+        runs: [run({ status: "finished" })],
+        scan: scan && {
+          ...scan,
+          folder: "/x/exp/data/scan_7",
+          output_folder: "/data/out",
+          filename_template: null,
+        },
+      }),
+    })
+    await until(() => {
+      expect(input("Scan", "folder").value).toBe("/x/exp/data/scan_7")
+    })
+    expect(input("Scan", "output_folder").value).toBe("/data/out")
+    // A session with no template fills the field blank (every .h5 file).
+    expect(input("Scan", "filename_template").value).toBe("")
+    await enterText(input("Scan", "folder"), "/x/exp/data/scan_8")
+    expect(input("Scan", "output_folder").value).toBe("/data/out")
+    const [fromData] = byRole("button", "From data folder", region("Scan"))
+    await click(fromData)
+    expect(input("Scan", "output_folder").value).toBe("/x/exp/analysis/scan_8")
+  })
+
+  it("a form filled from the last session whose Output Folder is its Folder's mirror keeps following", async () => {
+    const scan = makeSession().scan
+    await openLive({
+      session: makeSession({
+        open: false,
+        stopped: true,
+        runs: [run({ status: "finished" })],
+        scan: scan && {
+          ...scan,
+          folder: "/x/exp/data/scan_7",
+          output_folder: "/x/exp/analysis/scan_7",
+        },
+      }),
+    })
+    await until(() => {
+      expect(input("Scan", "folder").value).toBe("/x/exp/data/scan_7")
+    })
+    expect(input("Scan", "output_folder").value).toBe("/x/exp/analysis/scan_7")
+    await enterText(input("Scan", "folder"), "/x/exp/data/scan_8")
+    expect(input("Scan", "output_folder").value).toBe("/x/exp/analysis/scan_8")
+  })
+
+  it("its own session's end checks the form again: the report from before Start is not kept", async () => {
+    const created: CreatedLiveRuns = {
+      runs: [
+        {
+          run: { kind: "reconstruction", id: 3, label: "R3" },
+          job_id: 7,
+          status: "queued",
+          target: "local",
+          queue_id: "live_7",
+          failure: null,
+        },
+      ],
+    }
+    const api = await openLive()
+    api.start = () => {
+      api.session = makeSession({ runs: [run({ status: "queued" })] })
+      return Response.json(created, { status: 201 })
+    }
+    await until(() => {
+      expect(form().disabled).toBe(false)
+    })
+    // The values the ended session gives back (its Scan card, its wire run's clone): the same request, the same key.
+    await click(byRole("switch", "Indexing")[0])
+    await enterText(input("Scan", "folder"), "/data/live")
+    await enterText(input("Scan", "filename_template"), "wire_%d.h5")
+    await enterText(input("Scan", "output_folder"), "/data/out")
+    await enterText(input("Scan", "scan_number"), "12")
+    await enterText(input("Scan", "author"), "alice")
+    await enterText(input("Reconstruction", "depth_start"), "-12")
+    const summary = () =>
+      document.querySelector('section[aria-label="Validation"]')?.textContent ??
+      ""
+    await click(button("Validate"))
+    await until(() => {
+      expect(summary()).toContain("No issues")
+    })
+    await click(button("Start"))
+    await until(() => {
+      expect(form().disabled).toBe(true)
+    })
+    const checks = asked(api, "/api/v1/live-runs/validate", "POST").length
+
+    // The server's answer for the same values has changed: the session left something in the folder.
+    api.issues = [
+      {
+        loc: ["scan", "output_folder"],
+        severity: "warning",
+        code: "not_empty",
+        message: "Not empty",
+      },
+    ]
+    api.session = makeSession({
+      open: false,
+      runs: [run({ status: "finished" })],
+    })
+    await readAgain()
+    await until(() => {
+      expect(form().disabled).toBe(false)
+    })
+    await until(() => {
+      expect(summary()).toContain("Output Folder: Not empty")
+    })
+    await settle(800)
+    const after = asked(api, "/api/v1/live-runs/validate", "POST")
+    // One request, for the same values as before Start: only the session's end asked again.
+    expect(after).toHaveLength(checks + 1)
+    expect(after.at(-1)?.body).toEqual(after[checks - 1]?.body)
+  })
+
+  it("a Start right after its own session's end waits for the new check and asks to confirm its warnings", async () => {
+    const created: CreatedLiveRuns = {
+      runs: [
+        {
+          run: { kind: "reconstruction", id: 3, label: "R3" },
+          job_id: 7,
+          status: "queued",
+          target: "local",
+          queue_id: "live_7",
+          failure: null,
+        },
+      ],
+    }
+    const api = await openLive()
+    api.start = () => {
+      api.session = makeSession({ runs: [run({ status: "queued" })] })
+      return Response.json(created, { status: 201 })
+    }
+    await until(() => {
+      expect(form().disabled).toBe(false)
+    })
+    // The values the ended session gives back: the same request, so only the stale mark asks again.
+    await click(byRole("switch", "Indexing")[0])
+    await enterText(input("Scan", "folder"), "/data/live")
+    await enterText(input("Scan", "filename_template"), "wire_%d.h5")
+    await enterText(input("Scan", "output_folder"), "/data/out")
+    await enterText(input("Scan", "scan_number"), "12")
+    await enterText(input("Scan", "author"), "alice")
+    await enterText(input("Reconstruction", "depth_start"), "-12")
+    await click(button("Start"))
+    await until(() => {
+      expect(form().disabled).toBe(true)
+    })
+    expect(asked(api, "/api/v1/live-runs", "POST")).toHaveLength(1)
+
+    let release: () => void = () => undefined
+    api.validateHold = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    api.issues = [
+      {
+        loc: ["scan", "output_folder"],
+        severity: "warning",
+        code: "not_empty",
+        message: "Not empty",
+      },
+    ]
+    api.session = makeSession({
+      open: false,
+      runs: [run({ status: "finished" })],
+    })
+    await readAgain()
+    await until(() => {
+      expect(button("Start").disabled).toBe(false)
+    })
+    await click(button("Start"))
+    await settle(300)
+    // The report from before Start is stale: the Start waits for the new check and creates nothing yet.
+    expect(asked(api, "/api/v1/live-runs", "POST")).toHaveLength(1)
+    expect(byRole("alertdialog")).toHaveLength(0)
+    await act(async () => {
+      release()
+      await Promise.resolve()
+    })
+    await until(() => {
+      expect(byRole("alertdialog")[0]?.textContent).toContain(
+        "Start with warnings?"
+      )
+    })
+    expect(asked(api, "/api/v1/live-runs", "POST")).toHaveLength(1)
+  })
+
+  it("opening the page on an ended session checks its filled values once", async () => {
+    const scan = makeSession().scan
+    const api = await openLive({
+      session: makeSession({
+        open: false,
+        stopped: true,
+        runs: [run({ status: "finished" })],
+        scan: scan && { ...scan, folder: "/x/exp/data/scan_7" },
+      }),
+    })
+    await until(() => {
+      expect(input("Scan", "folder").value).toBe("/x/exp/data/scan_7")
+    })
+    await until(() => {
+      expect(asked(api, "/api/v1/live-runs/validate", "POST")).toHaveLength(1)
+    })
+    await settle(800)
+    const checks = asked(api, "/api/v1/live-runs/validate", "POST")
+    expect(checks).toHaveLength(1)
+    expect((checks[0]?.body as { scan: { folder: string } }).scan.folder).toBe(
+      "/x/exp/data/scan_7"
+    )
+  })
+
+  it("a form filled from a session whose Folder was typed through a link keeps following", async () => {
+    // Recorded: the Folder by its real path, the Output Folder as typed (through the link).
+    const scan = makeSession().scan
+    await openLive({
+      session: makeSession({
+        open: false,
+        stopped: true,
+        runs: [run({ status: "finished" })],
+        scan: scan && {
+          ...scan,
+          folder: "/r/beamline/exp/data/scan_12",
+          output_folder: "/r/link/exp/analysis/scan_12",
+        },
+      }),
+    })
+    await until(() => {
+      expect(input("Scan", "folder").value).toBe("/r/beamline/exp/data/scan_12")
+    })
+    expect(input("Scan", "output_folder").value).toBe(
+      "/r/link/exp/analysis/scan_12"
+    )
+    await enterText(input("Scan", "folder"), "/r/link/exp/data/scan_13")
+    expect(input("Scan", "output_folder").value).toBe(
+      "/r/link/exp/analysis/scan_13"
+    )
   })
 
   it("Validate shows each issue on its card's field (a DAQ's on Source) and in the summary", async () => {

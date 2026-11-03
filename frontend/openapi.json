@@ -1776,7 +1776,7 @@
                 "type": "null"
               }
             ],
-            "description": "The structure file (the card's Structure File).",
+            "description": "The structure file (the card's Structures File).",
             "title": "Crystal File"
           },
           "id": {
@@ -2131,7 +2131,7 @@
                 "type": "null"
               }
             ],
-            "description": "Its `arrival-status.json` (a DAQ's catalog thread, or a follower: its last check, the points read and, while a\npoint holds it, the waiting reason in `error`); null while it has none (a `notify` run, a follower before its\nfirst)."
+            "description": "Its `arrival-status.json` (a DAQ's catalog thread, or a follower: its last check, the points read and, while a\npoint holds it, the waiting reason in `error`; a `notify` run's: the last file it refused for having no number);\nnull while it has none (a follower before its first, a `notify` run before such a file)."
           },
           "arrivals": {
             "anyOf": [
@@ -2169,7 +2169,7 @@
                 "type": "null"
               }
             ],
-            "description": "Their name, one `%d` each file's number.",
+            "description": "Their name, one `%d` each file's number; null when the run has none (every file whose name ends `.h5`, its\nnumber the last run of digits in its name) or `live.json` was not read.",
             "title": "Filename Template"
           },
           "folder": {
@@ -2982,7 +2982,7 @@
         "type": "string"
       },
       "LiveArrivalStatus": {
-        "description": "A live run's `arrival-status.json`: how its source of arrivals is doing (a\nDAQ's catalog thread, or a follower waiting for a point). Its keys as written, unchecked.",
+        "description": "A live run's `arrival-status.json`: how its source of arrivals is doing (a DAQ's catalog thread, a follower\nwaiting for a point, or a `notify` run's last file refused for having no number). Its keys as written,\nunchecked.",
         "properties": {
           "checked_at": {
             "anyOf": [
@@ -3276,10 +3276,16 @@
               }
             ],
             "description": "Null when its source run's `live.json` could not be read."
+          },
+          "stopped": {
+            "description": "A user stopped it: its first run's stop was requested (the Live page's Stop or Stop now, or Stop Run on that\nrun's job page or in the Run Monitor), whether or not it has ended. The Live page shows no session once a stopped\none has ended with no run Failed of its own (a run ended by its Stop now with no failed file, `stopped_now`, does\nnot count; it still fills the next session's form from it); one that ended without a Stop, or with a run Failed\notherwise, stays shown.",
+            "title": "Stopped",
+            "type": "boolean"
           }
         },
         "required": [
           "open",
+          "stopped",
           "runs",
           "scan"
         ],
@@ -3298,7 +3304,7 @@
                 "type": "null"
               }
             ],
-            "description": "Its `arrival-status.json`; null while it has none (a `notify` run, a follower before its first)."
+            "description": "Its `arrival-status.json`; null while it has none (a follower before its first; a `notify` run until it\nrefused a file without a number, its one line then)."
           },
           "job_id": {
             "title": "Job Id",
@@ -3335,6 +3341,11 @@
             "description": "A stop (Stop seals the session) is requested and the run has not ended yet.",
             "title": "Stop Requested",
             "type": "boolean"
+          },
+          "stopped_now": {
+            "description": "It ended by its Stop now: Failed, phase `interrupted`, its job process killed once its job's messages held\n\"Stop now requested\" (`jobs.dispatch.end_stopped_now`). A failure of its own (a failed file, a run-level error, a\nworker stop) is not.",
+            "title": "Stopped Now",
+            "type": "boolean"
           }
         },
         "required": [
@@ -3345,6 +3356,7 @@
           "n_succeeded",
           "n_failed",
           "stop_requested",
+          "stopped_now",
           "arrival"
         ],
         "title": "LiveSessionRun",
@@ -3376,8 +3388,16 @@
             "title": "Daq Id"
           },
           "filename_template": {
-            "title": "Filename Template",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null: none (every file whose name ends `.h5`, its number the last run of digits in its name).",
+            "title": "Filename Template"
           },
           "folder": {
             "title": "Folder",
@@ -11016,7 +11036,7 @@
             "application/json": {
               "schema": {
                 "additionalProperties": true,
-                "description": "A live session: `scan`, the Scan card, `{source, daq_id, folder, filename_template, output_folder, scan_number, author}` (`source` `daq` with the DAQ's `daq_id`, or `notify`; the folder the files arrive in, their name with one `%d`, the folder the runs' folders go in); `reconstruction`, the live wire run's form fields of `wire-live/v1` but those the Scan card sets, or null; `indexing`, the live LaueGo run's of `lauego-live/v1` likewise, or null (`GET /api/v1/programs`). With both, the LaueGo run follows the wire run. The Scan card sets each run's `scan_number`, `author`, `input_path`, `filename_prefixes`, `output_path_template` (`<output_folder>/rec_%d`, `<output_folder>/index_%d`) and the LaueGo run's `reconstruction_id`: a program part that sends one is refused.",
+                "description": "A live session: `scan`, the Scan card, `{source, daq_id, folder, filename_template, output_folder, scan_number, author}` (`source` `daq` with the DAQ's `daq_id`, or `notify`; the folder the files arrive in, their name with one `%d` (blank or null: every file whose name ends `.h5`, its number the last run of digits in its name), the folder the runs' folders go in); `reconstruction`, the live wire run's form fields of `wire-live/v1` but those the Scan card sets, or null; `indexing`, the live LaueGo run's of `lauego-live/v1` likewise, or null (`GET /api/v1/programs`). With both, the LaueGo run follows the wire run. The Scan card sets each run's `scan_number`, `author`, `input_path`, `filename_prefixes`, `output_path_template` (`<output_folder>/rec_%d`, `<output_folder>/index_%d`) and the LaueGo run's `reconstruction_id`: a program part that sends one is refused.",
                 "title": "Form",
                 "type": "object"
               }
@@ -11104,14 +11124,14 @@
     },
     "/api/v1/live-runs/validate": {
       "post": {
-        "description": "Check a live session's form: the Scan card (the source and its DAQ, the folder an existing\nfolder inside the roots, the template one file name with one `%d`, the output folder inside the roots, the scan,\nthe author), each run's parameters as its live schema's (`wire-live/v1`, `lauego-live/v1`) and the batch form's\nchecks that apply, and the session's own: one scan number for the pair (the Scan card's), depth indices only for\nindexing that follows the reconstruction, the geometry (and the crystal) loading. Never a DM call (DM\nchecks the DAQ once, at Start): a DAQ source's folder is checked against where the DAQ writes as the\nDAQ list (`listLiveDaqs`) last saw it (outside: an error on `[\"scan\", \"daq_id\"]`), or, before the list was\nasked or without the DAQ in it, a warning there that Start checks the DAQ. A file system that does not answer is\nan issue `not_responding` on its field. Always a 200 with the issues, each `loc` starting with its part (`scan`,\n`reconstruction`, `indexing`; `[]` for the whole); `[]` when there are none. Reads only. A folder read's turn,\nas a create form's validation: while 16 wait, a 503 with `Retry-After`. 404 while live processing is off.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
+        "description": "Check a live session's form: the Scan card (the source and its DAQ, the folder an existing\nfolder inside the roots, for a DAQ source one not there yet a warning (the DAQ makes it), the template blank or\none file name with one `%d`, the output folder inside the roots, a warning when it exists and is not empty, the\nscan, the author), each run's parameters as its live schema's (`wire-live/v1`, `lauego-live/v1`) and the batch form's\nchecks that apply, and the session's own: one scan number for the pair (the Scan card's), depth indices only for\nindexing that follows the reconstruction, the geometry (and the crystal) loading. Never a DM call (DM\nchecks the DAQ once, at Start): a DAQ source's folder is checked against where the DAQ writes as the\nDAQ list (`listLiveDaqs`) last saw it (outside: an error on `[\"scan\", \"daq_id\"]`), or, before the list was\nasked or without the DAQ in it, a warning there that Start checks the DAQ. A file system that does not answer is\nan issue `not_responding` on its field. Always a 200 with the issues, each `loc` starting with its part (`scan`,\n`reconstruction`, `indexing`; `[]` for the whole); `[]` when there are none. Reads only. A folder read's turn,\nas a create form's validation: while 16 wait, a 503 with `Retry-After`. 404 while live processing is off.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
         "operationId": "validateLiveRuns",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "additionalProperties": true,
-                "description": "A live session: `scan`, the Scan card, `{source, daq_id, folder, filename_template, output_folder, scan_number, author}` (`source` `daq` with the DAQ's `daq_id`, or `notify`; the folder the files arrive in, their name with one `%d`, the folder the runs' folders go in); `reconstruction`, the live wire run's form fields of `wire-live/v1` but those the Scan card sets, or null; `indexing`, the live LaueGo run's of `lauego-live/v1` likewise, or null (`GET /api/v1/programs`). With both, the LaueGo run follows the wire run. The Scan card sets each run's `scan_number`, `author`, `input_path`, `filename_prefixes`, `output_path_template` (`<output_folder>/rec_%d`, `<output_folder>/index_%d`) and the LaueGo run's `reconstruction_id`: a program part that sends one is refused.",
+                "description": "A live session: `scan`, the Scan card, `{source, daq_id, folder, filename_template, output_folder, scan_number, author}` (`source` `daq` with the DAQ's `daq_id`, or `notify`; the folder the files arrive in, their name with one `%d` (blank or null: every file whose name ends `.h5`, its number the last run of digits in its name), the folder the runs' folders go in); `reconstruction`, the live wire run's form fields of `wire-live/v1` but those the Scan card sets, or null; `indexing`, the live LaueGo run's of `lauego-live/v1` likewise, or null (`GET /api/v1/programs`). With both, the LaueGo run follows the wire run. The Scan card sets each run's `scan_number`, `author`, `input_path`, `filename_prefixes`, `output_path_template` (`<output_folder>/rec_%d`, `<output_folder>/index_%d`) and the LaueGo run's `reconstruction_id`: a program part that sends one is refused.",
                 "title": "Form",
                 "type": "object"
               }
@@ -11179,7 +11199,7 @@
     },
     "/api/v1/live/daqs": {
       "get": {
-        "description": "The Live page's DAQ list: DM's DAQs, each with where it writes (`destination`, the folder a DAQ source fills in).\nOne answer shared by every browser: at most one DM call per `[live] daq_list_seconds` (30 s), made only when asked\n(no Live page open, no call), a request that comes while it runs waiting for its answer (holding no thread);\n`kept_seconds`, the time the answer is still the one served (ask again after it). A failed call is a 503 problem\n(`urn:laueportal:problem:dm-unavailable`, its reason; DM not configured too), kept as long as an answer (twice as\nlong for each failure in a row, up to 60 s), with `Retry-After` the time it is still kept. 404 while live processing\nis off.",
+        "description": "The Live page's DAQ list: DM's DAQs, each with where it writes (`destination`, the folder a DAQ source fills in),\nbut those whose experiment name or data directory contains one of `[live] daq_name_exclude` (`logs`, `current`),\nignoring case: left out of this list only (Validate and Start take any DAQ, the bind check at Start being DM's).\nOne answer shared by every browser: at most one DM call per `[live] daq_list_seconds` (30 s), made only when asked\n(no Live page open, no call), a request that comes while it runs waiting for its answer (holding no thread);\n`kept_seconds`, the time the answer is still the one served (ask again after it). A failed call is a 503 problem\n(`urn:laueportal:problem:dm-unavailable`, its reason; DM not configured too), kept as long as an answer (twice as\nlong for each failure in a row, up to 60 s), with `Retry-After` the time it is still kept. 404 while live processing\nis off.",
         "operationId": "listLiveDaqs",
         "responses": {
           "200": {
@@ -11221,7 +11241,7 @@
     },
     "/api/v1/live/session": {
       "get": {
-        "description": "The Live page's session: the latest live session (the runs one Start created: the wire run\nfirst, then its follower; or the one run), or `session` null before the first. Each run's status, counters\n(`n_inputs` arrived, `n_succeeded`, `n_failed`) and stop request from its job row, and its `arrival-status.json`\n(null while it has none: a `notify` run); `open` while a run of it is Queued or Running; `scan`, the session's\nScan card from its source run's `live.json` and rows (null when that file cannot be read). Poll it while\nthe session is open. The rows are read in a session closed before any file is; a file that is missing,\nunreadable or not answering is a state, never an error. 404 while live processing is off.",
+        "description": "The Live page's session: the latest live session (the runs one Start created: the wire run\nfirst, then its follower; or the one run), or `session` null before the first. Each run's status, counters\n(`n_inputs` arrived, `n_succeeded`, `n_failed`) and stop request from its job row, and its `arrival-status.json`\n(null while it has none: a follower before its first, a `notify` run until it refused a file without a number);\n`open` while a run of it is Queued or Running; `stopped` once a user stopped it (its first run's stop flag, kept\nafter it has ended: the Live page then shows no session once it has ended with no run Failed, a run ended by its\nStop now with no failed file, `stopped_now`, not counting, and fills its form from it); `scan`, the session's\nScan card from its source run's `live.json` and rows (null when that file cannot be read). Poll it while\nthe session is open. The rows are read in a session closed before any file is; a file that is missing,\nunreadable or not answering is a state, never an error. 404 while live processing is off.",
         "operationId": "getLiveSession",
         "responses": {
           "200": {

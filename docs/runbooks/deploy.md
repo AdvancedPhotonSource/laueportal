@@ -9,8 +9,9 @@ and the run directories it writes.
 **Decide before the first start** (render values, step 3): the installation root `ROOT` on a local disk (e.g.
 `/local/laueportal`), the runs root `RUNS_ROOT` on NFS (with the earlier portal's database, the earlier portal's
 `DEFAULT_VARIABLES.root_path`), the API's port `API_PORT`, the host name users reach the portal by `HOST_NAME`
-(`localhost` when they only tunnel), and whether remote execution is on (`REMOTE_ENABLED`). The geometry and crystal
-defaults of the forms and the scan-log folder are set in `prod.toml` afterwards (left empty by the template).
+(`localhost` when they only tunnel), and whether remote execution is on (`REMOTE_ENABLED`). The defaults of the forms'
+Geometry File and Structures File and the scan-log folder are set in `prod.toml` afterwards (left empty by the
+template).
 
 **When:** steps 1-3 ahead of time; with the earlier portal's database, its rehearsal (step 4) too, while the earlier
 portal runs, and its migration (step 4) once the earlier portal has stopped, then the first start (5) and the conversion
@@ -406,10 +407,10 @@ DAQ source and `notify` on the facility's runs root; which source to keep).
 ### The `[live]` settings
 
 All in `prod.toml`'s `[live]` (rendered with these defaults; each background rate runs only while a live run needs it).
-The api reads `enabled`, `daq_list_seconds` and the `dm_*` settings; the worker and its job processes read the rest.
-Each reads them at start: restart the api and the worker after a change (with no live session open: a worker restart
-ends it, step 5's "Restart a program"). A value outside its range is refused: the api, the worker and every `laueportal`
-command exit with "invalid settings (…)", naming it.
+The api reads `enabled`, `daq_list_seconds`, `daq_name_exclude` and the `dm_*` settings; the worker and its job
+processes read the rest. Each reads them at start: restart the api and the worker after a change (with no live session
+open: a worker restart ends it, step 5's "Restart a program"). A value outside its range is refused: the api, the
+worker and every `laueportal` command exit with "invalid settings (…)", naming it.
 
 | Setting | Default | Range | What it bounds |
 |---|---|---|---|
@@ -429,6 +430,7 @@ command exit with "invalid settings (…)", naming it.
 | `dm_ssh_host` | `""` | a host not starting with `-`, or empty | The host the DM operations run on, over SSH in batch mode; empty: the portal host. |
 | `dm_timeout_seconds` | `15` | > 0 | One DM operation (a shell and DM's API), killed past it; a catalog call starts no page request after half of it. |
 | `daq_list_seconds` | `30` | > 0 | The Live page's DAQ list: one answer shared by every browser, at most one DM call this often, and only while a form asks. |
+| `daq_name_exclude` | `["logs", "current"]` | a list of text without a blank entry (each is stripped), or `[]` | The Live page's DAQ list leaves out a DAQ whose Source option shows one of these, ignoring case: its experiment name, or its data directory's last two names (`e1/raw` for `/detector/current/e1/raw`: a name further up never counts). Only the list: a session already on such a DAQ still validates and starts, and the page shows it by its ID. `[]`: every DAQ. |
 
 ### DM access for live runs
 
@@ -593,7 +595,7 @@ polls every 2 s), so once the threads are taken the whole API stops answering, n
 
 - **Symptom:** every page spins and requests time out, `/health` included (`curl -m 10
   http://127.0.0.1:<port>/api/v1/health` gets no answer), while `supervisorctl ... status` still shows `api`
-  RUNNING.
+  RUNNING. The navbar shows **API unreachable** once its health check has had no answer for 10 s.
 - **Remedy:** once the mount answers again, `supervisorctl -c "$root/config/supervisord.conf" restart api`. It takes
   about 20 s: the stuck threads keep the API from ending on SIGTERM, and supervisor kills it after its
   `stopwaitsecs` (20 s); the new process answers at once.

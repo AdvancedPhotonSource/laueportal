@@ -509,3 +509,50 @@ describe("the LaueGo form's sources", () => {
     expect(sourceIds()).toEqual(["Scan Number: SN990001"])
   })
 })
+
+describe("the page's header", () => {
+  it.each([
+    ["/reconstructions/new", "New Wire Reconstruction"],
+    ["/indexing/new", "New LaueGo Indexation"],
+  ])(
+    "%s: Run on, Validate and Submit beside the title, the validation summary directly under them, and no bar after the sections",
+    async (url, title) => {
+      await openPage(url)
+      await until(() => {
+        expect(
+          document.querySelector('[data-slot="card-title"]')
+        ).not.toBeNull()
+      })
+      const header = document.querySelector('[data-slot="create-header"]')
+      const [row, summary] = Array.from(header?.children ?? [])
+      expect(row?.querySelector("h1")?.textContent).toBe(title)
+      expect(row?.textContent).toContain("Run on")
+      expect(
+        ["Validate", "Submit"].map((name) =>
+          byRole("button", name).filter((button) => row?.contains(button))
+        )
+      ).toEqual([[expect.anything()], [expect.anything()]])
+      expect(summary?.getAttribute("aria-label")).toBe("Validation")
+      // The only Validate and Submit are the header's.
+      expect(byRole("button", "Validate")).toHaveLength(1)
+      expect(byRole("button", "Submit")).toHaveLength(1)
+    }
+  )
+
+  it("draws the sidebar's icons in the muted text colour; the cards keep their accents", async () => {
+    await openPage("/indexing/new")
+    await until(() => {
+      expect(document.querySelector('[data-slot="card-title"]')).not.toBeNull()
+    })
+    const colours = (selector: string) =>
+      Array.from(document.querySelectorAll(`${selector} svg`), (icon) =>
+        Array.from(icon.classList).filter((name) => name.startsWith("text-"))
+      )
+    const sidebar = colours('nav[aria-label="Sections"]')
+    expect(sidebar.length).toBeGreaterThan(0)
+    expect(new Set(sidebar.flat())).toEqual(new Set(["text-muted-foreground"]))
+    const cards = colours('[data-slot="card-title"]')
+    expect(cards).toHaveLength(sidebar.length)
+    for (const card of cards) expect(card[0]).toMatch(/^text-section-/)
+  })
+})

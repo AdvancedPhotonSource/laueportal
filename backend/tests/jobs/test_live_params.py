@@ -74,6 +74,7 @@ def test_each_live_schema_has_its_batch_schemas_fields_and_differs_only_where_th
     assert live_properties["scan_points"]["x-source"] == live_properties["backend"]["x-source"] == "derived"
     assert live_properties["backend"]["const"] == "local"
     assert live_properties["filename_prefixes"]["maxItems"] == 1
+    assert "minItems" not in live_properties["filename_prefixes"]  # none: every .h5 file
     assert live_properties["schema_id"]["const"] == f"{kind}-live/v1"
     assert set(live_schema["required"]) == set(batch_schema["required"]) - {"scan_points"}
 
@@ -122,22 +123,25 @@ def test_the_live_models_normalize_each_shared_value_as_the_batch_models_do(tmp_
 
 @pytest.mark.parametrize("kind", ["wire", "lauego"])
 @pytest.mark.parametrize(
-    ("templates", "accepted"),
+    ("templates", "kept"),
     [
-        (["Si_%d.h5"], True),
-        (["Si_*%d.h5"], True),
-        (["Si.h5"], False),  # no number
-        (["Si_%d_%d.h5"], False),  # a raw frame's second %d (a depth index) is batch-only
-        (["Si_%d.h5", "Ge_%d.h5"], False),  # one template
-        (["Si_%d.h5", " "], True),  # a blank one dropped, as the batch schemas drop it
+        (["Si_%d.h5"], ["Si_%d.h5"]),
+        (["Si_*%d.h5"], ["Si_*%d.h5"]),
+        ([" Si_%d.h5 "], ["Si_%d.h5"]),  # stripped, as the batch schemas strip it
+        (["Si.h5"], None),  # no number
+        (["Si_%d_%d.h5"], None),  # a raw frame's second %d (a depth index) is batch-only
+        (["Si_%d.h5", "Ge_%d.h5"], None),  # at most one template
+        (["Si_%d.h5", " "], ["Si_%d.h5"]),  # a blank one dropped, as the batch schemas drop it
+        ([], []),  # none: every file whose name ends .h5
+        ([" ", ""], []),  # blanks only: none
     ],
 )
-def test_a_live_run_takes_one_file_name_template_with_one_number(tmp_path, kind, templates, accepted):
+def test_a_live_run_takes_at_most_one_file_name_template_with_one_number(tmp_path, kind, templates, kept):
+    """``filename_prefixes`` is at most one template, its ``%d`` each file's number; with none (``[]`` in
+    ``request.json``, the key kept) the run takes every file whose name ends ``.h5``."""
     settings = make_settings(tmp_path)
-    if accepted:
-        assert list(request_document(_live(kind, settings, filename_prefixes=templates))["filename_prefixes"]) == [
-            templates[0]
-        ]
+    if kept is not None:
+        assert list(request_document(_live(kind, settings, filename_prefixes=templates))["filename_prefixes"]) == kept
     else:
         with pytest.raises(ValidationError, match="filename_prefixes"):
             _live(kind, settings, filename_prefixes=templates)

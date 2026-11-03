@@ -71,13 +71,29 @@ def test_live_json_refuses_what_a_run_cannot_follow(change, message):
         LiveDocument.model_validate({**DOCUMENTS["daq"], **change})
 
 
-@pytest.mark.parametrize("key", ["format", "version", "daq", "follows"])
+@pytest.mark.parametrize("key", ["format", "version", "daq", "follows", "filename_template"])
 def test_live_json_is_read_only_with_every_key(tmp_path, key):
     stored = LiveDocument.model_validate(DOCUMENTS["notify"]).model_dump(mode="json")
     del stored[key]
     (tmp_path / LIVE_FILENAME).write_text(json.dumps(stored), encoding="utf-8")
     with pytest.raises(ValidationError, match=f"{key}\n  Field required"):
         read_live_document(tmp_path)
+
+
+@pytest.mark.parametrize("source", list(DOCUMENTS))
+def test_a_live_json_with_no_template_has_its_key_null_and_reads_back(tmp_path, source):
+    """No file name template (every file whose name ends ``.h5``): ``filename_template`` is written null, the
+    document's rule for a key that does not apply, ``version`` still 1; a document with a template (every one written
+    before) reads as it did."""
+    document = LiveDocument.model_validate({**DOCUMENTS[source], "filename_template": None})
+    write_live_document(tmp_path, document)
+
+    stored = json.loads((tmp_path / LIVE_FILENAME).read_text(encoding="utf-8"))
+    assert "filename_template" in stored and stored["filename_template"] is None
+    assert stored["version"] == 1
+    assert read_live_document(tmp_path).filename_template is None
+    with pytest.raises(ValidationError, match="at least 1 character"):
+        LiveDocument.model_validate({**DOCUMENTS[source], "filename_template": ""})
 
 
 def test_a_followers_run_is_named_by_its_job_and_directory():

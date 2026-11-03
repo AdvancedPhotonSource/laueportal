@@ -41,6 +41,21 @@ describe("a link to an indexing view", () => {
     )
   })
 
+  it("keeps the 3D axes of a link copied while the motors' X, Y, Z were the default", async () => {
+    const packed = await packViewLink({
+      v: 1,
+      url: { tab: "map", view: "3d" },
+      settings: { map: { axes3d: ["X", "Y", "Z"] } },
+    })
+    const opened = await openIndexingView(packed)
+    expect(opened.kind).toBe("apply")
+    expect(opened.kind === "apply" && opened.settings.map.axes3d).toEqual([
+      "X",
+      "Y",
+      "Z",
+    ])
+  })
+
   it("is ignored when its schema version is not the viewer's", async () => {
     const packed = await packViewLink({
       v: 2,

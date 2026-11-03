@@ -33,8 +33,8 @@ from laueportal.core.settings import Settings
 from laueportal.core.text import quoted
 from laueportal.files.inputs import WorkflowValidationError
 from laueportal.indexing.models import IndexingRun
-from laueportal.jobs import creation, dispatch, live_session, programs
-from laueportal.jobs.arrivals import notify
+from laueportal.jobs import creation, dispatch, live_session, programs, state
+from laueportal.jobs.arrivals import NO_TEMPLATE, ArrivalRefused, notify
 from laueportal.jobs.dispatch import Dispatcher, DispatchPolicy, LivePolicy
 from laueportal.jobs.live import live_queue_id, read_live_document
 from laueportal.jobs.live_session import SCAN_SETS
@@ -319,6 +319,234 @@ def test_a_daq_session_binds_its_daq_with_one_dm_call_and_live_json_names_it(pla
         assert document.daq.destination == os.path.join(storage, "34ide", "data")
 
 
+def test_a_daq_session_on_a_folder_the_daq_has_not_made_yet_starts_and_live_json_names_it_normalized(
+    place, tmp_path, monkeypatch
+):
+    """A DAQ makes its folder when it writes: a Folder that is not there yet is a warning for a DAQ source, and Start
+    makes the bind check (one DM call: the folder, resolved through its nearest existing folder, inside the DAQ's
+    destination). ``live.json``'s folder is that path normalized (the doubled and trailing slashes typed are gone),
+    inside the destination, for both runs. Start does not make the folder: the DAQ does."""
+    dm = FakeDMService(tmp_path / "dm", monkeypatch, workflow=False)
+    dm.daqs = {DAQ_ID: daq(place.root / "dm")}
+    settings = place.settings.model_copy(
+        update={"live": place.settings.live.model_copy(update={"dm_setup_file": tmp_path / "dm-setup.sh"})}
+    )
+    data = place.root / "dm" / "34ide" / "data"
+    form = place.form(scan={"source": "daq", "daq_id": DAQ_ID, "folder": f"{data}//scan_2/"})
+    with portal(settings) as client:
+        assert found(client.post(VALIDATE, json=form)) == {
+            (("scan", "folder"), "warning", "not_found"),
+            (("scan", "daq_id"), "warning", "checked_at_start"),
+        }
+        response = start(client, form)
+
+    assert response.status_code == 201, response.text
+    assert dm.operations() == ["daq"]
+    destination = os.path.join(os.fspath((place.root / "dm").resolve()), "34ide", "data")
+    rows = jobs(place.engine)
+    assert len(rows) == 2
+    for row in rows:
+        document = read_live_document(row.run_directory or "")
+        assert document.folder == os.path.join(destination, "scan_2")
+        if document.source == "daq":
+            assert document.daq is not None and document.daq.destination == destination
+    assert not (data / "scan_2").exists()
+
+
+@pytest.mark.parametrize(
+    "typed",
+    ["{root}/exp/analysis/scan_12", "{root}/exp/analysis/scan_12/", "{root}/exp//analysis/scan_12"],
+    ids=["as mirrored", "a trailing slash", "a doubled slash"],
+)
+def test_a_session_on_a_mirrored_output_folder_makes_its_runs_in_it_and_gives_it_normalized(place, client, typed):
+    """The Live page mirrors a Folder ``<root>/exp/data/scan_12`` into the Output Folder ``<root>/exp/analysis/scan_12``
+    (``frontend/src/features/live/live-form.ts``, ``mirroredOutput``), which does not exist yet; typed with a trailing
+    or a doubled slash too. Start makes it with the runs' folders in it, ``<output>/rec_<ID>`` and ``<output>/index_<ID>``,
+    and the run pages (each run's ``output_path``), the job page's run directory and the session's Scan card (the next
+    session's prefill) give it normalized. The clones keep the configured output template (``jobs.prefill``)."""
+    (place.root / "exp" / "data" / "scan_12").mkdir(parents=True)
+    output = typed.format(root=place.root)
+    normalized = os.fspath(place.root / "exp" / "analysis" / "scan_12")
+    form = place.form(scan={"folder": f"{place.root}/exp/data/scan_12", "output_folder": output})
+    assert found(client.post(VALIDATE, json=form)) == set()
+    response = start(client, form)
+
+    assert response.status_code == 201, response.text
+    wire, follower = (answer["run"]["id"] for answer in response.json()["runs"])
+    recon = client.get(f"/api/v1/reconstruction-runs/{wire}").json()
+    index = client.get(f"/api/v1/indexing-runs/{follower}").json()
+    assert (recon["output_path"], index["output_path"]) == (
+        f"{normalized}/rec_{wire}",
+        f"{normalized}/index_{follower}",
+    )
+    assert sorted(os.listdir(normalized)) == [f"index_{follower}", f"rec_{wire}"]
+    job = client.get(f"/api/v1/jobs/{recon['job_id']}").json()
+    assert job["configuration"]["run_directory"]["path"] == f"{normalized}/rec_{wire}"
+    assert client.get(SESSION).json()["session"]["scan"]["output_folder"] == normalized
+    clone = client.get("/api/v1/programs/wire/prefill", params={"reconstruction": wire}).json()["values"]
+    assert clone["output_path_template"] == programs.output_path_template("wire", place.settings, scan_number=1)
+
+
+def test_an_output_folder_with_a_dot_dot_component_is_refused_and_start_creates_nothing(place, client):
+    """``..`` (a mirror of ``…/data/../data/scan_12``) is refused on the Output Folder, as on any path from a request
+    (``files.roots.resolve_inside_roots``): Validate's error, and Start's 422 with nothing created."""
+    form = place.form(scan={"output_folder": f"{place.root}/exp/data/../analysis/scan_12"})
+    assert found(client.post(VALIDATE, json=form)) == {(("scan", "output_folder"), "error", "path_not_allowed")}
+    problem(start(client, form), 422)
+    assert jobs(place.engine) == [] and not (place.root / "exp").exists()
+
+
+def test_a_session_with_no_filename_template_takes_every_h5_file_its_runs_recording_none(place, client):
+    """Filename Template is optional: blank, white space or null is no issue. Start gives each run ``filename_prefixes``
+    ``[]`` in its ``request.json`` (the key kept, as every other) and ``live.json``'s ``filename_template`` null (the
+    follower's too); the session's Scan card and the job page say null, and notify admits a numbered ``.h5`` file."""
+    for blank in ("", "  ", None):
+        assert found(client.post(VALIDATE, json=place.form(scan={"filename_template": blank}))) == set()
+    response = start(client, place.form(scan={"filename_template": ""}))
+
+    assert response.status_code == 201, response.text
+    wire, follower = (answer["job_id"] for answer in response.json()["runs"])
+    for row in jobs(place.engine):
+        directory = Path(row.run_directory or "")
+        request = json.loads((directory / REQUEST_FILENAME).read_text())["request"]
+        assert "filename_prefixes" in request and request["filename_prefixes"] == []
+        stored = json.loads((directory / "live.json").read_text())
+        assert "filename_template" in stored and stored["filename_template"] is None
+    assert client.get(SESSION).json()["session"]["scan"]["filename_template"] is None
+    assert client.get(f"/api/v1/jobs/{wire}").json()["live"]["filename_template"] is None
+    assert client.get(f"/api/v1/jobs/{follower}").json()["live"]["filename_template"] is None
+    (place.folder / "Si_00012.h5").write_bytes(b"x")
+    assert notify(place.engine, wire, place.folder / "Si_00012.h5").arrival.scan_point == 12
+
+
+def test_a_missing_daq_folder_named_through_a_link_is_recorded_by_its_real_path(place, tmp_path, monkeypatch):
+    """A DAQ Folder not there yet, named through a link inside the roots (``dm-link`` to ``dm``): its real path is
+    resolved through its nearest existing folder, and ``live.json`` names that path, inside the DAQ's destination."""
+    dm = FakeDMService(tmp_path / "dm", monkeypatch, workflow=False)
+    dm.daqs = {DAQ_ID: daq(place.root / "dm")}
+    settings = place.settings.model_copy(
+        update={"live": place.settings.live.model_copy(update={"dm_setup_file": tmp_path / "dm-setup.sh"})}
+    )
+    (place.root / "dm-link").symlink_to(place.root / "dm")
+    form = place.form(scan={"source": "daq", "daq_id": DAQ_ID, "folder": f"{place.root}/dm-link/34ide/data/scan_2"})
+    with portal(settings) as client:
+        response = start(client, form)
+
+    assert response.status_code == 201, response.text
+    destination = os.fspath((place.root / "dm" / "34ide" / "data").resolve())
+    for row in jobs(place.engine):
+        document = read_live_document(row.run_directory or "")
+        assert document.folder == os.path.join(destination, "scan_2")
+        if document.source == "daq":
+            assert document.daq is not None and document.daq.destination == destination
+
+
+def test_a_second_session_on_the_same_output_folder_starts_with_no_not_empty_warning(place, client):
+    """The next session of an experiment takes the same Output Folder (the mirror of the same Folder, or the form
+    filled from the last session): the earlier session's run folders give no warning, so the page's Start asks no
+    confirmation; anything else in the folder still warns."""
+    form = place.form()
+    first = start(client, form)
+    assert first.status_code == 201, first.text
+    for answer in first.json()["runs"]:
+        _end(place.engine, answer["job_id"], JobStatus.FINISHED)
+    assert sorted(os.listdir(place.output)) == ["index_1", "rec_1"]
+
+    assert found(client.post(VALIDATE, json=form)) == set()
+    second = start(client, form, key="key-2")
+    assert second.status_code == 201, second.text
+    (place.output / "notes.txt").write_text("")
+    assert found(client.post(VALIDATE, json=form)) == {(("scan", "output_folder"), "warning", "not_empty")}
+
+
+def test_the_batch_forms_cloned_from_a_live_run_with_no_template_get_the_template_that_takes_its_files(place, client):
+    """A live run with no template (``filename_prefixes`` ``[]``), cloned on a batch form or its reconstruction indexed
+    from the LaueGo form, gets ``*%d.h5`` (``jobs.arrivals.NO_TEMPLATE``), never a blank Filename: the same files with
+    the same numbers as the live run's rule (``tests/jobs/test_arrivals.py``). The wire clone validates with no issue
+    on its Filename or its inputs."""
+    response = start(client, place.form(scan={"filename_template": ""}))
+    assert response.status_code == 201, response.text
+    wire, follower = (answer["run"]["id"] for answer in response.json()["runs"])
+    prefill = "/api/v1/programs/{}/prefill"
+    clone = client.get(prefill.format("wire"), params={"reconstruction": wire}).json()["values"]
+    indexed = client.get(prefill.format("lauego"), params={"reconstruction": wire}).json()["values"]
+    follower_clone = client.get(prefill.format("lauego"), params={"indexing": follower}).json()["values"]
+    assert clone["filename_prefixes"] == indexed["filename_prefixes"] == [NO_TEMPLATE]
+    assert follower_clone["filename_prefixes"] == [NO_TEMPLATE]
+
+    (place.folder / "Si_00012.h5").write_bytes(b"x")
+    report = client.post("/api/v1/reconstruction-runs/validate", json={**clone, "scan_points": "12"})
+    assert report.status_code == 200, report.text
+    names = {issue["loc"][0] for issue in report.json()["issues"] if issue["loc"] and issue["severity"] == "error"}
+    assert names.isdisjoint({"filename_prefixes", "input_path"}), report.json()["issues"]
+
+
+def test_a_notify_runs_file_without_a_number_is_its_line_on_the_live_page_once(place, client):
+    """With no template a ``.h5`` file without a number is not taken, and ``notify`` answers why (its one line). The
+    run's arrival status (``arrival-status.json``) gets that line too, so the Live page and the job page show it: once,
+    unchanged by the same file notified again or a numbered file admitted, replaced by another such file, and none
+    once the run was stopped."""
+    response = start(client, place.form(indexing=False, scan={"filename_template": ""}))
+    (job_id,) = (answer["job_id"] for answer in response.json()["runs"])
+    for name in ("Si_dark.h5", "Si_00012.h5", "Si_flat.h5", "Si_bright.h5"):
+        (place.folder / name).write_bytes(b"x")
+
+    def arrival() -> Any:
+        return client.get(SESSION).json()["session"]["runs"][0]["arrival"]
+
+    assert arrival() is None
+    with pytest.raises(ArrivalRefused, match="'Si_dark.h5' has no number in its name"):
+        notify(place.engine, job_id, place.folder / "Si_dark.h5")
+    first = arrival()
+    assert first["error"] == "Not taken: 'Si_dark.h5' has no number in its name"
+    assert (first["state"], first["checked_at"], first["rows_seen"]) == ("available", None, None)
+    assert first["error_at"] is not None
+    assert client.get(f"/api/v1/jobs/{job_id}").json()["live"]["arrival"] == first
+    status_file = Path(jobs(place.engine)[0].run_directory or "") / "arrival-status.json"
+    written = os.stat(status_file)
+    with pytest.raises(ArrivalRefused):
+        notify(place.engine, job_id, place.folder / "Si_dark.h5")
+    assert notify(place.engine, job_id, place.folder / "Si_00012.h5").admitted
+    assert arrival() == first
+    unchanged = os.stat(status_file)  # not replaced (a replace is a new inode), so error_at stays the first time
+    assert (unchanged.st_ino, unchanged.st_mtime_ns) == (written.st_ino, written.st_mtime_ns)
+    with pytest.raises(ArrivalRefused):
+        notify(place.engine, job_id, place.folder / "Si_flat.h5")
+    assert arrival()["error"] == "Not taken: 'Si_flat.h5' has no number in its name"
+    assert dispatch.claim_run(place.engine, job_id)
+    client.post(f"/api/v1/jobs/{job_id}/cancel")
+    with pytest.raises(ArrivalRefused):
+        notify(place.engine, job_id, place.folder / "Si_bright.h5")
+    assert arrival()["error"] == "Not taken: 'Si_flat.h5' has no number in its name"
+
+
+def test_a_notify_runs_file_without_a_number_after_the_runs_end_gives_no_line(place, client):
+    """A run that ended without a Stop (here Failed) stays shown with its arrival status; a file without a number
+    notified afterwards is refused (its one line) but never becomes the ended run's line."""
+    response = start(client, place.form(indexing=False, scan={"filename_template": ""}))
+    (job_id,) = (answer["job_id"] for answer in response.json()["runs"])
+    assert dispatch.claim_run(place.engine, job_id)
+    _fail(place.engine, job_id)
+    (place.folder / "Si_dark.h5").write_bytes(b"x")
+    with pytest.raises(ArrivalRefused, match="has no number in its name"):
+        notify(place.engine, job_id, place.folder / "Si_dark.h5")
+    session = client.get(SESSION).json()["session"]
+    assert (session["open"], session["stopped"], session["runs"][0]["arrival"]) == (False, False, None)
+    assert not (Path(jobs(place.engine)[0].run_directory or "") / "arrival-status.json").exists()
+
+
+def test_start_makes_a_missing_output_folder_with_its_parents_and_the_runs_go_in_it(place, client):
+    """A missing Output Folder is no issue: Start makes it, its parents too, inside the roots, with each run's
+    folder in it."""
+    output = place.root / "a" / "b" / "c"
+    response = start(client, place.form(scan={"output_folder": os.fspath(output)}))
+
+    assert response.status_code == 201, response.text
+    directories = sorted(row.run_directory or "" for row in jobs(place.engine))
+    assert directories == [os.fspath(output / "index_1"), os.fspath(output / "rec_1")]
+    assert all(os.path.isdir(directory) for directory in directories)
+
+
 # ---------------------------------------------------------------------------
 # The checks
 
@@ -337,6 +565,47 @@ def _too_large(place: Place) -> str:
     return os.fspath(path)
 
 
+def _not_empty(place: Place) -> str:
+    """An earlier session's output folder that also holds a file of something else."""
+    path = place.root / "full"
+    path.mkdir()
+    (path / "rec_1").mkdir()
+    (path / "notes.txt").write_text("")
+    return os.fspath(path)
+
+
+def _earlier_runs(place: Place) -> str:
+    """An output folder holding only earlier sessions' run folders (unique by ID: they cannot mix)."""
+    path = place.root / "runs-only"
+    for name in ("rec_1", "index_2", "rec_10"):
+        (path / name).mkdir(parents=True)
+    return os.fspath(path)
+
+
+def _file_named_as_a_run_folder(place: Place) -> str:
+    """An output folder holding a file named as a run folder (not a run's folder)."""
+    path = place.root / "run-name-file"
+    path.mkdir()
+    (path / "rec_1").write_text("")
+    return os.fspath(path)
+
+
+def _folder_named_almost_as_a_run_folder(place: Place) -> str:
+    """An output folder holding a folder named almost as a run folder (no ID)."""
+    path = place.root / "run-name-folder"
+    (path / "index_x").mkdir(parents=True)
+    return os.fspath(path)
+
+
+def _link_out(place: Place) -> str:
+    """A link inside the root to a folder outside every root."""
+    outside = place.root.parent / "outside"
+    outside.mkdir()
+    link = place.root / "out-link"
+    link.symlink_to(outside)
+    return os.fspath(link)
+
+
 CASES: list[tuple[str, Any, set[tuple[tuple[str | int, ...], str, str]]]] = [
     ("the author left blank", {"scan": {"author": " "}}, {(("scan", "author"), "error", "missing")}),
     ("an unknown source", {"scan": {"source": "ftp"}}, {(("scan", "source"), "error", "literal_error")}),
@@ -347,7 +616,26 @@ CASES: list[tuple[str, Any, set[tuple[tuple[str | int, ...], str, str]]]] = [
         {"scan": {"source": "daq", "daq_id": "z" * 201}},
         {(("scan", "daq_id"), "error", "string_too_long")},
     ),
-    ("a folder that is missing", {"scan": {"folder": "{root}/missing"}}, {(("scan", "folder"), "error", "not_found")}),
+    (
+        "a folder that is missing, for notifications",
+        {"scan": {"folder": "{root}/missing"}},
+        {(("scan", "folder"), "error", "not_found")},
+    ),
+    (
+        "a folder that is missing, for a DAQ: the DAQ makes it",
+        {"scan": {"source": "daq", "daq_id": DAQ_ID, "folder": "{root}/dm/34ide/data/scan_2"}},
+        {(("scan", "folder"), "warning", "not_found"), (("scan", "daq_id"), "warning", "checked_at_start")},
+    ),
+    (
+        "a missing folder, for a DAQ, through a link that leads out of the roots",
+        {"scan": {"source": "daq", "daq_id": DAQ_ID, "folder": "{link}/scan_2"}},
+        {(("scan", "folder"), "error", "path_not_allowed")},
+    ),
+    (
+        "a folder that is a file, for a DAQ",
+        {"scan": {"source": "daq", "daq_id": DAQ_ID, "folder": "{file}"}},
+        {(("scan", "folder"), "error", "not_a_folder")},
+    ),
     ("a folder that is a file", {"scan": {"folder": "{file}"}}, {(("scan", "folder"), "error", "not_a_folder")}),
     (
         "a folder outside the roots",
@@ -379,6 +667,29 @@ CASES: list[tuple[str, Any, set[tuple[tuple[str | int, ...], str, str]]]] = [
         {"scan": {"output_folder": "/elsewhere"}},
         {(("scan", "output_folder"), "error", "path_not_allowed")},
     ),
+    ("a missing output folder and its parents: Start makes them", {"scan": {"output_folder": "{root}/a/b/c"}}, set()),
+    (
+        "a missing output folder through a link that leads out of the roots",
+        {"scan": {"output_folder": "{link}/out"}},
+        {(("scan", "output_folder"), "error", "path_not_allowed")},
+    ),
+    (
+        "an output folder that is not empty",
+        {"scan": {"output_folder": "{full}"}},
+        {(("scan", "output_folder"), "warning", "not_empty")},
+    ),
+    ("an output folder holding only earlier sessions' run folders", {"scan": {"output_folder": "{runs}"}}, set()),
+    (
+        "an output folder holding a file named as a run folder",
+        {"scan": {"output_folder": "{named_file}"}},
+        {(("scan", "output_folder"), "warning", "not_empty")},
+    ),
+    (
+        "an output folder holding a folder named almost as a run folder",
+        {"scan": {"output_folder": "{named_folder}"}},
+        {(("scan", "output_folder"), "warning", "not_empty")},
+    ),
+    ("an output folder that is empty", {"scan": {"output_folder": "{empty}"}}, set()),
     ("a scan not found", {"scan": {"scan_number": 99}}, {(("scan", "scan_number"), "error", "source_not_found")}),
     ("a scan number not whole", {"scan": {"scan_number": "abc"}}, {(("scan", "scan_number"), "error", "int_parsing")}),
     ("no scan: unlinked", {"scan": {"scan_number": None}}, {(("scan", "scan_number"), "warning", "unlinked")}),
@@ -446,6 +757,10 @@ def test_each_check_of_a_live_session_is_an_issue_on_its_field(place, client, ch
     its part (a run's issue on a field the Scan card sets on the Scan card's); the base form has none."""
     names = {"root": os.fspath(place.root), "file": _not_a_folder(place), "big": _too_large(place)}
     names |= {"geometry": os.fspath(place.geometry), "crystal": os.fspath(place.crystal)}
+    (place.root / "empty").mkdir()
+    names |= {"full": _not_empty(place), "link": _link_out(place), "empty": os.fspath(place.root / "empty")}
+    names |= {"runs": _earlier_runs(place), "named_file": _file_named_as_a_run_folder(place)}
+    names |= {"named_folder": _folder_named_almost_as_a_run_folder(place)}
 
     def filled(values: dict[str, Any]) -> dict[str, Any]:
         return {key: value.format(**names) if isinstance(value, str) else value for key, value in values.items()}
@@ -750,6 +1065,41 @@ def test_the_daq_list_is_one_answer_at_most_one_dm_call_per_daq_list_seconds_and
     assert answers[0].json()["failed"] == [] and answers[0].headers["cache-control"] == "no-store"
 
 
+def test_the_daq_list_leaves_out_the_daqs_daq_name_exclude_names_and_validate_and_start_still_take_one(
+    place, tmp_path, monkeypatch
+):
+    """``[live] daq_name_exclude`` (``logs``, ``current``) leaves out of ``GET /live/daqs`` a DAQ whose option on the
+    Live page shows one, ignoring case: its experiment name, or its data directory's last two names; a name further up
+    the data directory never counts (the option does not show it). ``[]`` lists them all. The kept answer is
+    unchanged: Validate checks an excluded DAQ against it as any other (no warning that Start checks it), and Start
+    binds it."""
+    dm = FakeDMService(tmp_path / "dm", monkeypatch, workflow=False)
+    storage = place.root / "dm"
+    dm.daqs = {
+        DAQ_ID: daq(storage),
+        "l1": daq(storage, id="l1", experimentName="Beamline-LOGS"),
+        "c1": daq(storage, id="c1", dataDirectory="/detector/Current/e1"),
+        "k1": daq(storage, id="k1", experimentName="e2", dataDirectory="/detector/e2/raw"),
+        "k2": daq(storage, id="k2", experimentName="e3", dataDirectory="/net/current/logs-archive/e3/raw"),
+    }
+    live = place.settings.live.model_copy(update={"dm_setup_file": tmp_path / "dm-setup.sh"})
+    assert live.daq_name_exclude == ["logs", "current"]
+    with portal(place.settings.model_copy(update={"live": live})) as client:
+        listed_ids = [entry["id"] for entry in client.get(DAQS).json()["daqs"]]
+        form = place.form(scan={"source": "daq", "daq_id": "l1"})
+        validated = found(client.post(VALIDATE, json=form))
+        started = start(client, form)
+    every = live.model_copy(update={"daq_name_exclude": []})
+    with portal(place.settings.model_copy(update={"live": every})) as client:
+        every_ids = [entry["id"] for entry in client.get(DAQS).json()["daqs"]]
+
+    assert sorted(listed_ids) == sorted([DAQ_ID, "k1", "k2"])
+    assert sorted(every_ids) == sorted([DAQ_ID, "l1", "c1", "k1", "k2"])
+    assert validated == set()
+    assert started.status_code == 201, started.text
+    assert dm.operations() == ["daqs", "daq", "daqs"]
+
+
 def test_a_daq_list_dm_cannot_give_is_a_503_problem_with_its_reason(place, client, tmp_path, monkeypatch):
     """DM not configured (no ``dm_setup_file``: no call at all): a 503 ``dm-unavailable`` with the reason and
     ``Retry-After`` (the next call's earliest time)."""
@@ -967,6 +1317,99 @@ def test_the_live_session_is_the_latest_starts_runs_with_their_counters_arrival_
     assert ended["open"] is False
     assert [run["status"] for run in ended["runs"]] == ["finished", "cancelled"]
     assert ended["runs"][0]["stop_requested"] is False
+
+
+def _end(engine: Engine, job_id: int, status: JobStatus) -> None:
+    with Session(engine) as session_rows:
+        session_rows.execute(update(Job).where(Job.job_id == job_id).values(status=int(status)))
+        session_rows.commit()
+
+
+def test_a_session_a_user_stopped_says_so_once_ended_and_one_that_ended_without_a_stop_does_not(place, client):
+    """``stopped``: the session's first run's stop flag, set by a user's Stop (or Stop now) and kept once it has
+    ended, so the Live page shows no session then; the answer still has its runs and Scan card (the page fills the
+    next form from them). A session whose run failed without a Stop, or whose follower alone was stopped, is not
+    ``stopped``: it stays shown."""
+    wire, follower = (run["job_id"] for run in start(client, place.form()).json()["runs"])
+    assert client.get(SESSION).json()["session"]["stopped"] is False
+    assert dispatch.claim_run(place.engine, wire)
+    client.post(f"/api/v1/jobs/{wire}/cancel")
+    stopping = client.get(SESSION).json()["session"]
+    assert (stopping["open"], stopping["stopped"]) == (True, True)
+    _end(place.engine, wire, JobStatus.FINISHED)
+    _end(place.engine, follower, JobStatus.FINISHED)
+    ended = client.get(SESSION).json()["session"]
+    assert (ended["open"], ended["stopped"]) == (False, True)
+    assert [run["job_id"] for run in ended["runs"]] == [wire, follower] and ended["scan"] is not None
+
+    # Stop now on a Running run not stopped yet stops it as Stop does; it then ends Failed: still a Stop.
+    (now,) = (run["job_id"] for run in start(client, place.form(indexing=False), key="key-2").json()["runs"])
+    assert dispatch.claim_run(place.engine, now)
+    assert client.post(f"/api/v1/jobs/{now}/stop-now").json()["state"] == "requested"
+    _end(place.engine, now, JobStatus.FAILED)
+    assert client.get(SESSION).json()["session"]["stopped"] is True
+
+    # A run that failed by itself, its follower stopped alone: not a stopped session.
+    wire, follower = (run["job_id"] for run in start(client, place.form(), key="key-3").json()["runs"])
+    client.post(f"/api/v1/jobs/{follower}/cancel")
+    _end(place.engine, wire, JobStatus.FAILED)
+    failed = client.get(SESSION).json()["session"]
+    assert (failed["open"], failed["stopped"]) == (False, False)
+    assert [run["status"] for run in failed["runs"]] == ["failed", "cancelled"]
+
+
+def _fail(engine: Engine, job_id: int, *, phase: RunPhase | None = None, n_failed: int = 0) -> None:
+    """End the Running ``job_id`` Failed, as the executor or the reconciler does (``phase``: ``interrupted`` for a
+    worker stop), with ``n_failed`` failed files."""
+    with Session(engine) as session_rows, session_rows.begin():
+        job = session_rows.get(Job, job_id)
+        assert job is not None
+        job.n_inputs, job.n_failed = max(job.n_inputs, n_failed), n_failed
+        state.finalize(job, status=JobStatus.FAILED, phase=phase)
+
+
+def test_a_run_ended_by_its_stop_now_is_stopped_now_and_no_failure_of_its_own_is(place, client):
+    """``stopped_now``: a run ended by its Stop now (the second press, on a run whose stop was asked: the job's
+    messages hold "Stop now requested", and the dispatcher ends it Failed, ``interrupted``). Not: a file failed in the
+    drain, the worker stopped during it (``interrupted``, no Stop now), a Stop now the drain's own failure overtook, a
+    follower's run-level failure. The Live page hides the first session once it has ended and keeps the others shown."""
+
+    def session_runs() -> list[tuple[str, bool]]:
+        return [(run["status"], run["stopped_now"]) for run in client.get(SESSION).json()["session"]["runs"]]
+
+    def stopped_wire_run(key: str) -> int:
+        (job_id,) = (run["job_id"] for run in start(client, place.form(indexing=False), key=key).json()["runs"])
+        assert dispatch.claim_run(place.engine, job_id)
+        assert client.post(f"/api/v1/jobs/{job_id}/cancel").json()["state"] == "requested"
+        assert session_runs() == [("running", False)]
+        return job_id
+
+    killed = stopped_wire_run("key-1")
+    assert client.post(f"/api/v1/jobs/{killed}/stop-now").json()["state"] == "stopping_now"
+    assert dispatch.end_stopped_now(place.engine, killed, pid=12345)
+    assert session_runs() == [("failed", True)]
+    assert client.get(SESSION).json()["session"]["stopped"] is True
+
+    drain_failed = stopped_wire_run("key-2")
+    _fail(place.engine, drain_failed, n_failed=1)
+    assert session_runs() == [("failed", False)]
+
+    worker_stopped = stopped_wire_run("key-3")
+    _fail(place.engine, worker_stopped, phase=RunPhase.INTERRUPTED)
+    assert session_runs() == [("failed", False)]
+
+    overtaken = stopped_wire_run("key-4")
+    assert client.post(f"/api/v1/jobs/{overtaken}/stop-now").json()["state"] == "stopping_now"
+    _fail(place.engine, overtaken, n_failed=1)
+    assert not dispatch.end_stopped_now(place.engine, overtaken, pid=12345)
+    assert session_runs() == [("failed", False)]
+
+    wire, follower = (run["job_id"] for run in start(client, place.form(), key="key-5").json()["runs"])
+    assert dispatch.claim_run(place.engine, follower)
+    client.post(f"/api/v1/jobs/{wire}/cancel")
+    _fail(place.engine, follower)  # a run-level error: no failed file
+    _end(place.engine, wire, JobStatus.CANCELLED)
+    assert session_runs() == [("cancelled", False), ("failed", False)]
 
 
 def test_an_ended_row_with_the_live_queue_identity_but_no_live_json_is_no_session(place, client):

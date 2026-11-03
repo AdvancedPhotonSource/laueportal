@@ -15,7 +15,10 @@ import { HealthIndicators } from "./HealthIndicators"
 import { ThemeToggle } from "./ThemeToggle"
 
 // The main links. "Live" (after Run Monitor) shows only while live processing is on (GET /programs lists the
-// live programs); below 1024 px it is the Menu's first item, so the Worker label still fits down to 768 px.
+// live programs). Below 1024 px it is the Menu's first item, and the main links and the Menu have 5.4 px of
+// padding a side instead of 9 px, so that down to 768 px the dot's link keeps its 75.6 px and a pill shows its
+// state's words whole ("not running", "unreachable"); its subject (Worker, API) goes first, below about
+// 800 px (e2e/shell.spec.ts).
 const NAV_LINKS = [
   { to: "/scans", label: "Scans" },
   { to: "/reconstructions", label: "Reconstructions" },
@@ -33,7 +36,7 @@ const MENU_LINKS = [
 
 const navLinkClass = cn(
   buttonVariants({ variant: "ghost" }),
-  "text-muted-foreground data-[section=active]:bg-muted data-[section=active]:text-foreground"
+  "text-muted-foreground data-[section=active]:bg-muted data-[section=active]:text-foreground max-lg:px-1.5"
 )
 
 /**
@@ -89,7 +92,10 @@ export function Navbar() {
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <Button variant="ghost" className="text-muted-foreground" />
+                <Button
+                  variant="ghost"
+                  className="text-muted-foreground max-lg:pl-1.5"
+                />
               }
             >
               Menu

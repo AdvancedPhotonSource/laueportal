@@ -1,10 +1,12 @@
 // Section identity: each form section's accent (a 4 px stripe on its card's left edge, its icon's colour)
-// and lucide icon, one mapping for the create forms' sections and sidebar and the Live page's cards and
-// their sub-sections. The science sections carry the colours, the bookkeeping ones (Identity, Notes) the
-// neutral accent; no red or amber, which mean errors and warnings. The accents are theme tokens
-// (`--section-*` in index.css); the class names are whole strings, so Tailwind finds them. An unknown title
-// gets the neutral accent and a generic icon.
+// and lucide icon, one mapping for the create forms' sections and sidebar, the Live page's cards and
+// their sub-sections, and the viewers' Parameters tabs (`SectionCard`). The science sections carry the
+// colours, the bookkeeping ones (Identity, Notes, the tabs' Other recorded values) the neutral accent; no
+// red or amber, which mean errors and warnings. The accents are theme tokens (`--section-*` in index.css);
+// the class names are whole strings, so Tailwind finds them. An unknown title gets the neutral accent and a
+// generic icon.
 import {
+  ClipboardListIcon,
   CrosshairIcon,
   FolderOpenIcon,
   IdCardIcon,
@@ -47,7 +49,10 @@ const FUCHSIA = {
   accent: "text-section-fuchsia",
 }
 
-/** By the section's title: the backend's `x-layout` groups and the Live page's cards (`PART_TITLES`). */
+/**
+ * By the section's title: the backend's `x-layout` groups, the Live page's cards (`PART_TITLES`) and the Parameters
+ * tabs' group of the stored values the form does not show.
+ */
 export const SECTION_IDENTITIES: ReadonlyMap<string, SectionIdentity> = new Map(
   [
     ["Identity", { ...NEUTRAL, icon: IdCardIcon }],
@@ -59,6 +64,7 @@ export const SECTION_IDENTITIES: ReadonlyMap<string, SectionIdentity> = new Map(
     ["Indexing Parameters", { ...FUCHSIA, icon: NetworkIcon }],
     ["Indexing", { ...FUCHSIA, icon: NetworkIcon }],
     ["Notes", { ...NEUTRAL, icon: NotebookPenIcon }],
+    ["Other recorded values", { ...NEUTRAL, icon: ClipboardListIcon }],
   ]
 )
 

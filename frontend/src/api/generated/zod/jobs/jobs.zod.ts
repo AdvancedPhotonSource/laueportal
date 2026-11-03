@@ -160,11 +160,11 @@ export const GetJobResponse = zod.object({
   "error_at": zod.union([zod.string(),zod.null()]).describe('When that error was first seen.'),
   "rows_seen": zod.union([zod.int(),zod.null()]).describe('The catalog rows seen so far (a follower\'s: the lines of its wire run\'s `completed.jsonl` read).'),
   "state": zod.enum(['available', 'not_recorded', 'missing', 'unreadable', 'not_responding']).describe('`available` (read), `unreadable` or `not_responding`; the keys are null unless it was read.')
-}).describe('A live run\'s `arrival-status.json`: how its source of arrivals is doing (a\nDAQ\'s catalog thread, or a follower waiting for a point). Its keys as written, unchecked.'),zod.null()]).describe('Its `arrival-status.json` (a DAQ\'s catalog thread, or a follower: its last check, the points read and, while a\npoint holds it, the waiting reason in `error`); null while it has none (a `notify` run, a follower before its\nfirst).'),
+}).describe('A live run\'s `arrival-status.json`: how its source of arrivals is doing (a DAQ\'s catalog thread, a follower\nwaiting for a point, or a `notify` run\'s last file refused for having no number). Its keys as written,\nunchecked.'),zod.null()]).describe('Its `arrival-status.json` (a DAQ\'s catalog thread, or a follower: its last check, the points read and, while a\npoint holds it, the waiting reason in `error`; a `notify` run\'s: the last file it refused for having no number);\nnull while it has none (a follower before its first, a `notify` run before such a file).'),
   "arrivals": zod.union([zod.int(),zod.null()]).describe('The inputs admitted so far: the whole lines of `arrivals.jsonl` (a follower\'s: the points); null unless it was\nread (`arrivals_state`).'),
   "arrivals_state": zod.enum(['available', 'not_recorded', 'missing', 'unreadable', 'not_responding']).describe('Whether one of a run\'s files (or its run directory) could be read on the host serving the API: production\'s\npaths need not exist there.'),
   "daq_id": zod.union([zod.string(),zod.null()]).describe('`daq`: DM\'s DAQ ID.'),
-  "filename_template": zod.union([zod.string(),zod.null()]).describe('Their name, one `%d` each file\'s number.'),
+  "filename_template": zod.union([zod.string(),zod.null()]).describe('Their name, one `%d` each file\'s number; null when the run has none (every file whose name ends `.h5`, its\nnumber the last run of digits in its name) or `live.json` was not read.'),
   "folder": zod.union([zod.string(),zod.null()]).describe('The folder the files arrive in (a follower\'s: its wire run\'s).'),
   "follows": zod.union([zod.object({
   "id": zod.int(),
@@ -420,7 +420,7 @@ export const CreateLiveRunsHeader = zod.object({
   "Idempotency-Key": zod.string().min(1).max(createLiveRunsHeaderIdempotencyKeyMax).describe('The create form\'s key (a UUID made when the form opens; at most 255 characters): the same key with the same body answers the run created the first time, for 24 hours; with another body, a 409.')
 })
 
-export const CreateLiveRunsBody = zod.record(zod.string(), zod.unknown()).describe('A live session: `scan`, the Scan card, `{source, daq_id, folder, filename_template, output_folder, scan_number, author}` (`source` `daq` with the DAQ\'s `daq_id`, or `notify`; the folder the files arrive in, their name with one `%d`, the folder the runs\' folders go in); `reconstruction`, the live wire run\'s form fields of `wire-live/v1` but those the Scan card sets, or null; `indexing`, the live LaueGo run\'s of `lauego-live/v1` likewise, or null (`GET /api/v1/programs`). With both, the LaueGo run follows the wire run. The Scan card sets each run\'s `scan_number`, `author`, `input_path`, `filename_prefixes`, `output_path_template` (`<output_folder>/rec_%d`, `<output_folder>/index_%d`) and the LaueGo run\'s `reconstruction_id`: a program part that sends one is refused.')
+export const CreateLiveRunsBody = zod.record(zod.string(), zod.unknown()).describe('A live session: `scan`, the Scan card, `{source, daq_id, folder, filename_template, output_folder, scan_number, author}` (`source` `daq` with the DAQ\'s `daq_id`, or `notify`; the folder the files arrive in, their name with one `%d` (blank or null: every file whose name ends `.h5`, its number the last run of digits in its name), the folder the runs\' folders go in); `reconstruction`, the live wire run\'s form fields of `wire-live/v1` but those the Scan card sets, or null; `indexing`, the live LaueGo run\'s of `lauego-live/v1` likewise, or null (`GET /api/v1/programs`). With both, the LaueGo run follows the wire run. The Scan card sets each run\'s `scan_number`, `author`, `input_path`, `filename_prefixes`, `output_path_template` (`<output_folder>/rec_%d`, `<output_folder>/index_%d`) and the LaueGo run\'s `reconstruction_id`: a program part that sends one is refused.')
 
 export const CreateLiveRunsResponse = zod.object({
   "runs": zod.array(zod.object({
@@ -439,8 +439,9 @@ export const CreateLiveRunsResponse = zod.object({
 
 /**
  * Check a live session's form: the Scan card (the source and its DAQ, the folder an existing
- * folder inside the roots, the template one file name with one `%d`, the output folder inside the roots, the scan,
- * the author), each run's parameters as its live schema's (`wire-live/v1`, `lauego-live/v1`) and the batch form's
+ * folder inside the roots, for a DAQ source one not there yet a warning (the DAQ makes it), the template blank or
+ * one file name with one `%d`, the output folder inside the roots, a warning when it exists and is not empty, the
+ * scan, the author), each run's parameters as its live schema's (`wire-live/v1`, `lauego-live/v1`) and the batch form's
  * checks that apply, and the session's own: one scan number for the pair (the Scan card's), depth indices only for
  * indexing that follows the reconstruction, the geometry (and the crystal) loading. Never a DM call (DM
  * checks the DAQ once, at Start): a DAQ source's folder is checked against where the DAQ writes as the
@@ -453,7 +454,7 @@ export const CreateLiveRunsResponse = zod.object({
  * Needs the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.
  * @summary Validate a live session
  */
-export const ValidateLiveRunsBody = zod.record(zod.string(), zod.unknown()).describe('A live session: `scan`, the Scan card, `{source, daq_id, folder, filename_template, output_folder, scan_number, author}` (`source` `daq` with the DAQ\'s `daq_id`, or `notify`; the folder the files arrive in, their name with one `%d`, the folder the runs\' folders go in); `reconstruction`, the live wire run\'s form fields of `wire-live/v1` but those the Scan card sets, or null; `indexing`, the live LaueGo run\'s of `lauego-live/v1` likewise, or null (`GET /api/v1/programs`). With both, the LaueGo run follows the wire run. The Scan card sets each run\'s `scan_number`, `author`, `input_path`, `filename_prefixes`, `output_path_template` (`<output_folder>/rec_%d`, `<output_folder>/index_%d`) and the LaueGo run\'s `reconstruction_id`: a program part that sends one is refused.')
+export const ValidateLiveRunsBody = zod.record(zod.string(), zod.unknown()).describe('A live session: `scan`, the Scan card, `{source, daq_id, folder, filename_template, output_folder, scan_number, author}` (`source` `daq` with the DAQ\'s `daq_id`, or `notify`; the folder the files arrive in, their name with one `%d` (blank or null: every file whose name ends `.h5`, its number the last run of digits in its name), the folder the runs\' folders go in); `reconstruction`, the live wire run\'s form fields of `wire-live/v1` but those the Scan card sets, or null; `indexing`, the live LaueGo run\'s of `lauego-live/v1` likewise, or null (`GET /api/v1/programs`). With both, the LaueGo run follows the wire run. The Scan card sets each run\'s `scan_number`, `author`, `input_path`, `filename_prefixes`, `output_path_template` (`<output_folder>/rec_%d`, `<output_folder>/index_%d`) and the LaueGo run\'s `reconstruction_id`: a program part that sends one is refused.')
 
 export const validateLiveRunsResponseIssuesItemSeverityDefault = `error`;
 
@@ -467,7 +468,9 @@ export const ValidateLiveRunsResponse = zod.object({
 }).describe('What a validate endpoint answers for one run\'s parameters: a 200 whatever\nit finds; the create endpoint refuses the same parameters with a 422 when an issue is an error.')
 
 /**
- * The Live page's DAQ list: DM's DAQs, each with where it writes (`destination`, the folder a DAQ source fills in).
+ * The Live page's DAQ list: DM's DAQs, each with where it writes (`destination`, the folder a DAQ source fills in),
+ * but those whose experiment name or data directory contains one of `[live] daq_name_exclude` (`logs`, `current`),
+ * ignoring case: left out of this list only (Validate and Start take any DAQ, the bind check at Start being DM's).
  * One answer shared by every browser: at most one DM call per `[live] daq_list_seconds` (30 s), made only when asked
  * (no Live page open, no call), a request that comes while it runs waiting for its answer (holding no thread);
  * `kept_seconds`, the time the answer is still the one served (ask again after it). A failed call is a 503 problem
@@ -495,7 +498,10 @@ export const ListLiveDaqsResponse = zod.object({
  * The Live page's session: the latest live session (the runs one Start created: the wire run
  * first, then its follower; or the one run), or `session` null before the first. Each run's status, counters
  * (`n_inputs` arrived, `n_succeeded`, `n_failed`) and stop request from its job row, and its `arrival-status.json`
- * (null while it has none: a `notify` run); `open` while a run of it is Queued or Running; `scan`, the session's
+ * (null while it has none: a follower before its first, a `notify` run until it refused a file without a number);
+ * `open` while a run of it is Queued or Running; `stopped` once a user stopped it (its first run's stop flag, kept
+ * after it has ended: the Live page then shows no session once it has ended with no run Failed, a run ended by its
+ * Stop now with no failed file, `stopped_now`, not counting, and fills its form from it); `scan`, the session's
  * Scan card from its source run's `live.json` and rows (null when that file cannot be read). Poll it while
  * the session is open. The rows are read in a session closed before any file is; a file that is missing,
  * unreadable or not answering is a state, never an error. 404 while live processing is off.
@@ -511,7 +517,7 @@ export const GetLiveSessionResponse = zod.object({
   "error_at": zod.union([zod.string(),zod.null()]).describe('When that error was first seen.'),
   "rows_seen": zod.union([zod.int(),zod.null()]).describe('The catalog rows seen so far (a follower\'s: the lines of its wire run\'s `completed.jsonl` read).'),
   "state": zod.enum(['available', 'not_recorded', 'missing', 'unreadable', 'not_responding']).describe('`available` (read), `unreadable` or `not_responding`; the keys are null unless it was read.')
-}).describe('A live run\'s `arrival-status.json`: how its source of arrivals is doing (a\nDAQ\'s catalog thread, or a follower waiting for a point). Its keys as written, unchecked.'),zod.null()]).describe('Its `arrival-status.json`; null while it has none (a `notify` run, a follower before its first).'),
+}).describe('A live run\'s `arrival-status.json`: how its source of arrivals is doing (a DAQ\'s catalog thread, a follower\nwaiting for a point, or a `notify` run\'s last file refused for having no number). Its keys as written,\nunchecked.'),zod.null()]).describe('Its `arrival-status.json`; null while it has none (a follower before its first; a `notify` run until it\nrefused a file without a number, its one line then).'),
   "job_id": zod.int(),
   "n_failed": zod.int(),
   "n_inputs": zod.int().describe('The inputs arrived (a follower\'s: frames).'),
@@ -522,17 +528,19 @@ export const GetLiveSessionResponse = zod.object({
   "label": zod.string().describe('``I`` (indexing) or ``R`` (reconstruction) and the run\'s ID.')
 }).describe('The run a job executes, for links and labels: kind, ID and label (``I12``, ``R3``).'),zod.null()]),
   "status": zod.enum(['queued', 'running', 'finished', 'failed', 'cancelled']).describe('A run\'s status in the API (lower-case strings); the ``job`` table stores\n``jobs.state.JobStatus``\'s integers.'),
-  "stop_requested": zod.boolean().describe('A stop (Stop seals the session) is requested and the run has not ended yet.')
+  "stop_requested": zod.boolean().describe('A stop (Stop seals the session) is requested and the run has not ended yet.'),
+  "stopped_now": zod.boolean().describe('It ended by its Stop now: Failed, phase `interrupted`, its job process killed once its job\'s messages held\n"Stop now requested" (`jobs.dispatch.end_stopped_now`). A failure of its own (a failed file, a run-level error, a\nworker stop) is not.')
 }).describe('One run of the live session, as its job row and its run directory say: the Live page\'s header strip.')),
   "scan": zod.union([zod.object({
   "author": zod.union([zod.string(),zod.null()]),
   "daq_id": zod.union([zod.string(),zod.null()]),
-  "filename_template": zod.string(),
+  "filename_template": zod.union([zod.string(),zod.null()]).describe('Null: none (every file whose name ends `.h5`, its number the last run of digits in its name).'),
   "folder": zod.string(),
   "output_folder": zod.union([zod.string(),zod.null()]).describe('The folder the session\'s run folders went in (`<output_folder>/rec_%d`, `index_%d`).'),
   "scan_number": zod.union([zod.int(),zod.null()]),
   "source": zod.enum(['daq', 'notify'])
-}).describe('The session\'s Scan card, as its source run recorded it (its `live.json` and rows): the Live page shows it\nwhile the session is open and fills the next session\'s Scan card from it once it has ended.'),zod.null()]).describe('Null when its source run\'s `live.json` could not be read.')
+}).describe('The session\'s Scan card, as its source run recorded it (its `live.json` and rows): the Live page shows it\nwhile the session is open and fills the next session\'s Scan card from it once it has ended.'),zod.null()]).describe('Null when its source run\'s `live.json` could not be read.'),
+  "stopped": zod.boolean().describe('A user stopped it: its first run\'s stop was requested (the Live page\'s Stop or Stop now, or Stop Run on that\nrun\'s job page or in the Run Monitor), whether or not it has ended. The Live page shows no session once a stopped\none has ended with no run Failed of its own (a run ended by its Stop now with no failed file, `stopped_now`, does\nnot count; it still fills the next session\'s form from it); one that ended without a Stop, or with a run Failed\notherwise, stays shown.')
 }).describe('The latest live session: the runs one Start created (the wire run first, then its follower; or the one\nrun).'),zod.null()])
 }).describe('`GET /api/v1/live/session`: the latest live session, or null before the first.')
 

@@ -8,8 +8,9 @@ import type {
 } from "@/api"
 
 // The wire reconstruction viewer on the seeded stack (`make e2e`): R1, the synthetic one-point
-// reconstruction, opened with its header links and parameters; its point in the bar and the Points
-// tab; the flow through its Depth View and ROI Inspector. R2, the fine one, times a depth change.
+// reconstruction, opened with its header links and parameters (the wire form's section cards, one column; long
+// values on a narrow window); its point in the bar and the Points tab; the flow through its Depth View and ROI
+// Inspector. R2, the fine one, times a depth change.
 // R3, the seeded three-point one (each point brightest at its own depth), switches points. The URL's
 // point tests answer R1's points and artifact with a second complete point, a copy of R1's, whose ID
 // needs encoding in the URL.
@@ -112,6 +113,67 @@ test("R1 opens with its job and scan, its parameters, and its point", async ({
   await expect(checkbox(page, pointId)).toBeChecked()
   await tab(page, "Parameters").click()
   await expectAt(page, {})
+})
+
+/** The texts of the Parameters tab's cards and values that are wider than their box (clipped or overflowing). */
+function overflowing(page: Page) {
+  return page.getByRole("tabpanel").evaluate((panel) =>
+    Array.from(panel.querySelectorAll('[data-slot="card"], dd'))
+      .filter((element) => element.scrollWidth > element.clientWidth + 1)
+      .map((element) => element.textContent.slice(0, 60))
+  )
+}
+
+test("the Parameters tab shows the wire form's section cards in one column; long paths wrap on a narrow window", async ({
+  page,
+}) => {
+  await page.goto(R1)
+  const titles = [
+    "Identity",
+    "File Paths",
+    "Wire Reconstruction Parameters",
+    "Notes",
+    "Other recorded values",
+  ]
+  const cards = page.getByRole("tabpanel").locator('[data-slot="card"]')
+  await expect(cards.getByRole("heading", { level: 2 })).toHaveText(titles)
+  const boxes = await Promise.all(
+    titles.map((_, index) => cards.nth(index).boundingBox())
+  )
+  for (const box of boxes) {
+    expect(box && [box.x, box.width]).toEqual(
+      boxes[0] && [boxes[0].x, boxes[0].width]
+    )
+  }
+
+  // A folder inside a file root, its root-relative form as long.
+  const relative =
+    "export/s34data1/2026-3/Some_User_Experiment_With_A_Long_Name_And_No_Break/data/wire_scan_with_a_long_name"
+  await page.route(
+    (url) => url.pathname === "/api/v1/reconstruction-runs/1",
+    async (route) => {
+      const response = await route.fetch()
+      const run = (await response.json()) as ReconstructionRunDetail
+      await route.fulfill({
+        response,
+        json: {
+          ...run,
+          input_path: `/net/s34data/${relative}`,
+          relative_paths: {
+            ...run.relative_paths,
+            input_path: { root: "s34data", relative },
+          },
+        },
+      })
+    }
+  )
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.reload()
+  await expect(cards.getByRole("heading", { level: 2 })).toHaveText(titles)
+  await expect(
+    page.getByRole("tabpanel").getByTitle("Relative to its file root").first()
+  ).toHaveText(`s34data/${relative}`)
+  expect(await overflowing(page)).toEqual([])
 })
 
 test("a selected point shows in the bar, and the URL keeps it across a reload", async ({

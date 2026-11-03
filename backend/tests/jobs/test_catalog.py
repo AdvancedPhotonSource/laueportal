@@ -401,6 +401,25 @@ def test_a_file_without_the_catalog_s_size_is_held_back_and_admitted_once_it_mat
     assert status(run)["error"] is None  # admitted: nothing left to report
 
 
+def test_a_folder_the_daq_makes_after_the_start_is_read_and_its_files_admitted_as_they_come(engine, run, dm):
+    """A DAQ makes its folder when it first writes (the Live page starts a DAQ session on a missing Folder): the
+    cycles before it find nothing to admit and no error, a file catalogued before this host sees it is held, and the
+    files are admitted once the folder and they are there. DM's clock is the portal's (``START_SECONDS``)."""
+    run.folder.rmdir()
+    catalog = reader(engine, run)
+    assert catalog.step(0) is not None
+    dm.files = [row(1, START_SECONDS + 4)]  # catalogued; not on this host yet
+    catalog.step(5)
+    assert ledger(run) == [] and status(run)["error"] is None
+    run.folder.mkdir()
+    run.file(1, DATA)
+    run.file(2, DATA)
+    dm.files.append(row(2, START_SECONDS + 9))
+    catalog.step(10)
+    assert ledger(run) == ["live_1.h5", "live_2.h5"]
+    assert status(run)["error"] is None
+
+
 def test_a_catalogued_file_never_admitted_shows_in_arrival_status_json_with_the_counts_and_the_latest_reason(
     engine, run, dm
 ):
@@ -592,6 +611,29 @@ def test_the_folder_s_other_files_never_move_the_run_s_cursor_or_show_in_its_err
     assert status(run)["error"] == unusable
     catalog.step(300)  # a re-scan cycle: the cursor's query and the full scan both show it
     assert queries(dm)[-1] == ((881.0, 0), (None, 0)) and status(run)["error"] == unusable
+
+
+def test_with_no_template_the_catalog_admits_each_h5_file_and_reports_one_without_a_number(engine, tmp_path, dm):
+    """A DAQ run with no file name template takes the folder's files whose name ends ``.h5``, each numbered by the last
+    run of digits before ``.h5``. Another file of the folder is passed over (no error); a ``.h5`` file without a number
+    is refused for good by admission and stays in ``arrival-status.json``'s error, the session's line for it."""
+    run = create_live_wire_run(engine, tmp_path, source="daq", template=False)
+    for name in ("Si_00001.h5", "Si_2_dark.h5", "Si_dark.h5", "notes.txt"):
+        (run.folder / name).write_bytes(DATA)
+    dm.files = [
+        {**row(0, 1000.0 + index), "experimentFilePath": f"live-input/{name}"}
+        for index, name in enumerate(("Si_00001.h5", "Si_2_dark.h5", "Si_dark.h5", "notes.txt"))
+    ]
+    catalog = reader(engine, run)
+    catalog.step(0)
+    assert ledger(run) == ["Si_00001.h5", "Si_2_dark.h5"]
+    lines = (run.run_directory / "arrivals.jsonl").read_text().splitlines()
+    assert [json.loads(line)["scan_point"] for line in lines] == [1, 2]
+    refused = "'Si_dark.h5' has no number in its name"
+    assert status(run)["error"] == f"0 catalogued file(s) not admitted yet, 1 refused: {refused}"
+    assert status(run)["rows_seen"] == 4
+    catalog.step(5)
+    assert status(run)["error"] == f"0 catalogued file(s) not admitted yet, 1 refused: {refused}"
 
 
 def test_an_admission_that_finds_the_run_closed_ends_the_thread_with_no_call_after_it(engine, run, dm, monkeypatch):

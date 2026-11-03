@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { createMemoryHistory, type RouterHistory } from "@tanstack/react-router"
 import { act, useEffect, useState } from "react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { CreatedRun, ProblemItem } from "@/api"
 import { PROGRAMS, urlOf } from "@/test/programs"
 import {
@@ -88,6 +88,14 @@ async function mountWire(
 const input = (root: ParentNode, name: string) =>
   root.querySelector<HTMLInputElement>(`[name="${name}"]`)
 
+// jsdom has no scrollIntoView; the Submitted panel calls it when it appears (also for one commit before a
+// created and queued run's page opens).
+const reveal = vi.fn()
+beforeEach(() => {
+  reveal.mockClear()
+  Element.prototype.scrollIntoView = reveal
+})
+
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
@@ -173,8 +181,8 @@ describe("ProgramForm", () => {
     })
     await enterText(input(root, "depth_start"), "-50") // back to its default, but touched
     expect(marks("error")).toEqual([
+      ["Depth Start: Start after end", "text-destructive"], // the summary, above the sections, names it once
       ["Start after end", "text-destructive"], // under the field
-      ["Depth Start: Start after end", "text-destructive"], // the summary names it once
     ])
     expect(marks("warning")).toEqual([])
     expect(input(root, "depth_end")?.getAttribute("aria-invalid")).toBeNull()
@@ -280,5 +288,17 @@ describe("ProgramForm", () => {
       ["9", "/jobs/9"],
     ])
     expect(byRole("button", "Submit")[0]).toHaveProperty("disabled", true)
+  })
+
+  it("scrolls the Submitted panel into view when it appears", async () => {
+    stubApi([], { ...CREATED, failure: "The queue is unavailable" })
+    const root = await mountWire()
+    expect(reveal).not.toHaveBeenCalled()
+    await click(byRole("button", "Submit")[0])
+    await until(() => {
+      expect(reveal.mock.contexts).toContain(
+        root.querySelector('section[aria-label="Submitted"]')
+      )
+    })
   })
 })

@@ -16,7 +16,7 @@ export interface IndexingRunSummary {
   box_size: number | null;
   /** When the run was submitted. */
   created_at: string;
-  /** The structure file (the card's Structure File). */
+  /** The structure file (the card's Structures File). */
   crystal_file: string | null;
   /** The indexing run's ID (shown as ``I<id>``). */
   id: number;

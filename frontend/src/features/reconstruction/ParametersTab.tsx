@@ -2,18 +2,18 @@ import { InfoIcon } from "lucide-react"
 
 import type { ReconstructionRunDetail } from "@/api"
 import { DefinitionList, Value } from "@/components/DefinitionList"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { SectionCard } from "@/features/program-form"
 import { parameterGroups, type ParameterRow } from "./parameters"
 
 /**
  * The Parameters tab: the run's stored parameters (GET /reconstruction-runs/{id}, the database's),
- * read-only, grouped as the wire form; a path inside the file roots also shows its root-relative
- * form.
+ * read-only, in the wire form's section cards and order, one column; a path inside the file roots
+ * also shows its root-relative form.
  */
 export function ParametersTab({ run }: { run: ReconstructionRunDetail }) {
   const groups = parameterGroups(run)
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       {run.parameters === null && (
         <p
           role="status"
@@ -23,20 +23,11 @@ export function ParametersTab({ run }: { run: ReconstructionRunDetail }) {
           {`No wire parameters stored (method ${run.method})`}
         </p>
       )}
-      <div className="grid items-start gap-3 lg:grid-cols-2">
-        {groups.map((group) => (
-          <Card key={group.title} size="sm">
-            <CardHeader>
-              <CardTitle>
-                <h2>{group.title}</h2>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DefinitionList rows={group.rows.map(definitionOf)} />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {groups.map((group) => (
+        <SectionCard key={group.title} title={group.title}>
+          <DefinitionList rows={group.rows.map(definitionOf)} />
+        </SectionCard>
+      ))}
     </div>
   )
 }
@@ -50,7 +41,7 @@ function definitionOf(row: ParameterRow) {
       <span className="flex flex-col">
         <Value text={row.value} mono />
         <span
-          className="text-muted-foreground"
+          className="wrap-anywhere text-muted-foreground"
           title="Relative to its file root"
         >
           {row.relative}

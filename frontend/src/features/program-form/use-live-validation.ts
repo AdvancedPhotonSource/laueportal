@@ -46,6 +46,13 @@ export interface LiveValidation {
   flush: () => Promise<IssueLike[]>
   /** Keep issues found otherwise (a refused create's) for the values sent, while they are on screen. */
   accept: (issues: IssueLike[], key: string) => void
+  /**
+   * Check the values on screen again: the server's answer for them may have changed (the Live page's session has
+   * ended, its runs now in the Output Folder). The last report turns stale: it stays shown, as pending, never reused
+   * by a flush, and the debounced check runs after the next render, for the values then on screen (one request,
+   * whether the caller's change of values lands in that render or not).
+   */
+  revalidate: () => void
 }
 
 export function useLiveValidation(
@@ -55,6 +62,8 @@ export function useLiveValidation(
   const key = JSON.stringify(body)
   const [report, setReport] = useState<Report | null>(null)
   const reportRef = useRef<Report | null>(null)
+  // A revalidate's turn: the debounced check runs again for the same values.
+  const [revision, setRevision] = useState(0)
   // The values a flush checks: the ones on screen when Submit or Validate is clicked.
   const keyRef = useRef(key)
   useEffect(() => {
@@ -119,7 +128,7 @@ export function useLiveValidation(
         asking.current = null
       }
     }
-  }, [key, start])
+  }, [key, start, revision])
 
   const flush = useCallback(async () => {
     const current = keyRef.current
@@ -139,11 +148,25 @@ export function useLiveValidation(
     [keep]
   )
 
+  const revalidate = useCallback(() => {
+    const last = reportRef.current
+    if (last) {
+      const stale = { ...last, key: "" } // no values serialize to it: kept shown, never reused
+      reportRef.current = stale
+      setReport(stale)
+    }
+    // A check asked before is not the new one: a flush starts its own, and its answer is dropped.
+    asking.current = null
+    kept.current = started.current + 1
+    setRevision((count) => count + 1)
+  }, [])
+
   return {
     issues: report?.issues,
     pending: report?.key !== key,
     failed: report?.failed ?? false,
     flush,
     accept,
+    revalidate,
   }
 }

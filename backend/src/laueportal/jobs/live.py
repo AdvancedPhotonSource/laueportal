@@ -10,8 +10,9 @@ is never rewritten. Every key is always there, null where it does not apply:
   LaueGo run following a live wire run's completed points);
 - ``daq``: for ``daq`` only: DM's DAQ ``id``, its ``experiment``, the experiment's ``storage`` directory (the
   catalog's file paths are relative to it) and the DAQ's ``destination`` (where it writes; ``folder`` lies inside);
-- ``folder``: the folder the files arrive in, and ``filename_template``: their name, one ``%d`` each file's number;
-  a follower's are its wire run's;
+- ``folder``: the folder the files arrive in, and ``filename_template``: their name, one ``%d`` each file's number,
+  or null: every file whose name ends ``.h5``, its number the last run of digits in its name
+  (``jobs.arrivals.RunFiles``); a follower's are its wire run's;
 - ``follows``: for ``run`` only: the wire run's ``job_id`` (its job row says when it ends) and run ``directory``
   (whose ``completed.jsonl`` the follower reads).
 
@@ -33,6 +34,7 @@ follower of the session's own wire run is part of the same Start), and answers w
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
@@ -109,14 +111,16 @@ class LiveDocument(_LiveModel):
     source: LiveSource
     daq: LiveDaq | None = None
     folder: str
-    filename_template: str = Field(min_length=1, max_length=TEMPLATE_MAX_LENGTH)
+    filename_template: str | None = Field(default=None, min_length=1, max_length=TEMPLATE_MAX_LENGTH)
     follows: LiveFollows | None = None
 
     _folder = field_validator("folder")(_absolute)
 
     @field_validator("filename_template")
     @classmethod
-    def _template(cls, value: str) -> str:
+    def _template(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         if value != value.strip() or "/" in value or "\0" in value or value.count("%d") != 1:
             raise ValueError("must be one file name with exactly one %d")
         return value
@@ -130,6 +134,11 @@ class LiveDocument(_LiveModel):
         if self.daq is not None and not inside(self.folder, self.daq.destination):
             raise ValueError("the folder must lie inside the DAQ's destination")
         return self
+
+
+def live_template(templates: Sequence[str]) -> str | None:
+    """``live.json``'s ``filename_template`` from a live run's ``filename_prefixes`` (at most one): None with none."""
+    return templates[0] if templates else None
 
 
 def live_path(run_directory: str | os.PathLike[str]) -> str:

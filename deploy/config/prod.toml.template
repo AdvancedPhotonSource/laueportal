@@ -164,3 +164,6 @@ dm_setup_file = ""                      # DM's setup file for the DAQ list and t
 dm_ssh_host = ""                        # run the DM operations on this host over SSH; "" = on the portal host
 dm_timeout_seconds = 15                 # the bound of one DM operation
 daq_list_seconds = 30                   # the Live page's DAQ list: one shared answer, at most one DM call this often
+daq_name_exclude = ["logs", "current"]  # the Live page's DAQ list leaves out a DAQ whose option shows one of these,
+                                        # any case: its experiment, or its data directory's last two names (a session
+                                        # on it still starts); no blank entry

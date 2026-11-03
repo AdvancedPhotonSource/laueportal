@@ -13,6 +13,7 @@ import {
   DEFAULT_AXES_3D,
   type MapSettings,
   type Matrix3,
+  MOTOR_AXES_3D,
   type PoleReference,
   type PoleSettings,
   type SurfaceChoice,
@@ -54,8 +55,9 @@ export function rodriguesStepOf(
 }
 
 /**
- * The axes to plot: the stored ones when the results have them all, else the defaults (X × H, or
- * X, Y, Z) when they have those, else the first ones they have; null when they have too few.
+ * The axes to plot: the stored ones when the results have them all, else the first default they have
+ * (2D: X × H; 3D: the lab X, Y, Z, else, for results without depths, which have no Zlab, the motors'
+ * X, Y, Z), else the first ones they have; null when they have too few.
  */
 export function resolveAxes(
   stored: readonly string[],
@@ -65,12 +67,13 @@ export function resolveAxes(
   const names = available.map((axis) => axis.value)
   const has = (axes: readonly string[]) =>
     axes.every((axis) => names.includes(axis))
-  const defaults = mode === "3d" ? DEFAULT_AXES_3D : DEFAULT_AXES_2D
+  const defaults: readonly (readonly string[])[] =
+    mode === "3d" ? [DEFAULT_AXES_3D, MOTOR_AXES_3D] : [DEFAULT_AXES_2D]
   if (has(stored)) return [...stored]
-  if (has(defaults)) return [...defaults]
-  return names.length >= defaults.length
-    ? names.slice(0, defaults.length)
-    : null
+  const found = defaults.find(has)
+  if (found) return [...found]
+  const count = mode === "3d" ? DEFAULT_AXES_3D.length : DEFAULT_AXES_2D.length
+  return names.length >= count ? names.slice(0, count) : null
 }
 
 export interface MapRequestInput {

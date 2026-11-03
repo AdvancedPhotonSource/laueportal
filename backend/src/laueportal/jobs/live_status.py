@@ -9,7 +9,12 @@ may match), looked at once the rows are read: a newest row without it is no sess
 left out of its follower's. A run's counters and stop are its job
 row's; its ``arrival-status.json`` is read for the page's arrival status, and the
 source run's ``live.json`` and rows give the session's Scan card (the page shows it while the session is open
-and fills the next one from it once it has ended). The rows are read in a session closed before any
+and fills the next one from it once it has ended). ``stopped`` says that a user stopped the session: its source
+run's stop flag (``job.cancel_requested_at``, set only by a user's Stop or Stop now, ``jobs.controls``, and kept once
+the run has ended). The answer keeps a stopped session that has ended, since the page fills the next session's form
+from it; the page shows no session then (``LiveSession.stopped``) unless a run Failed of its own (a run ended by its
+Stop now, ``LiveSessionRun.stopped_now``, does not count, unless a file of it failed), while one that ended without a
+Stop stays shown until the next Start. The rows are read in a session closed before any
 file is (a hung mount holds no database connection), and each file through ``files.probe`` (``jobs.summary``'s
 JSON reader): one that is missing, unreadable or does not answer is a state, never an error.
 """
@@ -50,6 +55,8 @@ class _Row:
     """What the session's view reads of one run's rows, before any file."""
 
     run: LiveSessionRun
+    stopped: bool
+    """A user's Stop or Stop now reached the run (its stop flag), whether or not it has ended."""
     run_directory: str | None
     scan_number: int | None
     author: str | None
@@ -72,8 +79,10 @@ def _row(job: Job) -> _Row:
             n_succeeded=job.n_succeeded,
             n_failed=job.n_failed,
             stop_requested=job.cancel_requested_at is not None and not state.is_terminal(job),
+            stopped_now=job.phase == state.RunPhase.INTERRUPTED and state.stop_now_requested(job.messages),
             arrival=None,
         ),
+        stopped=job.cancel_requested_at is not None,
         run_directory=job.run_directory,
         scan_number=None if owner is None else owner.scan_number,
         author=None if owner is None else owner.author,
@@ -128,7 +137,7 @@ def _scan(source: _Row, document: dict[str, Any] | None) -> LiveSessionScan | No
         live = LiveDocument.model_validate(document)
     except ValidationError:
         return None
-    if live.source == "run" or live.folder is None or live.filename_template is None:
+    if live.source == "run":
         return None
     return LiveSessionScan(
         source=live.source,
@@ -167,6 +176,7 @@ def latest_session(sessions: sessionmaker[Session]) -> LiveSessionState:
     return LiveSessionState(
         session=LiveSession(
             open=any(run.status in _OPEN for run in runs),
+            stopped=rows[0].stopped,
             runs=runs,
             scan=_scan(rows[0], live_json(rows[0])[0]),
         )
