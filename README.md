@@ -4,10 +4,6 @@ Web portal for Laue diffraction analysis at APS beamline 34-ID-E. Users import s
 frames with LaueGo and inspect the results in the browser, and run the computation on the portal host, on the APS
 cluster or at ALCF. [lauelab](https://github.com/advancedphotonsource/lauelab) does the scientific computation.
 
-When ALCF is enabled, the navbar's status indicator shows read-only checks of DM, Globus, storage access and the
-Crux endpoint; its panel shows the last check and a refresh action. See the
-[remote deployment runbook](docs/runbooks/remote-execution.md#connectivity-monitor).
-
 ![Laue Portal: a 3D orientation map, a pole figure, the scan list and an indexed detector frame](docs/images/portal.webp)
 
 The [user guide](docs/user/workflows.md) describes the workflows, and the [deploy runbook](docs/runbooks/deploy.md)

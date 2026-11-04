@@ -149,11 +149,6 @@ that applied in the pull request.
 4. **A gate passed by weakening a test.** Never weaken, skip or delete a test to make a gate pass; report the failure
    verbatim. A fix is done when a test of its failure case passes, and a performance claim needs a measured number.
 
-The navbar's ALCF indicator reads `GET /system/remote-status` (`system.remote_status`, `remote.health`). Its
-launcher-side probe must stay read-only: never register or submit functions/workflows, start an endpoint, allocate
-PBS resources, or prompt for login. Keep probes shared, bounded and on demand; a failed bridge is unknown, not an
-offline endpoint. An online core endpoint does not guarantee user-worker startup or PBS capacity.
-
 ## Build and test
 
 Source `scripts/env.sh` in every shell of your own; the `make` targets that need it source it themselves. `make help`
@@ -202,6 +197,11 @@ halves), `check-frontend` and `check-contract`; reproduce a failed job with its 
 - [`docs/architecture.md`](docs/architecture.md#layout) describes each package and folder.
 
 ## Docs
+
+Change `README.md` or the core philosophy, principles and policies in `AGENTS.md` only when explicitly instructed.
+Keep factual references in `AGENTS.md`, such as code layout, paths and commands, up to date when a relevant change
+requires it. Explicitly note all edits to either file in the change summary and, when applicable, the pull request
+description.
 
 Operators deploy from the runbooks, and scientists read the user docs to decide whether to trust what the viewers show.
 If a change alters what a user, an operator or a contributor can observe, change the docs in the same commit.
