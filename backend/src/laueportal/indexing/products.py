@@ -22,6 +22,7 @@ from laueportal.core.problems import ProblemError, ProblemItem, problems_detail
 from laueportal.core.text import quoted, shortened
 from laueportal.indexing.schemas import (
     AxisCoordinate,
+    CrystalCellDetails,
     PatternDetails,
     PointDetails,
     SelectionStats,
@@ -229,12 +230,26 @@ def point_product(loaded: ViewerDataset, scope: DataScope, step: int, axes: tupl
                 rms_error_deg=pattern.rms_error_deg,
                 indexed=pattern.indexed,
                 in_scope=pattern.in_scope,
+                reciprocal=[list(row) for row in pattern.reciprocal] if pattern.reciprocal else None,
             )
             for pattern in point.patterns
         ],
         coordinates=[
             AxisCoordinate(axis=value.axis, label=value.label, value=value.value) for value in point.coordinates
         ],
+        crystal=(
+            CrystalCellDetails(
+                name=point.crystal.name,
+                space_group=point.crystal.space_group,
+                lengths_nm=list(point.crystal.lengths_nm),
+                angles_deg=list(point.crystal.angles_deg),
+                reference_reciprocal=[list(row) for row in point.crystal.reference_reciprocal],
+                symmetry=point.crystal.symmetry,
+                equivalent_settings=[[list(row) for row in setting] for setting in point.crystal.equivalent_settings],
+            )
+            if point.crystal
+            else None
+        ),
     )
 
 

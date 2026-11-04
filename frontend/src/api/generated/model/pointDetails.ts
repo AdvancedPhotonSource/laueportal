@@ -5,6 +5,7 @@
  * OpenAPI spec version: 2.0.0.dev0
  */
 import type { AxisCoordinate } from './axisCoordinate';
+import type { CrystalCellDetails } from './crystalCellDetails';
 import type { PatternDetails } from './patternDetails';
 
 /**
@@ -13,6 +14,8 @@ import type { PatternDetails } from './patternDetails';
 export interface PointDetails {
   /** The step's coordinates on the requested ``axes``. */
   coordinates: AxisCoordinate[];
+  /** The results' nominal cell; null without a crystal. */
+  crystal?: CrystalCellDetails | null;
   /** µm; null for a frame that is not depth-resolved. */
   depth: number | null;
   /** The frame's identity in the results (the manifest index of a native run, the step order of an XML). */

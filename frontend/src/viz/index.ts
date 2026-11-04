@@ -1,6 +1,6 @@
 // The 2D renderers: the scatter and pole figure, the heatmap with its overlay layer, the
 // interactive colorbar and its colormaps, and the linked selection shared by the views; the 3D
-// view, whose VTK.js loads with import() on its first mount.
+// view, whose VTK.js loads with import() on its first mount; and the unit-cell view (Canvas2D).
 export {
   createSelectionStore,
   EMPTY_SELECTION,
@@ -87,3 +87,18 @@ export {
   type OverlayLayer,
   type OverlayOptions,
 } from "./heatmap/overlays"
+export { UnitCellView, type UnitCellViewProps } from "./cell/UnitCellView"
+export {
+  crystalDirection,
+  DEFAULT_CAMERA,
+  dualBasis,
+  latticeParameters,
+  mat3Of,
+  nearestSetting,
+  rotationFromReference,
+  type Camera,
+  type LatticeParameters,
+  type Mat3,
+  type Rotation,
+  type Vec3,
+} from "./cell/geometry"

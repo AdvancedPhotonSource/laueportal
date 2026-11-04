@@ -109,6 +109,10 @@ export interface MapSettings {
   /** CSS px, 1 to 75. */
   markerSize: number
   nonIndexed: NonIndexedColor
+  /** The crystal-orientation card is collapsed to its strip. */
+  cellCollapsed: boolean
+  /** The card draws the beam's direction through the cell. */
+  cellBeam: boolean
 }
 
 export const POLE_SCHEMES = ["hsv", "ipf", "uniform"] as const
@@ -214,6 +218,8 @@ export const DEFAULT_MAP: MapSettings = {
   axes3d: DEFAULT_AXES_3D,
   markerSize: 10,
   nonIndexed: "gray",
+  cellCollapsed: false,
+  cellBeam: true,
 }
 
 export const DEFAULT_POLE: PoleSettings = {
@@ -348,6 +354,12 @@ export function readMap(value: unknown): MapSettings {
       ? v.markerSize
       : DEFAULT_MAP.markerSize,
     nonIndexed: oneOf(NON_INDEXED_COLORS, v.nonIndexed, DEFAULT_MAP.nonIndexed),
+    cellCollapsed:
+      typeof v.cellCollapsed === "boolean"
+        ? v.cellCollapsed
+        : DEFAULT_MAP.cellCollapsed,
+    cellBeam:
+      typeof v.cellBeam === "boolean" ? v.cellBeam : DEFAULT_MAP.cellBeam,
   }
 }
 

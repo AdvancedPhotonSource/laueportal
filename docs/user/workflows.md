@@ -63,6 +63,16 @@ Then set the parameters, choose **Run on**, and **Submit**, as for a reconstruct
   X lab, Y lab and Z lab, or X motor, Y motor and Z motor when the results have no depths (so no Z lab); choose other
   axes in the sidebar. Hover over a point for its values; click it for its details. Adjust the colours on the colorbar:
   drag its handles, double-click a value to type it.
+- **Crystal orientation** (beside the Color Map): the clicked point's unit cell in beamline coordinates (X, Y up, Z
+  along the beam), drawn from its pattern's reciprocal lattice (a\*, b\*, c\*). Orientation indexing keeps the
+  crystal's nominal cell, so the box is that cell, oriented as indexed; the card shows a **Nominal** row beside a, b,
+  c and α, β, γ only when the results hold a refined lattice that differs from it. Drag to turn the view;
+  double-click to reset it. The view stays when you click another point, so you can compare orientations. **Beam**
+  draws the beam's direction through the cell. **Rotation** is the rotation from the crystal's reference cell (c along
+  Z, b in the YZ plane) about a lab axis; for a cubic or hexagonal crystal it is the smallest of its equivalent
+  rotations, as in the Pole Figure's misorientation, and a, b, c are labelled to match. **Beam ∥** and **Up ∥** are
+  the crystal directions along the beam and up. A step with several patterns offers each one. Collapse the card to a
+  strip with the arrow; the portal keeps your choice.
 - **Pole Figure:** set the HKL and click **Update**. Click a pole to centre the colours on it; draw a lasso or box
   to see the misorientation statistics, highlighted on the map.
 - **Detector View:** a step's detector image with its overlays (detected, indexed, simulated peaks, hkl labels).

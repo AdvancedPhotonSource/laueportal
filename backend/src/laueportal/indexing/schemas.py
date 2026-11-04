@@ -403,6 +403,26 @@ class PatternDetails(_ApiModel):
     """The pattern has a finite orientation."""
     in_scope: bool
     """The scope (``pattern0_only``, ``min_peaks``) keeps the pattern."""
+    reciprocal: list[list[float]] | None = None
+    """Rows a*, b*, c* in beamline coordinates (1/nm, with 2π); null without a finite orientation."""
+
+
+class CrystalCellDetails(_ApiModel):
+    """The results' nominal cell."""
+
+    name: str | None
+    space_group: int | None
+    lengths_nm: list[float]
+    """a, b, c (nm)."""
+    angles_deg: list[float]
+    """α, β, γ (degrees)."""
+    reference_reciprocal: list[list[float]]
+    """The unrotated cell's rows a*, b*, c* (1/nm, with 2π): lauelab's reference basis."""
+    symmetry: Literal["cubic", "hexagonal", "none"]
+    """The proper rotations of ``equivalent_settings``: lauelab's, which knows the cubic and hexagonal groups."""
+    equivalent_settings: list[list[list[int]]]
+    """Each proper rotation of the crystal as an integer matrix P: P·R is an equivalent setting of a pattern's rows
+    R (a, b, c relabelled, the same lattice). The identity alone for ``none``."""
 
 
 class AxisCoordinate(_ApiModel):
@@ -431,6 +451,8 @@ class PointDetails(_ApiModel):
     """Every pattern of the frame, in the results' order."""
     coordinates: list[AxisCoordinate]
     """The step's coordinates on the requested ``axes``."""
+    crystal: CrystalCellDetails | None = None
+    """The results' nominal cell; null without a crystal."""
 
 
 MAX_SELECTION_ENTRIES = 48 * 700

@@ -1539,9 +1539,10 @@ export const getGetIndexingPointUrl = (indexingId: number,
 
 /**
  * A step's details for the map's hover and click cards: frame, motor position,
- * depth, detected peaks, each pattern (indexed peaks, goodness, RMS error, whether the scope keeps it), and the
- * step's coordinates on `axes` (null on an axis that needs a depth the step does not have; another step's missing
- * depth does not matter). Revalidated by its `ETag`. 404 for a step the results do not have; otherwise the map's
+ * depth, detected peaks, each pattern (indexed peaks, goodness, RMS error, whether the scope keeps it, its
+ * reciprocal rows a*, b*, c* in beamline coordinates), the step's coordinates on `axes` (null on an axis that needs a
+ * depth the step does not have; another step's missing depth does not matter), and the results' nominal cell with
+ * its reference basis and equivalent settings. Revalidated by its `ETag`. 404 for a step the results do not have; otherwise the map's
  * errors.
  * @summary Get a step's details
  */

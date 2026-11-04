@@ -317,6 +317,7 @@ def test_openapi_contract_names(tmp_path: Path) -> None:
         "PointDetails",
         "PatternDetails",
         "AxisCoordinate",
+        "CrystalCellDetails",
         "SelectionStatsRequest",
         "SelectionStats",
         # the detector view's overlays, and the peaks and patterns tables

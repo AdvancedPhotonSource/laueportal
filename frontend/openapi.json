@@ -469,6 +469,95 @@
         "title": "CreatedRun",
         "type": "object"
       },
+      "CrystalCellDetails": {
+        "description": "The results' nominal cell.",
+        "properties": {
+          "angles_deg": {
+            "description": "α, β, γ (degrees).",
+            "items": {
+              "type": "number"
+            },
+            "title": "Angles Deg",
+            "type": "array"
+          },
+          "equivalent_settings": {
+            "description": "Each proper rotation of the crystal as an integer matrix P: P·R is an equivalent setting of a pattern's rows\nR (a, b, c relabelled, the same lattice). The identity alone for ``none``.",
+            "items": {
+              "items": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "title": "Equivalent Settings",
+            "type": "array"
+          },
+          "lengths_nm": {
+            "description": "a, b, c (nm).",
+            "items": {
+              "type": "number"
+            },
+            "title": "Lengths Nm",
+            "type": "array"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "reference_reciprocal": {
+            "description": "The unrotated cell's rows a*, b*, c* (1/nm, with 2π): lauelab's reference basis.",
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Reference Reciprocal",
+            "type": "array"
+          },
+          "space_group": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Space Group"
+          },
+          "symmetry": {
+            "description": "The proper rotations of ``equivalent_settings``: lauelab's, which knows the cubic and hexagonal groups.",
+            "enum": [
+              "cubic",
+              "hexagonal",
+              "none"
+            ],
+            "title": "Symmetry",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "space_group",
+          "lengths_nm",
+          "angles_deg",
+          "reference_reciprocal",
+          "symmetry",
+          "equivalent_settings"
+        ],
+        "title": "CrystalCellDetails",
+        "type": "object"
+      },
       "DatabaseStatus": {
         "properties": {
           "path": {
@@ -3673,6 +3762,24 @@
             "title": "Pattern Index",
             "type": "integer"
           },
+          "reciprocal": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rows a*, b*, c* in beamline coordinates (1/nm, with 2π); null without a finite orientation.",
+            "title": "Reciprocal"
+          },
           "rms_error_deg": {
             "anyOf": [
               {
@@ -4292,6 +4399,17 @@
             },
             "title": "Coordinates",
             "type": "array"
+          },
+          "crystal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CrystalCellDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The results' nominal cell; null without a crystal."
           },
           "depth": {
             "anyOf": [
@@ -10076,7 +10194,7 @@
     },
     "/api/v1/indexing-runs/{indexing_id}/points/{step}": {
       "get": {
-        "description": "A step's details for the map's hover and click cards: frame, motor position,\ndepth, detected peaks, each pattern (indexed peaks, goodness, RMS error, whether the scope keeps it), and the\nstep's coordinates on `axes` (null on an axis that needs a depth the step does not have; another step's missing\ndepth does not matter). Revalidated by its `ETag`. 404 for a step the results do not have; otherwise the map's\nerrors.",
+        "description": "A step's details for the map's hover and click cards: frame, motor position,\ndepth, detected peaks, each pattern (indexed peaks, goodness, RMS error, whether the scope keeps it, its\nreciprocal rows a*, b*, c* in beamline coordinates), the step's coordinates on `axes` (null on an axis that needs a\ndepth the step does not have; another step's missing depth does not matter), and the results' nominal cell with\nits reference basis and equivalent settings. Revalidated by its `ETag`. 404 for a step the results do not have; otherwise the map's\nerrors.",
         "operationId": "getIndexingPoint",
         "parameters": [
           {

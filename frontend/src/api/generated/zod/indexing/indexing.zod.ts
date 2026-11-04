@@ -688,9 +688,10 @@ export const ListIndexingPeaksResponse = zod.object({
 
 /**
  * A step's details for the map's hover and click cards: frame, motor position,
- * depth, detected peaks, each pattern (indexed peaks, goodness, RMS error, whether the scope keeps it), and the
- * step's coordinates on `axes` (null on an axis that needs a depth the step does not have; another step's missing
- * depth does not matter). Revalidated by its `ETag`. 404 for a step the results do not have; otherwise the map's
+ * depth, detected peaks, each pattern (indexed peaks, goodness, RMS error, whether the scope keeps it, its
+ * reciprocal rows a*, b*, c* in beamline coordinates), the step's coordinates on `axes` (null on an axis that needs a
+ * depth the step does not have; another step's missing depth does not matter), and the results' nominal cell with
+ * its reference basis and equivalent settings. Revalidated by its `ETag`. 404 for a step the results do not have; otherwise the map's
  * errors.
  * @summary Get a step's details
  */
@@ -727,6 +728,15 @@ export const GetIndexingPointResponse = zod.object({
   "label": zod.string(),
   "value": zod.union([zod.number(),zod.null()])
 })).describe('The step\'s coordinates on the requested ``axes``.'),
+  "crystal": zod.union([zod.object({
+  "angles_deg": zod.array(zod.number()).describe('α, β, γ (degrees).'),
+  "equivalent_settings": zod.array(zod.array(zod.array(zod.int()))).describe('Each proper rotation of the crystal as an integer matrix P: P·R is an equivalent setting of a pattern\'s rows\nR (a, b, c relabelled, the same lattice). The identity alone for ``none``.'),
+  "lengths_nm": zod.array(zod.number()).describe('a, b, c (nm).'),
+  "name": zod.union([zod.string(),zod.null()]),
+  "reference_reciprocal": zod.array(zod.array(zod.number())).describe('The unrotated cell\'s rows a*, b*, c* (1/nm, with 2π): lauelab\'s reference basis.'),
+  "space_group": zod.union([zod.int(),zod.null()]),
+  "symmetry": zod.enum(['cubic', 'hexagonal', 'none']).describe('The proper rotations of ``equivalent_settings``: lauelab\'s, which knows the cubic and hexagonal groups.')
+}).describe('The results\' nominal cell.'),zod.null()]).optional().describe('The results\' nominal cell; null without a crystal.'),
   "depth": zod.union([zod.number(),zod.null()]).describe('µm; null for a frame that is not depth-resolved.'),
   "frame_id": zod.union([zod.int(),zod.string()]).describe('The frame\'s identity in the results (the manifest index of a native run, the step order of an XML).'),
   "in_scope": zod.boolean().describe('The scope keeps the step (a selected pattern, or a frame-only record).'),
@@ -737,6 +747,7 @@ export const GetIndexingPointResponse = zod.object({
   "indexed": zod.boolean().describe('The pattern has a finite orientation.'),
   "n_indexed": zod.int().describe('Indexed peaks.'),
   "pattern_index": zod.int().describe('The pattern\'s rank in its frame (0: the primary pattern).'),
+  "reciprocal": zod.union([zod.array(zod.array(zod.number())),zod.null()]).optional().describe('Rows a*, b*, c* in beamline coordinates (1/nm, with 2π); null without a finite orientation.'),
   "rms_error_deg": zod.union([zod.number(),zod.null()]).describe('RMS error in degrees.')
 })).describe('Every pattern of the frame, in the results\' order.'),
   "sample_position": zod.array(zod.union([zod.number(),zod.null()])).describe('X, Y and Z motor positions (µm).'),

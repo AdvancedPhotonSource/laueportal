@@ -15,6 +15,8 @@ export interface PatternDetails {
   n_indexed: number;
   /** The pattern's rank in its frame (0: the primary pattern). */
   pattern_index: number;
+  /** Rows a*, b*, c* in beamline coordinates (1/nm, with 2π); null without a finite orientation. */
+  reciprocal?: number[][] | null;
   /** RMS error in degrees. */
   rms_error_deg: number | null;
 }

@@ -136,6 +136,11 @@
   --section-teal: oklch(0.6 0.118 184.704);
   --section-violet: oklch(0.606 0.25 292.717);
   --section-fuchsia: oklch(0.667 0.295 322.15);
+  /* The unit-cell view's a, b, c (Tailwind's red, green and blue 600) and the beam (--warning's amber 700). */
+  --cell-a: oklch(0.577 0.245 27.325);
+  --cell-b: oklch(0.527 0.154 150.069);
+  --cell-c: oklch(0.546 0.245 262.881);
+  --cell-beam: oklch(0.555 0.163 48.998);
 }
 
 .dark {
@@ -183,6 +188,11 @@
   --section-teal: oklch(0.777 0.152 181.912);
   --section-violet: oklch(0.702 0.183 293.541);
   --section-fuchsia: oklch(0.74 0.238 322.16);
+  /* The unit-cell view's a, b, c and the beam: Tailwind's red, green, blue and amber 400. */
+  --cell-a: oklch(0.704 0.191 22.216);
+  --cell-b: oklch(0.792 0.209 151.711);
+  --cell-c: oklch(0.707 0.165 254.624);
+  --cell-beam: oklch(0.828 0.189 84.429);
 }
 
 @layer base {

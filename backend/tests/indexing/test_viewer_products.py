@@ -379,6 +379,56 @@ def test_a_steps_details_hold_its_patterns_and_its_coordinates_on_the_axes(run: 
     ]
 
 
+def test_a_steps_details_hold_each_patterns_reciprocal_rows_and_the_crystals_cell(run: Run) -> None:
+    body = run.get("points/0", axes="X,H").json()
+    crystal = run.dataset.crystal
+    assert crystal is not None
+    cell = crystal.cell.in_angstrom
+
+    rows = np.flatnonzero(run.dataset.pattern_frame_indices == 0)
+    for item, row in zip(body["patterns"], rows, strict=True):
+        np.testing.assert_allclose(item["reciprocal"], run.dataset.pattern_reciprocals[row])
+    assert body["crystal"]["name"] == crystal.name
+    assert body["crystal"]["space_group"] == crystal.space_group
+    np.testing.assert_allclose(body["crystal"]["lengths_nm"], [cell.a / 10, cell.b / 10, cell.c / 10])
+    np.testing.assert_allclose(body["crystal"]["angles_deg"], [cell.alpha, cell.beta, cell.gamma])
+    np.testing.assert_allclose(
+        body["crystal"]["reference_reciprocal"],
+        lattice_params_to_reciprocal(
+            cell.a / 10, cell.b / 10, cell.c / 10, cell.alpha, cell.beta, cell.gamma, space_group=crystal.space_group
+        ),
+    )
+    # Each setting P relabels the reference cell as one of the crystal's rotations O does: P·R_ref = R_ref·Oᵀ.
+    reference = np.asarray(body["crystal"]["reference_reciprocal"])
+    operations = lauelab_symmetry_operations(crystal.space_group)
+    assert body["crystal"]["symmetry"] == "cubic"
+    assert len(body["crystal"]["equivalent_settings"]) == len(operations) == 24
+    for setting, operation in zip(body["crystal"]["equivalent_settings"], operations, strict=True):
+        np.testing.assert_allclose(np.asarray(setting) @ reference, reference @ operation.T, atol=1e-9)
+
+
+def test_a_pattern_without_an_orientation_has_no_reciprocal_rows(tmp_path: Path) -> None:
+    source = results_xml(tmp_path / "steps.xml")
+    tree = ET.parse(source)
+    pattern = tree.getroot().findall("step")[0].find("indexing/pattern")
+    assert pattern is not None
+    node = pattern.find("recip_lattice")
+    assert node is not None
+    for vector in node:
+        vector.text = "nan nan nan"
+    tree.write(source)
+    for viewer in open_viewer(tmp_path):
+        directory = viewer.run_directory(1)
+        converted(directory, source=source)
+        viewer.add_run(1, directory)
+
+        body = viewer.get(1, "points/0", axes="X,H", **EVERY_STEP).json()
+
+        assert body["patterns"][0]["indexed"] is False
+        assert body["patterns"][0]["reciprocal"] is None
+        assert body["patterns"][1]["reciprocal"] is not None
+
+
 def test_a_steps_coordinates_need_only_its_own_depth(tmp_path: Path) -> None:
     source = results_xml(tmp_path / "steps.xml")
     tree = ET.parse(source)

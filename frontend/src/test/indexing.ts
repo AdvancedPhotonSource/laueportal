@@ -6,6 +6,8 @@ import type {
   IndexingRunDetail,
   IndexingRunPage,
   LaueGoParameters,
+  PatternDetails,
+  PointDetails,
 } from "@/api"
 import {
   DEFAULT_SETTINGS,
@@ -162,4 +164,88 @@ export function answerIndexing(
     return makeSummary()
   }
   return undefined
+}
+
+/**
+ * The 24 proper rotations of the cube as signed permutation matrices: a cubic crystal's
+ * `equivalent_settings`, as the API sends them.
+ */
+export const CUBIC_SETTINGS: number[][][] = (() => {
+  const out: number[][][] = []
+  const permutations = [
+    [0, 1, 2],
+    [1, 2, 0],
+    [2, 0, 1],
+    [0, 2, 1],
+    [2, 1, 0],
+    [1, 0, 2],
+  ]
+  for (const [index, permutation] of permutations.entries())
+    for (const signs of [
+      [1, 1, 1],
+      [1, -1, -1],
+      [-1, 1, -1],
+      [-1, -1, 1],
+    ]) {
+      // an odd permutation needs an odd number of minus signs for determinant +1
+      const flip = index >= 3 ? -1 : 1
+      out.push(
+        permutation.map((column, row) =>
+          [0, 1, 2].map((i) => (i === column ? (signs[row] ?? 1) * flip : 0))
+        )
+      )
+    }
+  return out
+})()
+
+/** 2π / a of Ni (1/nm): its reference cell's reciprocal rows are this times the lab axes. */
+export const NI_RECIPROCAL = (2 * Math.PI) / 0.35238
+
+/** A point's pattern; `reciprocal` null for one without an orientation. */
+export function makePatternDetails(
+  index: number,
+  reciprocal: number[][] | null
+): PatternDetails {
+  return {
+    pattern_index: index,
+    n_indexed: 20,
+    goodness: 100,
+    rms_error_deg: 0.001,
+    indexed: reciprocal !== null,
+    in_scope: true,
+    reciprocal,
+  }
+}
+
+/** Step 3's details with `patterns`, and Ni's cell unless `crystal` is false. */
+export function makePointDetails(
+  patterns: PatternDetails[],
+  crystal = true
+): PointDetails {
+  const k = NI_RECIPROCAL
+  return {
+    step: 3,
+    frame_id: 3,
+    sample_position: [0, 0, 0],
+    depth: null,
+    n_peaks: 24,
+    in_scope: true,
+    patterns,
+    coordinates: [],
+    crystal: crystal
+      ? {
+          name: "Ni",
+          space_group: 225,
+          lengths_nm: [0.35238, 0.35238, 0.35238],
+          angles_deg: [90, 90, 90],
+          reference_reciprocal: [
+            [k, 0, 0],
+            [0, k, 0],
+            [0, 0, k],
+          ],
+          symmetry: "cubic",
+          equivalent_settings: CUBIC_SETTINGS,
+        }
+      : null,
+  }
 }

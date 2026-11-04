@@ -22,6 +22,8 @@ export * from './createdRun';
 export * from './createIndexingRunBody';
 export * from './createLiveRunsBody';
 export * from './createReconstructionRunBody';
+export * from './crystalCellDetails';
+export * from './crystalCellDetailsSymmetry';
 export * from './databaseStatus';
 export * from './databaseStatusStatus';
 export * from './detectedPeak';

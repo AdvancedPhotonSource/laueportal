@@ -27,6 +27,7 @@ from lauelab.analysis import (
     SurfaceFrame,
     cubic_ipf_key,
     hsv_key,
+    lattice_params_to_reciprocal,
     misorientation_from_reference,
     symmetry_operations,
 )
@@ -367,6 +368,25 @@ class PatternInfo:
     indexed: bool
     """A finite orientation."""
     in_scope: bool
+    reciprocal: tuple[tuple[float, float, float], ...] | None = None
+    """Rows a*, b*, c* in beamline coordinates (1/nm, with 2*pi); None without a finite orientation."""
+
+
+@dataclass(frozen=True)
+class CrystalCell:
+    name: str | None
+    space_group: int | None
+    lengths_nm: tuple[float, float, float]
+    angles_deg: tuple[float, float, float]
+    reference_reciprocal: tuple[tuple[float, float, float], ...]
+    """The unrotated cell's rows a*, b*, c* (1/nm, with 2*pi): lauelab's reference basis."""
+    symmetry: Literal["cubic", "hexagonal", "none"]
+    """The proper rotations ``equivalent_settings`` come from: lauelab's ``symmetry_operations``, which knows the
+    cubic and hexagonal groups."""
+    equivalent_settings: tuple[tuple[tuple[int, int, int], ...], ...]
+    """Each proper rotation O of the crystal as the integer matrix P = R_ref O^T R_ref^-1, so that P R is an
+    equivalent setting of a pattern's rows R (a, b, c relabelled, the same lattice); the identity alone for
+    ``none``."""
 
 
 @dataclass(frozen=True)
@@ -386,6 +406,7 @@ class PointInfo:
     in_scope: bool
     patterns: tuple[PatternInfo, ...]
     coordinates: tuple[AxisValue, ...]
+    crystal: CrystalCell | None = None
 
 
 def _frame_coordinates(dataset: VisualizationDataset, axes: tuple[str, ...]) -> np.ndarray:
@@ -441,6 +462,7 @@ def step_patterns(dataset: VisualizationDataset, scope: DataScope, step: int) ->
         scope.includes_unindexed_frames and scope.unindexed_frame_mask(dataset)[step]
     )
     rotations = dataset.pattern_rotations[rows]
+    reciprocals = dataset.pattern_reciprocals[rows]
     patterns = tuple(
         PatternInfo(
             pattern_index=int(dataset.pattern_indices[row]),
@@ -449,8 +471,9 @@ def step_patterns(dataset: VisualizationDataset, scope: DataScope, step: int) ->
             rms_error_deg=_finite_or_none(dataset.pattern_rms_error_deg[row]),
             indexed=bool(np.isfinite(rotation).all()),
             in_scope=bool(selected[row]),
+            reciprocal=(_rows(reciprocal) if np.isfinite(rotation).all() and np.isfinite(reciprocal).all() else None),
         )
-        for row, rotation in zip(rows, rotations, strict=True)
+        for row, rotation, reciprocal in zip(rows, rotations, reciprocals, strict=True)
     )
     return kept, patterns
 
@@ -473,6 +496,54 @@ def point_details(dataset: VisualizationDataset, scope: DataScope, step: int, ax
         in_scope=kept,
         patterns=patterns,
         coordinates=step_coordinates(dataset, step, axes),
+        crystal=crystal_cell(dataset),
+    )
+
+
+def _rows(matrix: np.ndarray) -> tuple[tuple[float, float, float], ...]:
+    """A 3x3 basis as three rows of floats."""
+
+    return tuple((float(row[0]), float(row[1]), float(row[2])) for row in matrix)
+
+
+def crystal_cell(dataset: VisualizationDataset) -> CrystalCell | None:
+    """The results' nominal cell, its reference reciprocal basis and its equivalent settings (the space groups lauelab
+    gives symmetry operations for: cubic 195-230, hexagonal 168-194); None without a crystal."""
+
+    crystal = dataset.crystal
+    if crystal is None:
+        return None
+    cell = crystal.cell.in_angstrom
+    reference = np.asarray(
+        lattice_params_to_reciprocal(
+            cell.a / 10.0,
+            cell.b / 10.0,
+            cell.c / 10.0,
+            cell.alpha,
+            cell.beta,
+            cell.gamma,
+            space_group=crystal.space_group,
+        ),
+        dtype=float,
+    )
+    space_group = int(crystal.space_group)
+    symmetry: Literal["cubic", "hexagonal", "none"] = (
+        "cubic" if space_group >= 195 else "hexagonal" if space_group >= 168 else "none"
+    )
+    operations = symmetry_operations(space_group) if symmetry != "none" else np.eye(3)[np.newaxis]
+    inverse = np.linalg.inv(reference)
+    settings = tuple(
+        tuple((int(row[0]), int(row[1]), int(row[2])) for row in np.rint(reference @ operation.T @ inverse))
+        for operation in operations
+    )
+    return CrystalCell(
+        name=crystal.name or None,
+        space_group=space_group,
+        lengths_nm=(cell.a / 10.0, cell.b / 10.0, cell.c / 10.0),
+        angles_deg=(float(cell.alpha), float(cell.beta), float(cell.gamma)),
+        reference_reciprocal=_rows(reference),
+        symmetry=symmetry,
+        equivalent_settings=settings,
     )
 
 

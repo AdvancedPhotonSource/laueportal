@@ -2,7 +2,7 @@ import { expect, test, type Page, type Request } from "@playwright/test"
 
 // The Color Map tab on the seeded stack (`make e2e`, nothing mocked): every colour mode on I1, a scalar
 // mode's colorbar recolouring without fetching the map again, the hover readout and the click details
-// card, a failed product keeping the last plot as stale, the 2D/3D switch (I1's frames have no depths, so 3D plots
+// card, the crystal-orientation card, a failed product keeping the last plot as stale, the 2D/3D switch (I1's frames have no depths, so 3D plots
 // the motors' X, Y, Z), and (also in the `no-gpu` project) I2's (the demo's map, with depths) 3D view on the lab X,
 // Y, Z with its hover tooltip, or the "needs WebGL" message.
 
@@ -250,6 +250,47 @@ test("hovering a point shows its readout, and clicking it opens its details card
   await card.getByRole("button", { name: "Close the point details" }).click()
   await expect(card).toHaveCount(0)
   await expect(page).not.toHaveURL(/point=/)
+})
+
+test("the crystal-orientation card shows a clicked point's cell, goes back to its line, and stays collapsed", async ({
+  page,
+}) => {
+  await openMap(page)
+  const cell = page.getByRole("region", { name: "Crystal orientation" })
+  await expect(
+    cell.getByText("Click a point to show its unit cell.")
+  ).toBeVisible()
+
+  const point = await aMarker(page)
+  await page.mouse.click(point.x, point.y)
+  await expect(
+    cell.getByRole("img", { name: /^The unit cell of step \d+/ })
+  ).toBeVisible()
+  await expect(cell.getByText("Ni · SG 225")).toBeVisible()
+  await expect(
+    cell.getByRole("term").filter({ hasText: /^Rotation$/ })
+  ).toBeVisible()
+
+  // Closing the point's details clears the point: the card keeps its place and its line.
+  await page
+    .getByRole("region", { name: "Clicked point details" })
+    .getByRole("button", { name: "Close the point details" })
+    .click()
+  await expect(
+    cell.getByText("Click a point to show its unit cell.")
+  ).toBeVisible()
+
+  await cell
+    .getByRole("button", { name: "Collapse the crystal orientation" })
+    .click()
+  await expect(cell).toHaveCount(0)
+  await page.reload()
+  const strip = page.getByRole("button", {
+    name: "Show the crystal orientation",
+  })
+  await expect(strip).toBeVisible()
+  await strip.click()
+  await expect(cell).toBeVisible()
 })
 
 test("a product that fails keeps the last plot and says it is stale", async ({

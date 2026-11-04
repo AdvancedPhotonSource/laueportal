@@ -36,6 +36,7 @@ import {
 import { ColorMapControls, ScalarPaletteControls } from "./ColorMapControls"
 import { MapLegend } from "./MapLegend"
 import { PointDetailsCard } from "./PointDetailsCard"
+import { UnitCellCard } from "./UnitCellCard"
 import { legendCaption, legendOf, mapRequest, resolveAxes } from "./color-map"
 import type { IndexingView } from "./viewer-search"
 import { isScalarMode, type ScalarMode } from "./viewer-slices"
@@ -44,7 +45,8 @@ import { useIndexingViewerStore, useScopeParams } from "./viewer-store"
 
 /**
  * The Color Map tab: the controls, the map in 2D (ScatterView) or 3D (PointCloud3DView), the legend
- * or a scalar mode's colorbar, the hover readout and the clicked point's card. The map's request
+ * or a scalar mode's colorbar, the hover readout, the clicked point's card and its crystal
+ * orientation (UnitCellCard). The map's request
  * carries the scope (useScopeParams) and only what the colour mode reads; a scalar mode's palette,
  * reverse and range recolour in the browser and never refetch it.
  */
@@ -141,8 +143,17 @@ export function ColorMapTab({
   const legendColor = shown ? legendOf(shown.meta.color) : legendOf(view.color)
   const legendSurface = legendColor === "pole_hsv" ? pole.surface : map.surface
 
+  // The crystal-orientation card is a column of its own on a wide screen (a strip when
+  // collapsed), so a click never narrows the map; below that it follows the map.
   return (
-    <div className="grid gap-4 md:grid-cols-[16rem_minmax(0,1fr)]">
+    <div
+      className={cn(
+        "grid gap-4 md:grid-cols-[16rem_minmax(0,1fr)]",
+        map.cellCollapsed
+          ? "xl:grid-cols-[16rem_minmax(0,1fr)_2.5rem]"
+          : "xl:grid-cols-[16rem_minmax(0,1fr)_19rem]"
+      )}
+    >
       <aside
         aria-label="Color map settings"
         className={cn(surface, "h-fit p-3")}
@@ -208,6 +219,15 @@ export function ColorMapTab({
             }}
           />
         )}
+      </div>
+      <div className="h-fit md:col-start-2 xl:sticky xl:top-4 xl:col-start-auto">
+        <UnitCellCard
+          indexingId={indexingId}
+          step={axes ? view.point : undefined}
+          patternIndex={clickedPattern}
+          axes={axes ?? []}
+          scope={scope}
+        />
       </div>
     </div>
   )
