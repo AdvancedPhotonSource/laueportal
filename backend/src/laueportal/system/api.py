@@ -2,13 +2,23 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 
 from laueportal.core.api import EngineDep, SessionDep, SettingsDep
 from laueportal.system import status
-from laueportal.system.schemas import Health, SystemStatus
+from laueportal.system.schemas import Health, RemoteReadiness, SystemStatus
 
 router = APIRouter(tags=["system"])
+
+
+@router.get(
+    "/system/remote-status", name="getRemoteReadiness", summary="ALCF connectivity", response_model=RemoteReadiness
+)
+def get_remote_readiness(request: Request, response: Response) -> RemoteReadiness:
+    """Return the shared check immediately; refresh at most once every five minutes, with failure backoff.
+    Checks run on the configured launcher host, never submitting a task or allocating PBS resources."""
+    response.headers["Cache-Control"] = "no-store"
+    return request.app.state.remote_status.get()
 
 
 @router.get("/health", name="getHealth", summary="Health", response_model=Health)

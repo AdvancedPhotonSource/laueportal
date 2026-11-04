@@ -19,7 +19,8 @@ from tests.remote_support import V2_BLOCKED
 from tests.settings_support import fresh_interpreter_env
 
 LAUNCHER_MODULES = tuple(
-    f"laueportal.remote.{name}" for name in ("settings", "plan", "transport", "stage", "dm", "flow", "pbs", "auth")
+    f"laueportal.remote.{name}"
+    for name in ("settings", "plan", "transport", "stage", "dm", "flow", "pbs", "auth", "health")
 )
 """What the launcher runs on the DM host (``python -m laueportal.remote.stage``), from the YAML settings only."""
 REPO_ROOT = Path(__file__).resolve().parents[3]

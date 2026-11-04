@@ -402,6 +402,13 @@ with the script; its focus ring made the opaque one).
 
 ## Components
 
+`features/system/RemoteHealthIndicator` is the navbar's ALCF dot, compact status tooltip and details dialog. Its generated query reads
+`GET /system/remote-status`, shared across browsers by the server: every five minutes while visible (two seconds while
+a check runs), no automatic retries, and a ten-second API timeout. Refresh respects the server's cache/backoff.
+`remote-readiness.ts` keeps presentation separate: stale answers never stay green, sign-in and denied access are
+distinct from a confirmed offline endpoint, and remote-disabled deployments hide the indicator. Keep the panel
+usable in both themes; monitoring must never submit work.
+
 - component files export only components (keeps hot reload working);
 - keep components small and typed;
 - no `any`.

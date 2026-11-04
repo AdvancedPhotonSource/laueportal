@@ -19,6 +19,29 @@ export const GetHealthResponse = zod.object({
 })
 
 /**
+ * Return the shared check immediately; refresh at most once every five minutes, with failure backoff.
+ * Checks run on the configured launcher host, never submitting a task or allocating PBS resources.
+ * @summary ALCF connectivity
+ */
+export const getRemoteReadinessResponseChecksItemDetailMax = 160;
+
+
+
+export const GetRemoteReadinessResponse = zod.object({
+  "checked_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
+  "checking": zod.boolean(),
+  "checks": zod.array(zod.object({
+  "detail": zod.string().max(getRemoteReadinessResponseChecksItemDetailMax),
+  "name": zod.enum(['dm', 'flows', 'compute', 'aps', 'eagle', 'crux']),
+  "state": zod.enum(['ok', 'login_required', 'denied', 'unavailable', 'unknown', 'disabled'])
+}).describe('One observed component; the detail is fixed text, never an upstream exception.')),
+  "enabled": zod.boolean(),
+  "retry_after_seconds": zod.number(),
+  "stale": zod.boolean(),
+  "state": zod.enum(['ok', 'warning', 'error', 'unknown', 'disabled'])
+}).describe('Cached, read-only ALCF checks. Online does not guarantee worker startup or PBS capacity.')
+
+/**
  * Database (and its path), API version, the worker and its threads, the queue's counts (the job and conversion
  * tables) and its next items in dispatch order, and the queued and running runs. Never fails because the database
  * is down: it reports `error`, and what needs it is null.

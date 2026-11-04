@@ -244,7 +244,7 @@ const STATES: {
     state: "the worker running",
     answer: HEALTH_OK,
     retried: false,
-    name: "Worker: running",
+    name: "Local Worker: running",
     tone: "ok",
     label: null,
     words: null,
@@ -256,7 +256,7 @@ const STATES: {
     state: "no answer yet",
     answer: "pending",
     retried: false,
-    name: "Worker: checking",
+    name: "Local Worker: checking",
     tone: "unknown",
     label: null,
     words: null,
@@ -339,7 +339,7 @@ for (const expected of STATES) {
     if (expected.retried) await page.clock.fastForward(5_000)
     await expect(indicators(page)).toHaveAccessibleName(expected.name)
     await expect(indicators(page)).toHaveAttribute("data-tone", expected.tone)
-    expect(await visibleText(page)).toBe(expected.label ?? "")
+    expect(await visibleText(page)).toBe(expected.label ?? "Local")
     await expect(indicators(page).locator("svg")).toHaveCount(0)
     expect(await dotPaint(page)).toEqual({
       fill: await computedColour(page, expected.fill),
@@ -365,9 +365,9 @@ test("a health check without an answer within 10 s turns the ring into API unrea
   await page.clock.install()
   await mockHealth(page, () => "pending")
   await page.goto("/scans")
-  await expect(indicators(page)).toHaveAccessibleName("Worker: checking")
+  await expect(indicators(page)).toHaveAccessibleName("Local Worker: checking")
   await page.clock.fastForward(9_000)
-  await expect(indicators(page)).toHaveAccessibleName("Worker: checking")
+  await expect(indicators(page)).toHaveAccessibleName("Local Worker: checking")
 
   await page.clock.fastForward(1_000)
   await expect(indicators(page)).toHaveAccessibleName("API unreachable")
@@ -410,7 +410,7 @@ test("the worker running is a 7 px dot in the quiet colour of each theme, a link
 }) => {
   await mockHealth(page, () => HEALTH_OK)
   await page.goto("/runs")
-  await expect(indicators(page)).toHaveAccessibleName("Worker: running")
+  await expect(indicators(page)).toHaveAccessibleName("Local Worker: running")
   await expect(page.getByRole("banner")).not.toContainText(/redis/i)
   const box = await dot(page).boundingBox()
   expect([box?.width, box?.height]).toEqual([7, 7])
@@ -474,7 +474,7 @@ test("the navbar fits narrow desktop widths, the dot and its target whole", asyn
   for (const width of [1280, 900, 768]) {
     await page.setViewportSize({ width, height: 600 })
     await page.goto("/runs")
-    await expect(indicators(page)).toHaveAccessibleName("Worker: running")
+    await expect(indicators(page)).toHaveAccessibleName("Local Worker: running")
     await navbarFits(page, width)
     await expect(dot(page)).toBeVisible()
     const box = await dot(page).boundingBox()
@@ -541,8 +541,8 @@ test("the indicator says when the API is unreachable, and recovers on the next p
 
   health = HEALTH_OK
   await page.clock.fastForward(10_000)
-  await expect(indicators(page)).toHaveAccessibleName("Worker: running")
-  expect(await visibleText(page)).toBe("")
+  await expect(indicators(page)).toHaveAccessibleName("Local Worker: running")
+  expect(await visibleText(page)).toBe("Local")
 })
 
 test("unknown URLs show the 404 page", async ({ page }) => {

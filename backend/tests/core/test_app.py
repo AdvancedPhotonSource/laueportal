@@ -210,6 +210,8 @@ def test_openapi_contract_names(tmp_path: Path) -> None:
         "ScanImportSummary",
         # system status
         "SystemStatus",
+        "RemoteReadiness",
+        "RemoteCheck",
         "DatabaseStatus",
         "QueueCounts",
         # the worker, its threads and the next items

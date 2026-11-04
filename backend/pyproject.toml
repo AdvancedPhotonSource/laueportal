@@ -140,6 +140,7 @@ source_modules = [
     "laueportal.remote.flow",
     "laueportal.remote.pbs",
     "laueportal.remote.auth",
+    "laueportal.remote.health",
     "laueportal.**.compute",
     "laueportal.**.live_compute",
 ]

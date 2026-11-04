@@ -161,6 +161,13 @@ Index), as any other's.
 
 ## Manage the queue
 
+The Local dot shows the portal worker's state. When ALCF is enabled, its dot opens a connectivity panel; hovering
+shows a compact summary and last-check time. The panel lists DM, Globus,
+APS/Eagle storage and the Crux endpoint, with the last-check time and Refresh. Amber can mean Login needed or
+stale/partial checks; red means a service is unavailable or the endpoint reports offline. Checks are shared and
+run at most once every five minutes, backing off after failures, so Refresh may show the same recent result.
+They submit no jobs. An available endpoint does not guarantee an immediate PBS allocation or a successful computation.
+
 Open **Run Monitor**. It lists every job, newest first, and updates by itself.
 
 - **Stop:** check one or more queued or running jobs, click **Stop**, and confirm. A running run finishes the

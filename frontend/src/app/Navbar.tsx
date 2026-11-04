@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useLiveEnabled } from "@/features/live/use-live"
+import { RemoteHealthIndicator } from "@/features/system/RemoteHealthIndicator"
 import { cn } from "@/lib/utils"
 import { HealthIndicators } from "./HealthIndicators"
 import { ThemeToggle } from "./ThemeToggle"
@@ -79,6 +80,7 @@ export function Navbar() {
         </Link>
         {/* The Worker indicator, live (polled). */}
         <HealthIndicators />
+        <RemoteHealthIndicator />
         <nav
           aria-label="Main"
           className="ml-auto flex shrink-0 items-center gap-1"

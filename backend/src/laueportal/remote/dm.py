@@ -60,10 +60,12 @@ request = json.load(sys.stdin)
 operation, args = request['operation'], request['args']
 # Each operation imports and builds only the DM API it uses: the remote runs' the workflow API, the live runs' the
 # DAQ API or the file catalog's (a DM setup for one service only serves its own operations).
-if operation in ('submit', 'get', 'fetch'):
+if operation in ('submit', 'get', 'fetch', 'workflow'):
     from dm.proc_web_service.api.workflowProcApi import WorkflowProcApi
     api = WorkflowProcApi()
-if operation == 'submit':
+if operation == 'workflow':
+    result = [api.getWorkflowByName(args['owner'], name) for name in args['workflows']]
+elif operation == 'submit':
     result = api.startProcessingJob(args['owner'], args['workflow'], args['arguments'])
 elif operation == 'get':
     try:
@@ -644,6 +646,12 @@ class DMClient:
                 "filePath": self._required("launcher_config"),
             },
         )
+
+    def workflow(self) -> Any:
+        """Read the configured workflow registrations in one call, without starting a DM job."""
+        workflows = [self._required("workflow")]
+        workflows.extend(name for name in (self.settings.cancel_workflow, self.settings.cleanup_workflow) if name)
+        return self._call("workflow", owner=self._required("owner"), workflows=workflows)
 
     def clean_up(self, submission_id: str) -> Any:
         """Run the launcher's ``cleanup`` stage on the DM VM (``dm.cleanup_workflow``), as ``cancel`` does."""

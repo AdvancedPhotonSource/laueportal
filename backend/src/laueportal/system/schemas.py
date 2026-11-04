@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 from laueportal.core.timeutil import UTCTimestamp
 from laueportal.jobs.schemas import RunReference, RunStatus
+from laueportal.remote.health import RemoteCheck
 
 ProbeStatus = Literal["ok", "error"]
 
@@ -34,6 +35,18 @@ class Health(_ApiModel):
     worker: WorkerState | None
     """The worker as its row records it; null when the database cannot be read."""
     version: str
+
+
+class RemoteReadiness(_ApiModel):
+    """Cached, read-only ALCF checks. Online does not guarantee worker startup or PBS capacity."""
+
+    enabled: bool
+    state: Literal["ok", "warning", "error", "unknown", "disabled"]
+    checks: list[RemoteCheck]
+    checked_at: UTCTimestamp | None
+    stale: bool
+    checking: bool
+    retry_after_seconds: float
 
 
 # ---------------------------------------------------------------------------

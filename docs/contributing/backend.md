@@ -27,7 +27,7 @@ import-linter checks these (its contracts are in `backend/pyproject.toml`; `make
 - only `science`, the `*/compute.py` modules and the `*/live_compute.py` modules import lauelab;
 - `jobs.contract`, `jobs.rundir`, `jobs.backends`, the remote runners (`jobs.runner`, `jobs.mpi_runner`,
   `jobs.processes`), `remote.paths`, `remote.observation`, the launcher-side `remote` modules (`settings`, `plan`,
-  `transport`, `stage`, `dm`, `flow`, `pbs`, `auth`), `*/compute.py` and `*/live_compute.py` never import `core.db` or
+  `transport`, `stage`, `dm`, `flow`, `pbs`, `auth`, `health`), `*/compute.py` and `*/live_compute.py` never import `core.db` or
   `core.settings`, nor `sqlalchemy`, `fastapi`, `starlette` or `pydantic_settings`, not even inside a function (the
   remote-execution seam; pydantic is allowed, for the `bdp.yaml` model);
 - what a compute node loads (`jobs.contract`, `jobs.rundir`, the remote runners, `remote.paths`, `*/compute.py`,

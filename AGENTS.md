@@ -149,6 +149,11 @@ that applied in the pull request.
 4. **A gate passed by weakening a test.** Never weaken, skip or delete a test to make a gate pass; report the failure
    verbatim. A fix is done when a test of its failure case passes, and a performance claim needs a measured number.
 
+The navbar's ALCF indicator reads `GET /system/remote-status` (`system.remote_status`, `remote.health`). Its
+launcher-side probe must stay read-only: never register or submit functions/workflows, start an endpoint, allocate
+PBS resources, or prompt for login. Keep probes shared, bounded and on demand; a failed bridge is unknown, not an
+offline endpoint. An online core endpoint does not guarantee user-worker startup or PBS capacity.
+
 ## Build and test
 
 Source `scripts/env.sh` in every shell of your own; the `make` targets that need it source it themselves. `make help`

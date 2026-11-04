@@ -106,7 +106,7 @@ const HUNG: Fetch = (_input, init) =>
   })
 
 describe("HealthIndicators", () => {
-  // One test per state: a dot alone, no words and no icon, while the worker runs (filled) or the first answer is
+  // One test per state: a Local dot without an icon, while the worker runs (filled) or the first answer is
   // awaited (a ring); a tinted pill with the tone's dot and words when something is wrong. Each leads to the
   // status page. The clock runs past a failed check's two retries (after 1 and 2 s).
   it.each([
@@ -114,9 +114,9 @@ describe("HealthIndicators", () => {
       "the worker running: the quiet dot",
       answer("running"),
       {
-        name: "Worker: running",
+        name: "Local Worker: running",
         tone: "ok",
-        words: null,
+        words: "Local",
         dot: "bg-success-quiet",
         tint: null,
       },
@@ -125,9 +125,9 @@ describe("HealthIndicators", () => {
       "no answer yet: the muted ring, checking",
       NEVER,
       {
-        name: "Worker: checking",
+        name: "Local Worker: checking",
         tone: "unknown",
-        words: null,
+        words: "Local",
         dot: "border-[1.5px] border-muted-foreground",
         tint: null,
       },
@@ -207,7 +207,7 @@ describe("HealthIndicators", () => {
     vi.useFakeTimers()
     const fetchMock = await renderIndicators(HUNG)
     await act(() => vi.advanceTimersByTimeAsync(HEALTH_POLL_MS - 100))
-    expect(indicator()).toMatchObject({ name: "Worker: checking" })
+    expect(indicator()).toMatchObject({ name: "Local Worker: checking" })
 
     await act(() => vi.advanceTimersByTimeAsync(200))
     expect(indicator()).toMatchObject({
@@ -225,7 +225,10 @@ describe("HealthIndicators", () => {
     let worker: Health["worker"] = "running"
     await renderIndicators(() => answer(worker)(""))
     await act(() => vi.advanceTimersByTimeAsync(100))
-    expect(indicator()).toMatchObject({ name: "Worker: running", words: null })
+    expect(indicator()).toMatchObject({
+      name: "Local Worker: running",
+      words: "Local",
+    })
 
     worker = "not_running"
     await act(() => vi.advanceTimersByTimeAsync(HEALTH_POLL_MS))
@@ -236,7 +239,10 @@ describe("HealthIndicators", () => {
 
     worker = "running"
     await act(() => vi.advanceTimersByTimeAsync(HEALTH_POLL_MS))
-    expect(indicator()).toMatchObject({ name: "Worker: running", words: null })
+    expect(indicator()).toMatchObject({
+      name: "Local Worker: running",
+      words: "Local",
+    })
   })
 
   it("polls every 10 s while the tab is visible, and again when it shows", async () => {

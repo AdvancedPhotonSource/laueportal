@@ -218,6 +218,40 @@ nothing useful. Restore the run directory's permissions by hand with DM's toolin
 registered `dm.workflow` with DM's administrative tooling (an administrator does it; nothing registers it here). Until
 then the registered workflow has no `03-PERMISSIONS` and its check stage is still `03-CHECK`, which works as before.
 
+## Connectivity monitor
+
+With remote execution and the `crux` target enabled, the navbar has an ALCF indicator beside the local worker's
+indicator, labelled Local. Hover for the status summary and last-check time; click ALCF for DM workflow,
+Globus Flows/Compute, APS/Eagle storage and Crux endpoint checks. Green means
+the checks passed; amber means login needed, denied access, partial checks or stale information; red means an
+observed service failure or offline endpoint. Unknown state never becomes a false green. Disabled deployments
+hide the indicator. A core endpoint being online does not prove an on-demand user worker can start, a PBS node is
+available, or a scientific run will complete.
+
+The API's `GET /api/v1/system/remote-status` serves its shared cached result immediately. Only a request can start a
+probe; simultaneous browsers share it. At most one probe runs every five minutes, backing off to fifteen minutes
+while checks fail. Refresh reads this shared result and respects the same interval. While checking, browsers look
+again after two seconds; otherwise once every five minutes, only while visible. A lost API answer or bridge makes
+the result unknown or stale, never silently leaving an old green dot. No database connection or queue worker is held
+for monitoring.
+
+The portal runs `python -m laueportal.remote.health --config <launcher config>` with the launcher's Python and
+source (`dm.launcher_python`, `dm.launcher_code`, `dm.launcher_config`), over `dm.launcher_ssh_host` when set;
+otherwise the configured DM bridge (`dm.ssh_host`). An explicit null launcher host means local execution, for a
+portal that is also the launcher. Configure noninteractive access to that host; a missing/expired SSH login yields
+unknown status. It uses the existing launcher authentication state; no Globus credentials go to the portal or browser.
+The bridge is bounded to 45 s and killed with its process group, including at API shutdown. A remote helper has
+its own 40 s deadline so a disconnected SSH session cannot leave it running indefinitely; a local helper shares
+the portal's bounded process group. No persistent monitoring service or DM workflow is added.
+
+The checks read configured workflow registrations, the existing registered Flow, Compute endpoint metadata/status,
+and a Transfer stat of the experiment directory on APS and the configured compute workspace on Eagle. They make no
+transfers, create no directories, register no Flow/function and submit no task or PBS job. SDK automatic registration
+and interactive login are disabled. Sign-in challenges are reported as Login needed, permission denials separately,
+and other errors as fixed safe text: never pass SDK exception text or authorization parameters to the UI or logs.
+Deploy the same source revision to the launcher before enabling this portal version; the launcher's Python needs
+`requirements/launcher.lock` as usual. The check can also be run by an operator with the command above.
+
 ## The poller
 
 The remote poller reconciles remote runs with DM and publishes their returned results; its listing also removes what

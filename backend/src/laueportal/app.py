@@ -60,6 +60,7 @@ from laueportal.scans import api as scans_api
 from laueportal.science.cache import DatasetCache
 from laueportal.science.recon import MIB, ProductCache
 from laueportal.system import api as system_api
+from laueportal.system.remote_status import RemoteStatus
 
 logger = logging.getLogger(__name__)
 
@@ -286,12 +287,16 @@ def create_app(settings: Settings) -> FastAPI:
     ``hung_mount_seconds`` and ``probe_threads``)."""
     probe.configure(settings.files)
     engine = make_engine(settings, create=False)
+    remote_status = RemoteStatus(settings.remote)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        etag.versions()  # the code's identity in every entity tag, made once, from the source this process loaded
-        yield
-        engine.dispose()
+        try:
+            etag.versions()  # the code's identity in every entity tag, made once, from the source this process loaded
+            yield
+        finally:
+            remote_status.close()
+            engine.dispose()
 
     app = PortalAPI(
         title=API_TITLE,
@@ -318,6 +323,7 @@ def create_app(settings: Settings) -> FastAPI:
     # the Live page's (jobs.live_session): the DAQ list's one shared answer (no DM call until one is asked for), and
     # Start's one lock across the one-session check, the creations and the queueing (the api is one process)
     app.state.daq_list = DaqList(settings.live)
+    app.state.remote_status = remote_status
     app.state.live_start = threading.Lock()
 
     for router in _routers():

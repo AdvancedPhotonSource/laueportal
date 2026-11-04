@@ -99,7 +99,7 @@ export function HealthIndicators() {
 }
 
 /**
- * The link to the status page: a dot alone while all is well (its name says the state), a pill with
+ * The link to the status page: a Local dot while all is well (its name says the state), a pill with
  * the words otherwise. On a narrow navbar the pill's subject ("Worker", "API") goes before its
  * state's words do; its name and tooltip keep the full text.
  */
@@ -116,6 +116,7 @@ function Indicator({
     <Tooltip>
       <TooltipTrigger
         render={<Link to="/" activeOptions={{ exact: true }} />}
+        aria-label={view.form === "dot" ? `Local ${view.state}` : undefined}
         data-tone={view.tone}
         className={
           view.form === "dot"
@@ -137,6 +138,9 @@ function Indicator({
                 aria-hidden
                 className={cn(DOT, DOT_TONE[view.tone])}
               />
+            </span>
+            <span aria-hidden className="hidden xl:inline">
+              Local{" "}
             </span>
             <span className="sr-only">{view.state}</span>
           </>

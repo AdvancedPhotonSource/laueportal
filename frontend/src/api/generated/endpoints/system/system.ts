@@ -21,6 +21,7 @@ import type {
 
 import type {
   Health,
+  RemoteReadiness,
   SystemStatus
 } from '../../model';
 
@@ -138,6 +139,108 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getGetRemoteReadinessUrl = () => {
+
+
+
+
+  return `/api/v1/system/remote-status`
+}
+
+/**
+ * Return the shared check immediately; refresh at most once every five minutes, with failure backoff.
+ * Checks run on the configured launcher host, never submitting a task or allocating PBS resources.
+ * @summary ALCF connectivity
+ */
+export const getRemoteReadiness = async ( options?: Parameters<typeof apiFetch>[1]): Promise<RemoteReadiness> => {
+
+  return apiFetch<RemoteReadiness>(getGetRemoteReadinessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRemoteReadinessQueryKey = () => {
+    return [
+    `/api/v1/system/remote-status`
+    ] as const;
+    }
+
+
+export const getGetRemoteReadinessQueryOptions = <TData = Awaited<ReturnType<typeof getRemoteReadiness>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRemoteReadiness>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRemoteReadinessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRemoteReadiness>>> = ({ signal }) => getRemoteReadiness({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRemoteReadiness>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetRemoteReadinessQueryResult = NonNullable<Awaited<ReturnType<typeof getRemoteReadiness>>>
+export type GetRemoteReadinessQueryError = ErrorType<unknown>
+
+
+export function useGetRemoteReadiness<TData = Awaited<ReturnType<typeof getRemoteReadiness>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRemoteReadiness>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRemoteReadiness>>,
+          TError,
+          Awaited<ReturnType<typeof getRemoteReadiness>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetRemoteReadiness<TData = Awaited<ReturnType<typeof getRemoteReadiness>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRemoteReadiness>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRemoteReadiness>>,
+          TError,
+          Awaited<ReturnType<typeof getRemoteReadiness>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetRemoteReadiness<TData = Awaited<ReturnType<typeof getRemoteReadiness>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRemoteReadiness>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary ALCF connectivity
+ */
+
+export function useGetRemoteReadiness<TData = Awaited<ReturnType<typeof getRemoteReadiness>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getRemoteReadiness>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetRemoteReadinessQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

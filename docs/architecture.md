@@ -34,7 +34,7 @@ as it needs them):
 | `files/` | Allowed roots (`roots.py`), the mount probe (`probe.py`), the browser, input resolution (`inputs.py`), Find Matching Files and Find Indices (`finder.py`, `patterns.py`) |
 | `science/` | The lauelab boundary: result datasets and their cache (`cache.py`), viewer products, detector images, reconstruction readers and the product cache (`recon.py`), one computation per key (`once.py`), the calibration files' loading check of a live create (`calibration.py`), the MPI merges, and the synthetic development data that the demo seed and the tests generate (`synthetic.py`: wire scans, their reconstruction, an indexing map) |
 | `remote/` | The DM, Globus and PBS integration: portal side `dm.py`, `submission.py`, `poller.py`, `cleanup.py`, `estimates.py`; launcher side `settings.py` (`bdp.yaml`), `plan.py`, `stage.py`, `flow.py`, `pbs.py`, `transport.py`, `auth.py`; shared `paths.py`, `observation.py` (the remote observation) |
-| `system/` | `GET /health` and `GET /system/status` |
+| `system/` | `GET /health`, `GET /system/status`, and cached read-only ALCF checks at `GET /system/remote-status` |
 | `seed/` | `laueportal seed demo` (scan 990001, R1, R2, R3, I1, I2, all from synthetic data: the committed fixtures and `science.synthetic`; `--crux-run` adds R4, recorded as running on CRUX, refused while remote execution is enabled), `seed slow-runs` |
 | `app.py`, `cli.py`, `models.py` | The FastAPI factory, the `laueportal` command, every model for Alembic |
 

@@ -5734,6 +5734,48 @@
         "title": "ReconstructionTrace",
         "type": "object"
       },
+      "RemoteCheck": {
+        "additionalProperties": false,
+        "description": "One observed component; the detail is fixed text, never an upstream exception.",
+        "properties": {
+          "detail": {
+            "maxLength": 160,
+            "title": "Detail",
+            "type": "string"
+          },
+          "name": {
+            "enum": [
+              "dm",
+              "flows",
+              "compute",
+              "aps",
+              "eagle",
+              "crux"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "login_required",
+              "denied",
+              "unavailable",
+              "unknown",
+              "disabled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "state",
+          "detail"
+        ],
+        "title": "RemoteCheck",
+        "type": "object"
+      },
       "RemoteObservation": {
         "description": "A ``crux`` run's latest remote observation: the ``remoteObservation`` that the launcher's DM stage prints and the\nremote poller accepted from DM's record (``remote.observation``).",
         "properties": {
@@ -5824,6 +5866,68 @@
         ],
         "title": "RemotePhase",
         "type": "string"
+      },
+      "RemoteReadiness": {
+        "description": "Cached, read-only ALCF checks. Online does not guarantee worker startup or PBS capacity.",
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "checking": {
+            "title": "Checking",
+            "type": "boolean"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/RemoteCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "retry_after_seconds": {
+            "title": "Retry After Seconds",
+            "type": "number"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "warning",
+              "error",
+              "unknown",
+              "disabled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "state",
+          "checks",
+          "checked_at",
+          "stale",
+          "checking",
+          "retry_after_seconds"
+        ],
+        "title": "RemoteReadiness",
+        "type": "object"
       },
       "RemoteRunState": {
         "description": "Where a remote run executes.",
@@ -12783,6 +12887,28 @@
         "summary": "Append a note to a scan's catalog",
         "tags": [
           "scans"
+        ]
+      }
+    },
+    "/api/v1/system/remote-status": {
+      "get": {
+        "description": "Return the shared check immediately; refresh at most once every five minutes, with failure backoff.\nChecks run on the configured launcher host, never submitting a task or allocating PBS resources.",
+        "operationId": "getRemoteReadiness",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoteReadiness"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "ALCF connectivity",
+        "tags": [
+          "system"
         ]
       }
     },
