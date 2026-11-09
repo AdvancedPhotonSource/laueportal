@@ -6,6 +6,7 @@ import { LoadingState } from "@/components/LoadingState"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatSignificant } from "@/lib/format"
+import { useGoodnessLabel } from "./goodness-label"
 import type { ScopeParams } from "./viewer-store"
 
 const fixed = (value: number | null, digits: number) =>
@@ -82,6 +83,7 @@ function Details({
   patternIndex: number | null
 }) {
   const [x = null, y = null, z = null] = point.sample_position
+  const goodness = useGoodnessLabel()
   return (
     <div className="flex flex-col gap-2">
       <p>
@@ -113,7 +115,7 @@ function Details({
             <tr>
               <th className="font-normal">Pattern</th>
               <th className="font-normal">Indexed</th>
-              <th className="font-normal">Goodness</th>
+              <th className="font-normal">{goodness}</th>
               <th className="font-normal">RMS error (°)</th>
               <th className="font-normal">In scope</th>
             </tr>

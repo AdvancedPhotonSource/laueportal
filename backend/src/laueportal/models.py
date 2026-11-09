@@ -4,7 +4,12 @@ The models live in their domain packages; import them from there. This module on
 """
 
 from laueportal.core.db import Base
-from laueportal.indexing.models import Conversion, IndexingRun, LaueGoIndexingParameters
+from laueportal.indexing.models import (
+    Conversion,
+    IndexingRun,
+    LaueGoIndexingParameters,
+    LaueMatchingIndexingParameters,
+)
 from laueportal.jobs.models import IdempotencyKey, Job, Worker
 from laueportal.reconstruction.models import ReconstructionRun, WireReconstructionParameters
 from laueportal.scans.models import Catalog, Metadata, Scan
@@ -17,6 +22,7 @@ __all__ = [
     "IndexingRun",
     "Job",
     "LaueGoIndexingParameters",
+    "LaueMatchingIndexingParameters",
     "Metadata",
     "ReconstructionRun",
     "Scan",

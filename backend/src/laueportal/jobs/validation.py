@@ -51,6 +51,7 @@ from laueportal.core.text import quoted
 from laueportal.files import probe
 from laueportal.files.inputs import WorkflowValidationError, format_output_path, requested_input_count
 from laueportal.files.roots import PathNotAllowed, real_path, resolve_inside_roots
+from laueportal.indexing.laue_matching.params import LaueMatchingParamsV1
 from laueportal.indexing.lauego.live_params import LaueGoLiveParamsV1
 from laueportal.indexing.lauego.params import LaueGoParamsV1
 from laueportal.jobs import programs
@@ -59,7 +60,7 @@ from laueportal.reconstruction.wire.live_params import WireLiveParamsV1
 from laueportal.reconstruction.wire.params import WireParamsV1
 
 Severity = Literal["error", "warning"]
-Params = LaueGoParamsV1 | WireParamsV1
+Params = LaueGoParamsV1 | LaueMatchingParamsV1 | WireParamsV1
 LiveParams = LaueGoLiveParamsV1 | WireLiveParamsV1
 """A program's parameters (``jobs.programs.PROGRAMS``)."""
 
@@ -82,6 +83,7 @@ STAND_INS: dict[str, Any] = {
     "mask_file": None,
     "output_xml": None,
     "depth": None,
+    "forward_cache": "cache",
 }
 """A valid value of each required form field whose configured default may be missing or refused (a blank scan
 selection, a source), put in place of a failed field so that the other fields can still be checked."""
@@ -662,7 +664,7 @@ def too_many_inputs(params: Params, limit: int) -> str | None:
     """Why the run requests more than ``limit`` inputs, counted from its index ranges without expanding them
     (``files.inputs.requested_input_count``); ``None`` when it does not."""
 
-    depths = params.depth_count if isinstance(params, LaueGoParamsV1) else None
+    depths = params.depth_count if isinstance(params, (LaueGoParamsV1, LaueMatchingParamsV1)) else None
     count = requested_input_count(params.filename_prefixes, params.scan_point_count, depths)
     if count <= limit:
         return None
@@ -678,7 +680,7 @@ def check_input_count(issues: Issues, settings: Settings, params: Params) -> boo
     if problem is None:
         return True
     issues.error(["scan_points"], "too_many_inputs", problem)
-    if isinstance(params, LaueGoParamsV1) and params.depth_range is not None:
+    if isinstance(params, (LaueGoParamsV1, LaueMatchingParamsV1)) and params.depth_range is not None:
         issues.error(["depth_range"], "too_many_inputs", problem)
     return False
 

@@ -9,9 +9,23 @@ export interface CreatePrefill {
   scan?: string
   reconstruction?: string
   indexing?: string
+  /** The indexing form's program (`/indexing/new`); no source. */
+  program?: "lauego" | "laue_matching"
 }
 
 export const PREFILL_KEYS = ["scan", "reconstruction", "indexing"] as const
+
+/** Whether a URL's `program` names an indexing program. */
+export function isIndexingProgram(
+  value: unknown
+): value is "lauego" | "laue_matching" {
+  return value === "lauego" || value === "laue_matching"
+}
+
+/** The link parameter that opens the indexing form on a run's method (LaueGo, the form's default, needs none). */
+export function programSearch(method: string): { program?: "laue_matching" } {
+  return method === "laue_matching" ? { program: "laue_matching" } : {}
+}
 
 /** The value as an ID string (trimmed), or undefined when it is not one. */
 function idString(value: unknown): string | undefined {

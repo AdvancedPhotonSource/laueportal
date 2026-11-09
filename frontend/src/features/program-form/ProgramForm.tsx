@@ -7,7 +7,14 @@
 // scan's or a reconstruction's fills only its data fields and the source IDs. A run created and queued
 // opens its page; one created that could not be queued stays in the Submitted panel.
 import { useNavigate } from "@tanstack/react-router"
-import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
+import {
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react"
 import {
   type Control,
   useForm,
@@ -28,6 +35,7 @@ import { LoadingState } from "@/components/LoadingState"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { FilenamePatternField, IndicesField } from "./file-helpers"
+import { ForwardCacheField } from "./ForwardCacheField"
 import {
   HklField,
   NumberField,
@@ -129,6 +137,10 @@ export interface ProgramFormProps {
    * applies a new prefill (`applyPrefill`): keep it stable otherwise.
    */
   values?: RequestValues
+  /** Values the form starts with besides the prefill's (those kept when the program is switched). */
+  carried?: RequestValues
+  /** Set to a function giving the form's current values as a request's. */
+  valuesRef?: RefObject<(() => RequestValues) | null>
   /** What `values` fills (default: every field). */
   fills?: PrefillFills
   onSourceChange?: SourceChange
@@ -145,6 +157,8 @@ export interface ProgramFormProps {
 export function ProgramForm({
   kind,
   values,
+  carried,
+  valuesRef,
   fills,
   onSourceChange,
   source,
@@ -172,6 +186,8 @@ export function ProgramForm({
     <ProgramFormBody
       spec={spec}
       values={values}
+      carried={carried}
+      valuesRef={valuesRef}
       fills={fills}
       onSourceChange={onSourceChange}
       source={source}
@@ -184,6 +200,8 @@ export function ProgramForm({
 export function ProgramFormBody({
   spec,
   values,
+  carried,
+  valuesRef,
   fills,
   onSourceChange,
   source,
@@ -191,13 +209,29 @@ export function ProgramFormBody({
 }: {
   spec: ProgramSpec<ProgramKind>
   values?: RequestValues
+  carried?: RequestValues
+  valuesRef?: RefObject<(() => RequestValues) | null>
   fills?: PrefillFills
   onSourceChange?: SourceChange
   source?: (slot: SourceSlot) => ReactNode
   layout?: FormLayout
 }) {
-  const initial = useMemo(() => formValuesOf(spec, values), [spec, values])
+  const initial = useMemo(
+    () =>
+      formValuesOf(
+        spec,
+        carried || values ? { ...carried, ...values } : values
+      ),
+    [spec, carried, values]
+  )
   const form = useForm<FormValues>({ defaultValues: initial })
+  useEffect(() => {
+    if (!valuesRef) return
+    valuesRef.current = () => requestOf(spec, form.getValues())
+    return () => {
+      valuesRef.current = null
+    }
+  }, [valuesRef, spec, form])
   // A new prefill: the fields it fills from its source replace the form's, and what the user changed
   // otherwise stays (a scan's or a reconstruction's: every field outside `fills` stays).
   const seen = useRef(initial)
@@ -565,6 +599,10 @@ function renderField(
       )
     case "select":
       return <SelectField {...props} />
+    case "forward-cache":
+      return <ForwardCacheField {...props} />
+    case "forward-cache-new":
+      return null
     case "checkbox":
       return <ToggleField {...props} />
     case "textarea":

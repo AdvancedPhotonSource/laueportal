@@ -13,10 +13,10 @@ export function ParametersTab({ run }: { run: IndexingRunDetail }) {
   const groups = parameterGroups(run)
   return (
     <div className="flex flex-col gap-4">
-      {run.parameters === null && (
+      {run.parameters === null && run.laue_matching_parameters === null && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <InfoIcon aria-hidden className="size-4 shrink-0" />
-          {`No LaueGo parameters stored (method ${run.method}).`}
+          {`No parameters stored (method ${run.method}).`}
         </p>
       )}
       {groups.map((group) => (

@@ -24,6 +24,7 @@ import { surface } from "@/lib/styles"
 import { cn } from "@/lib/utils"
 import { onResultsReload } from "./artifact-bar"
 import { PATTERN_COLUMNS, PEAK_COLUMNS } from "./columns"
+import { useGoodnessLabel } from "./goodness-label"
 import { Section } from "./controls"
 import {
   groupChoices,
@@ -39,16 +40,29 @@ import { useScopeParams } from "./viewer-store"
 // The grid's row ID: the row's position in the whole table (the API's `id`).
 const rowId = (row: { id: number }) => String(row.id)
 
+/** The columns with the run's name for the goodness column. */
+function withGoodnessHeader<Row>(
+  columns: GridColumn<Row>[],
+  header: string
+): GridColumn<Row>[] {
+  return columns.map((column) =>
+    column.field === "goodness"
+      ? ({ ...column, header } as GridColumn<Row>)
+      : column
+  )
+}
+
 export function PeaksTab({ indexingId }: { indexingId: number }) {
   const scope = useScopeParams()
   const total = useListIndexingPeaks(indexingId, { ...scope, limit: 1 })
+  const goodness = useGoodnessLabel()
   return (
     <ResultsTable<PeakRow>
       indexingId={indexingId}
       title="Indexed Peaks"
       noun="peaks"
       gridId={PEAKS_GRID_ID}
-      columns={PEAK_COLUMNS}
+      columns={withGoodnessHeader(PEAK_COLUMNS, goodness)}
       groups={PEAK_COLUMN_GROUPS}
       listKey={`${String(scope.pattern0_only)}:${String(scope.min_peaks)}`}
       total={total.data?.total}
@@ -62,13 +76,14 @@ export function PeaksTab({ indexingId }: { indexingId: number }) {
 export function PatternsTab({ indexingId }: { indexingId: number }) {
   const scope = useScopeParams()
   const total = useListIndexingPatterns(indexingId, { ...scope, limit: 1 })
+  const goodness = useGoodnessLabel()
   return (
     <ResultsTable<PatternRow>
       indexingId={indexingId}
       title="Indexed Patterns"
       noun="patterns"
       gridId={PATTERNS_GRID_ID}
-      columns={PATTERN_COLUMNS}
+      columns={withGoodnessHeader(PATTERN_COLUMNS, goodness)}
       groups={PATTERN_COLUMN_GROUPS}
       listKey={`${String(scope.pattern0_only)}:${String(scope.min_peaks)}`}
       total={total.data?.total}

@@ -511,7 +511,7 @@
             "x-hint": "One depth for every frame. Empty: each frame's own.",
             "x-placeholder": "Automatic",
             "x-source": "form",
-            "x-unit": "µm",
+            "x-unit": "\u00b5m",
             "x-widget": "text",
             "default": null
           },
@@ -719,6 +719,779 @@
       }
     },
     {
+      "kind": "laue_matching",
+      "title": "LaueMatching indexing",
+      "schema_id": "laue-matching/v1",
+      "json_schema": {
+        "additionalProperties": false,
+        "description": "The parameters of one LaueMatching indexing run (`laue-matching/v1`).",
+        "properties": {
+          "scan_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The scan the run belongs to; empty for an unlinked run, which then takes its reconstruction's scan, if any.",
+            "title": "Scan Number",
+            "x-group": "Identity",
+            "x-hint": "The scan the run belongs to. Empty: the reconstruction's scan, or an unlinked run.",
+            "x-source": "form",
+            "x-widget": "scan"
+          },
+          "reconstruction_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reconstruction whose depth-resolved frames the run indexes (its `scan.h5` is the input); empty for a folder of frame files.",
+            "title": "Reconstruction ID",
+            "x-group": "Identity",
+            "x-hint": "The reconstruction whose depth-resolved frames are indexed. Empty: a folder of frame files.",
+            "x-source": "form",
+            "x-widget": "reconstruction"
+          },
+          "input_path": {
+            "description": "The folder of the frame files, or a reconstruction's catalog (its `scan.h5`).",
+            "title": "Folder Path",
+            "type": "string",
+            "x-group": "File Paths",
+            "x-hint": "The folder of the frame files, or a reconstruction's scan.h5.",
+            "x-source": "form",
+            "x-widget": "folder"
+          },
+          "output_path_template": {
+            "description": "The run directory, with exactly one `%d`, the run ID. The default is `[output_templates] indexing` under `files.runs_root`, without the segments of a scan or reconstruction the run does not have.",
+            "title": "Output Path",
+            "type": "string",
+            "x-config": "output_templates.indexing",
+            "x-group": "File Paths",
+            "x-hint": "The run's folder; %d becomes the run ID.",
+            "x-source": "form",
+            "x-widget": "output-folder",
+            "default": "/data/runs/analysis/index_%d"
+          },
+          "filename_prefixes": {
+            "description": "The frame files' name templates: `%d` takes the scan index, a second `%d` the depth index; wildcards are allowed. At least one, at most 100, each at most 255 characters; blank ones are dropped.",
+            "items": {
+              "maxLength": 255,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Filename",
+            "type": "array",
+            "x-group": "File Paths",
+            "x-hint": "Frame file names, comma-separated: %d is the scan index, a second %d the depth index, * any text (e.g. Si_*%d.h5).",
+            "x-placeholder": "Si_%d.h5",
+            "x-source": "form",
+            "x-widget": "filename-templates"
+          },
+          "scan_points": {
+            "description": "The scan points to index: srange syntax, at least one; stored as srange writes it (`3,1-2` is `1-3`).",
+            "title": "Scan Indices",
+            "type": "string",
+            "x-config": "indexing.defaults.scan_points",
+            "x-group": "File Paths",
+            "x-hint": "The scan points to index, e.g. 1-10, 1,5,8,9, 1-4,10-21 or 1-10:2 (every second).",
+            "x-placeholder": "1-10,15",
+            "x-source": "form",
+            "x-widget": "indices",
+            "default": ""
+          },
+          "depth_range": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The depth indices to index (srange syntax), for a reconstruction's frames or file names with two `%d`; empty: every depth of a reconstruction's `scan.h5`, none for file names with one `%d`.",
+            "title": "Depth Indices",
+            "x-config": "indexing.defaults.depth_range",
+            "x-group": "File Paths",
+            "x-hint": "The depth indices to index, e.g. 0-90:30. Empty: every depth of a reconstruction; none for names with one %d.",
+            "x-source": "form",
+            "x-widget": "indices",
+            "default": ""
+          },
+          "geometry_file": {
+            "description": "The detector geometry (XML); it must exist inside the roots.",
+            "title": "Geometry File",
+            "type": "string",
+            "x-config": "indexing.defaults.geometry_file",
+            "x-extensions": [".xml"],
+            "x-group": "File Paths",
+            "x-hint": "The detector geometry (XML).",
+            "x-source": "form",
+            "x-widget": "file"
+          },
+          "crystal_file": {
+            "description": "The crystal structure (XML); it must exist inside the roots.",
+            "title": "Structures File",
+            "type": "string",
+            "x-config": "indexing.defaults.crystal_file",
+            "x-extensions": [".xml"],
+            "x-group": "File Paths",
+            "x-hint": "The crystal structure (XML).",
+            "x-source": "form",
+            "x-widget": "file"
+          },
+          "mask_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A detector mask for the peak search, inside the roots; empty: none.",
+            "title": "Mask File",
+            "x-config": "indexing.defaults.mask_file",
+            "x-extensions": [".h5", ".hdf5"],
+            "x-group": "File Paths",
+            "x-hint": "The pixels the peak search ignores (an HDF5 image). Empty: none.",
+            "x-source": "form",
+            "x-widget": "file",
+            "default": null
+          },
+          "create_forward_cache": {
+            "default": false,
+            "description": "Whether the run builds the named forward cache (its name must be new) or reuses it.",
+            "title": "New Cache",
+            "type": "boolean",
+            "x-group": "Forward Cache",
+            "x-hint": "Build a new forward cache. The first frame builds it, which can take many minutes.",
+            "x-source": "form",
+            "x-widget": "forward-cache-new"
+          },
+          "forward_cache": {
+            "description": "The forward cache's name: a folder in `[laue_matching] data_root`.",
+            "maxLength": 128,
+            "title": "Forward Cache",
+            "type": "string",
+            "x-group": "Forward Cache",
+            "x-hint": "The forward simulation this run reads. One cache fits one geometry, crystal, energy range and spot count.",
+            "x-source": "form",
+            "x-widget": "forward-cache"
+          },
+          "threshold_method": {
+            "description": "The image threshold method.",
+            "enum": ["percentile", "adaptive", "otsu", "fixed"],
+            "title": "Threshold Method",
+            "type": "string",
+            "x-config": "laue_matching.defaults.threshold_method",
+            "x-group": "Spot Finding",
+            "x-hint": "How pixels are separated from the background before spots are found.",
+            "x-options": [
+              {
+                "label": "Percentile",
+                "value": "percentile"
+              },
+              {
+                "label": "Adaptive",
+                "value": "adaptive"
+              },
+              {
+                "label": "Otsu",
+                "value": "otsu"
+              },
+              {
+                "label": "Fixed",
+                "value": "fixed"
+              }
+            ],
+            "x-source": "form",
+            "x-widget": "select",
+            "default": "percentile"
+          },
+          "threshold_percentile": {
+            "description": "The percentile of the image used by the `percentile` method.",
+            "exclusiveMinimum": 0,
+            "maximum": 100,
+            "title": "Threshold Percentile",
+            "type": "number",
+            "x-config": "laue_matching.defaults.threshold_percentile",
+            "x-group": "Spot Finding",
+            "x-hint": "Used by the Percentile method: pixels above this percentile of the image are kept.",
+            "x-source": "form",
+            "x-unit": "%",
+            "x-widget": "number",
+            "default": 99.8
+          },
+          "threshold_value": {
+            "description": "The intensity threshold of the `fixed` method.",
+            "minimum": 0,
+            "title": "Threshold",
+            "type": "number",
+            "x-config": "laue_matching.defaults.threshold_value",
+            "x-group": "Spot Finding",
+            "x-hint": "Used by the Fixed method: the intensity threshold.",
+            "x-source": "form",
+            "x-unit": "counts",
+            "x-widget": "number",
+            "default": 0
+          },
+          "min_area": {
+            "description": "The fewest connected pixels that make a spot.",
+            "exclusiveMinimum": 0,
+            "title": "Min Spot Area",
+            "type": "integer",
+            "x-config": "laue_matching.defaults.min_area",
+            "x-group": "Spot Finding",
+            "x-hint": "Connected pixels fewer than this are not a spot.",
+            "x-source": "form",
+            "x-unit": "px",
+            "x-widget": "integer",
+            "default": 4
+          },
+          "watershed_image": {
+            "description": "Whether a watershed segmentation splits touching spots (LaueMatching `WatershedImage`).",
+            "title": "Split Overlapping Spots",
+            "type": "boolean",
+            "x-config": "laue_matching.defaults.watershed_image",
+            "x-group": "Spot Finding",
+            "x-hint": "Split touching spots with a watershed before counting them.",
+            "x-source": "form",
+            "x-widget": "checkbox",
+            "default": true
+          },
+          "background_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A float64 background image for raw frames; empty: the median filter of the run's first frame.",
+            "title": "Background File",
+            "x-config": "laue_matching.defaults.background_file",
+            "x-extensions": [".bin"],
+            "x-group": "Spot Finding",
+            "x-hint": "A background image for raw frames. Empty: the first frame's median. Reconstructed frames use none.",
+            "x-placeholder": "Automatic",
+            "x-source": "form",
+            "x-widget": "file",
+            "default": null
+          },
+          "elo": {
+            "description": "The lowest energy of the simulated reflections (LaueMatching `Elo`).",
+            "exclusiveMinimum": 0,
+            "title": "Min Energy",
+            "type": "number",
+            "x-config": "laue_matching.defaults.elo",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The lowest photon energy simulated. Part of what the cache is built for.",
+            "x-source": "form",
+            "x-unit": "keV",
+            "x-widget": "number",
+            "default": 5
+          },
+          "ehi": {
+            "description": "The highest energy of the simulated reflections (LaueMatching `Ehi`).",
+            "exclusiveMinimum": 0,
+            "title": "Max Energy",
+            "type": "number",
+            "x-config": "laue_matching.defaults.ehi",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The highest photon energy simulated. Part of what the cache is built for.",
+            "x-source": "form",
+            "x-unit": "keV",
+            "x-widget": "number",
+            "default": 30
+          },
+          "max_nr_laue_spots": {
+            "description": "The spots simulated per orientation (LaueMatching `MaxNrLaueSpots`); sets the forward cache's size.",
+            "exclusiveMinimum": 0,
+            "title": "Max Spots per Orientation",
+            "type": "integer",
+            "x-config": "laue_matching.defaults.max_nr_laue_spots",
+            "x-group": "Indexing Parameters",
+            "x-hint": "How many spots are simulated per orientation. Part of what the cache is built for.",
+            "x-source": "form",
+            "x-widget": "integer",
+            "default": 30
+          },
+          "min_nr_spots": {
+            "description": "The fewest matching spots of an orientation (LaueMatching `MinNrSpots`).",
+            "exclusiveMinimum": 0,
+            "title": "Min Matching Spots",
+            "type": "integer",
+            "x-config": "laue_matching.defaults.min_nr_spots",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The fewest matching spots that qualify an orientation in the first pass.",
+            "x-source": "form",
+            "x-widget": "integer",
+            "default": 8
+          },
+          "min_good_spots": {
+            "description": "The fewest winner-take-all spots of a kept orientation (LaueMatching `MinGoodSpots`).",
+            "minimum": 0,
+            "title": "Min Exclusive Spots",
+            "type": "integer",
+            "x-config": "laue_matching.defaults.min_good_spots",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The fewest spots an orientation must claim that no better orientation in the frame claimed first.",
+            "x-source": "form",
+            "x-widget": "integer",
+            "default": 4
+          },
+          "min_intensity": {
+            "description": "The least total intensity of an orientation (LaueMatching `MinIntensity`).",
+            "minimum": 0,
+            "title": "Min Intensity",
+            "type": "number",
+            "x-config": "laue_matching.defaults.min_intensity",
+            "x-group": "Indexing Parameters",
+            "x-hint": "The least total intensity that qualifies an orientation.",
+            "x-source": "form",
+            "x-unit": "counts",
+            "x-widget": "number",
+            "default": 50
+          },
+          "max_angle": {
+            "description": "The misorientation below which two orientations are merged (LaueMatching `MaxAngle`).",
+            "exclusiveMinimum": 0,
+            "title": "Min Misorientation",
+            "type": "number",
+            "x-config": "laue_matching.defaults.max_angle",
+            "x-group": "Indexing Parameters",
+            "x-hint": "Orientations closer than this are one grain.",
+            "x-source": "form",
+            "x-unit": "deg",
+            "x-widget": "number",
+            "default": 3
+          },
+          "robust_filter": {
+            "description": "Whether the twin-aware filter is used (LaueMatching `RobustFilter`).",
+            "title": "Keep Twins",
+            "type": "boolean",
+            "x-config": "laue_matching.defaults.robust_filter",
+            "x-group": "Indexing Parameters",
+            "x-hint": "Keep twin-related orientations that share spots with a stronger one.",
+            "x-source": "form",
+            "x-widget": "checkbox",
+            "default": true
+          },
+          "author": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "description": "Who made the run, or a tag (at most 200 characters).",
+            "title": "Author",
+            "x-config": "indexing.defaults.author",
+            "x-group": "Identity",
+            "x-hint": "Who made the run, or a tag.",
+            "x-source": "form",
+            "x-widget": "text"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "description": "Free text about the run (at most 10,000 characters).",
+            "title": "Notes",
+            "x-config": "indexing.defaults.notes",
+            "x-group": "Notes",
+            "x-hint": "Free text about the run.",
+            "x-source": "form",
+            "x-widget": "textarea"
+          },
+          "data_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The folder holding the orientation database and the forward caches.",
+            "readOnly": true,
+            "title": "Data Folder",
+            "x-config": "laue_matching.data_root",
+            "x-source": "config",
+            "default": null
+          },
+          "orientation_spacing": {
+            "description": "The orientation database's grid spacing (LaueMatching `OrientationSpacing`).",
+            "readOnly": true,
+            "title": "Orientation Spacing",
+            "type": "number",
+            "x-config": "laue_matching.orientation_spacing",
+            "x-source": "config",
+            "x-unit": "deg",
+            "default": 0.4
+          },
+          "filter_radius": {
+            "description": "The median filter's size for a background computed from a raw frame (LaueMatching `FilterRadius`).",
+            "readOnly": true,
+            "title": "Background Filter Size",
+            "type": "integer",
+            "x-config": "laue_matching.filter_radius",
+            "x-source": "config",
+            "x-unit": "px",
+            "default": 101
+          },
+          "gauss_sigma_max": {
+            "description": "The cap on the matching blur's sigma (LaueMatching `GaussSigmaMax`).",
+            "readOnly": true,
+            "title": "Max Blur",
+            "type": "number",
+            "x-config": "laue_matching.gauss_sigma_max",
+            "x-source": "config",
+            "x-unit": "px",
+            "default": 2.5
+          },
+          "num_threads": {
+            "description": "The indexer's threads for each frame. Frames are indexed one at a time.",
+            "readOnly": true,
+            "title": "Threads",
+            "type": "integer",
+            "x-config": "laue_matching.threads",
+            "x-source": "config",
+            "default": 16
+          },
+          "space_group": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The crystal file's space group number.",
+            "readOnly": true,
+            "title": "Space Group",
+            "x-source": "derived"
+          },
+          "symmetry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The lattice centring letter of the space group.",
+            "readOnly": true,
+            "title": "Centring",
+            "x-source": "derived"
+          },
+          "lattice_parameters": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "a, b, c (nm), alpha, beta, gamma (degrees).",
+            "readOnly": true,
+            "title": "Lattice",
+            "x-source": "derived"
+          },
+          "p_array": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The geometry file's detector translation (m).",
+            "readOnly": true,
+            "title": "Detector Position",
+            "x-source": "derived"
+          },
+          "r_array": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The geometry file's rotation vector (radians).",
+            "readOnly": true,
+            "title": "Detector Rotation",
+            "x-source": "derived"
+          },
+          "px_x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The detector's pixel size along x (m).",
+            "readOnly": true,
+            "title": "Pixel Size X",
+            "x-source": "derived"
+          },
+          "px_y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The detector's pixel size along y (m).",
+            "readOnly": true,
+            "title": "Pixel Size Y",
+            "x-source": "derived"
+          },
+          "nr_px_x": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The detector's columns, unbinned.",
+            "readOnly": true,
+            "title": "Pixels X",
+            "x-source": "derived"
+          },
+          "nr_px_y": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The detector's rows, unbinned.",
+            "readOnly": true,
+            "title": "Pixels Y",
+            "x-source": "derived"
+          },
+          "detector_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The geometry file's detector identifier.",
+            "readOnly": true,
+            "title": "Detector",
+            "x-source": "derived"
+          },
+          "n_orientations": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The orientation database's size, in orientations.",
+            "readOnly": true,
+            "title": "Orientations",
+            "x-source": "derived"
+          },
+          "backend": {
+            "const": "local",
+            "default": "local",
+            "description": "Always `local`.",
+            "readOnly": true,
+            "title": "Run on",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "algorithm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Not set by the portal: null.",
+            "readOnly": true,
+            "title": "Algorithm Version",
+            "x-source": "derived"
+          },
+          "computer_name": {
+            "description": "The host that created the run (its real name).",
+            "readOnly": true,
+            "title": "Computer",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "priority": {
+            "default": 0,
+            "description": "Always 0: a queue priority, unused.",
+            "readOnly": true,
+            "title": "Priority",
+            "type": "integer",
+            "x-source": "derived"
+          },
+          "submitted_at": {
+            "description": "When the run was created: aware UTC.",
+            "format": "date-time",
+            "readOnly": true,
+            "title": "Submitted",
+            "type": "string",
+            "x-source": "derived"
+          },
+          "schema_id": {
+            "const": "laue-matching/v1",
+            "default": "laue-matching/v1",
+            "description": "The parameter schema, `laue-matching/v1`.",
+            "readOnly": true,
+            "title": "Schema",
+            "type": "string",
+            "x-source": "derived"
+          }
+        },
+        "required": [
+          "scan_number",
+          "reconstruction_id",
+          "input_path",
+          "output_path_template",
+          "filename_prefixes",
+          "scan_points",
+          "depth_range",
+          "geometry_file",
+          "crystal_file",
+          "mask_file",
+          "forward_cache",
+          "threshold_method",
+          "threshold_percentile",
+          "threshold_value",
+          "min_area",
+          "watershed_image",
+          "background_file",
+          "elo",
+          "ehi",
+          "max_nr_laue_spots",
+          "min_nr_spots",
+          "min_good_spots",
+          "min_intensity",
+          "max_angle",
+          "robust_filter"
+        ],
+        "title": "LaueMatchingParamsV1",
+        "type": "object",
+        "x-layout": [
+          {
+            "group": "Identity",
+            "fields": ["scan_number", "reconstruction_id", "author"]
+          },
+          {
+            "group": "File Paths",
+            "fields": [
+              "input_path",
+              "filename_prefixes",
+              "scan_points",
+              "depth_range",
+              "geometry_file",
+              "crystal_file",
+              "mask_file",
+              "output_path_template"
+            ]
+          },
+          {
+            "group": "Forward Cache",
+            "fields": ["create_forward_cache", "forward_cache"]
+          },
+          {
+            "group": "Spot Finding",
+            "fields": [
+              "threshold_method",
+              "threshold_percentile",
+              "threshold_value",
+              "min_area",
+              "watershed_image",
+              "background_file"
+            ]
+          },
+          {
+            "group": "Indexing Parameters",
+            "fields": [
+              "elo",
+              "ehi",
+              "max_nr_laue_spots",
+              "min_nr_spots",
+              "min_good_spots",
+              "min_intensity",
+              "max_angle",
+              "robust_filter"
+            ]
+          },
+          {
+            "group": "Notes",
+            "fields": ["notes"]
+          }
+        ]
+      }
+    },
+    {
       "kind": "wire",
       "title": "Wire reconstruction",
       "schema_id": "wire/v1",
@@ -838,7 +1611,7 @@
             "x-group": "Wire Reconstruction Parameters",
             "x-hint": "The start of the reconstructed depth range.",
             "x-source": "form",
-            "x-unit": "µm",
+            "x-unit": "\u00b5m",
             "x-widget": "number",
             "default": -50.0
           },
@@ -850,7 +1623,7 @@
             "x-group": "Wire Reconstruction Parameters",
             "x-hint": "The end of the reconstructed depth range.",
             "x-source": "form",
-            "x-unit": "µm",
+            "x-unit": "\u00b5m",
             "x-widget": "number",
             "default": 150.0
           },
@@ -863,7 +1636,7 @@
             "x-group": "Wire Reconstruction Parameters",
             "x-hint": "The depth step of the reconstruction.",
             "x-source": "form",
-            "x-unit": "µm",
+            "x-unit": "\u00b5m",
             "x-widget": "number",
             "default": 1.0
           },
@@ -1597,7 +2370,7 @@
             "x-hint": "One depth for every frame. Empty: each frame's own.",
             "x-placeholder": "Automatic",
             "x-source": "form",
-            "x-unit": "µm",
+            "x-unit": "\u00b5m",
             "x-widget": "text",
             "default": null
           },
@@ -1909,7 +2682,7 @@
             "x-group": "Wire Reconstruction Parameters",
             "x-hint": "The start of the reconstructed depth range.",
             "x-source": "form",
-            "x-unit": "µm",
+            "x-unit": "\u00b5m",
             "x-widget": "number",
             "default": -50.0
           },
@@ -1921,7 +2694,7 @@
             "x-group": "Wire Reconstruction Parameters",
             "x-hint": "The end of the reconstructed depth range.",
             "x-source": "form",
-            "x-unit": "µm",
+            "x-unit": "\u00b5m",
             "x-widget": "number",
             "default": 150.0
           },
@@ -1934,7 +2707,7 @@
             "x-group": "Wire Reconstruction Parameters",
             "x-hint": "The depth step of the reconstruction.",
             "x-source": "form",
-            "x-unit": "µm",
+            "x-unit": "\u00b5m",
             "x-widget": "number",
             "default": 1.0
           },

@@ -156,6 +156,11 @@ async function openPage(url: string) {
       }))
       return Promise.resolve(Response.json({ rows, total: 1, as_of: "" }))
     }
+    if (target.pathname === "/api/v1/laue-matching/forward-caches") {
+      return Promise.resolve(
+        Response.json({ caches: [], suggested_name: "Ni_5-30", problem: null })
+      )
+    }
     return Promise.resolve(
       Response.json({ rows: [], total: 0, as_of: "2026-10-22T12:00:00Z" })
     )
@@ -219,12 +224,15 @@ async function pick(label: string, typed: string) {
 /** The Source switch's kinds, and the one pressed. */
 const kinds = () =>
   Array.from(
-    document.querySelectorAll('[data-slot="toggle-group-item"]'),
+    document.querySelectorAll(
+      '[data-slot="toggle-group"][aria-labelledby] [data-slot="toggle-group-item"]'
+    ),
     (item) => item.textContent
   )
 const pressed = () =>
-  document.querySelector('[data-slot="toggle-group-item"][aria-pressed="true"]')
-    ?.textContent
+  document.querySelector(
+    '[data-slot="toggle-group"][aria-labelledby] [data-slot="toggle-group-item"][aria-pressed="true"]'
+  )?.textContent
 
 async function switchTo(kind: string) {
   await click(byRole("button", kind)[0])
@@ -347,6 +355,46 @@ describe("the wire form's prefill", () => {
     })
     expect(prefills).toEqual(["?scan=990001", "?scan=990002"])
     expect(router.state.location.searchStr).toBe("")
+  })
+})
+
+describe("the program switch", () => {
+  const programs = () =>
+    Array.from(
+      document.querySelectorAll(
+        '[aria-label="Program"] [data-slot="toggle-group-item"]'
+      ),
+      (item) => item.textContent
+    )
+
+  it("opens on LaueGo and keeps the shared fields when switched to LaueMatching", async () => {
+    await openPage("/indexing/new")
+    await until(() => {
+      expect(programs()).toEqual(["LaueGo", "LaueMatching"])
+      expect(field("box_size")).not.toBeNull()
+    })
+    await enterText(field("geometry_file"), "/data/geo.xml")
+    await enterText(field("author"), "me")
+    await click(byRole("button", "LaueMatching")[0])
+    await until(() => {
+      expect(field("box_size")).toBeNull()
+      if (field("min_area") === null)
+        console.log("BODY", document.body.textContent.slice(0, 900))
+      expect(field("min_area")).not.toBeNull()
+    })
+    expect(field("geometry_file")?.value).toBe("/data/geo.xml")
+    expect(field("author")?.value).toBe("me")
+  })
+
+  it("opens on the program a link names", async () => {
+    await openPage("/indexing/new?program=laue_matching")
+    await until(() => {
+      expect(field("min_area")).not.toBeNull()
+    })
+    expect(
+      document.querySelector('[aria-label="Program"] [aria-pressed="true"]')
+        ?.textContent
+    ).toBe("LaueMatching")
   })
 })
 
@@ -513,7 +561,7 @@ describe("the LaueGo form's sources", () => {
 describe("the page's header", () => {
   it.each([
     ["/reconstructions/new", "New Wire Reconstruction"],
-    ["/indexing/new", "New LaueGo Indexation"],
+    ["/indexing/new", "New Indexation"],
   ])(
     "%s: Run on, Validate and Submit beside the title, the validation summary directly under them, and no bar after the sections",
     async (url, title) => {

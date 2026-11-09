@@ -1,5 +1,5 @@
-"""The validation of a new LaueGo indexing run (``POST /api/v1/indexing-runs/validate``): the model's
-rules, then the cross-field and context checks (``jobs.validation`` has the shared ones, and the issue format).
+"""The validation of a new LaueGo or LaueMatching indexing run (``POST /api/v1/indexing-runs/validate``,
+``POST /api/v1/indexing-runs/laue-matching/validate``): the model's rules, then the cross-field and context checks (``jobs.validation`` has the shared ones, and the issue format).
 
 The checks (the source is ``scan_number`` and ``reconstruction_id``):
 
@@ -15,7 +15,9 @@ The checks (the source is ``scan_number`` and ``reconstruction_id``):
   and an ALCF run's inputs (``check_backend``, ``check_transferred_inputs``); on a remote target, the Output XML is
   a name inside the run directory (an absolute one is refused);
 - at most ``execution.max_run_inputs`` inputs, counted before anything is expanded; then input resolution
-  (``files.inputs.resolve_request_inputs``, as ``create_indexing``) finds every requested file or frame.
+  (``files.inputs.resolve_request_inputs``, as ``create_indexing``) finds every requested file or frame;
+- for LaueMatching: the energy range, the data folder and the forward cache (``indexing.laue_matching.data``), and a
+  warning when a reconstruction's depths reach beyond ``DEEP_DEPTH_UM``.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
@@ -31,6 +33,8 @@ from sqlalchemy.orm import Session
 from laueportal.core.settings import Settings
 from laueportal.core.text import quoted
 from laueportal.files.inputs import resolve_request_inputs
+from laueportal.indexing.laue_matching.data import DEEP_DEPTH_UM, check_laue_matching
+from laueportal.indexing.laue_matching.params import LaueMatchingParamsV1
 from laueportal.indexing.lauego.params import LaueGoParamsV1
 from laueportal.jobs.rundir import reconstruction_catalog_path
 from laueportal.jobs.validation import (
@@ -63,10 +67,22 @@ UNLINKED = "No source scan or reconstruction: this creates an unlinked peak inde
 def validate_indexing(form: Mapping[str, Any], *, settings: Settings, engine: Engine) -> Validated:
     """Every issue of one LaueGo run's parameters (``form``: the create form's values). Reads only."""
 
+    return _validate("lauego", form, settings=settings, engine=engine)
+
+
+def validate_laue_matching(form: Mapping[str, Any], *, settings: Settings, engine: Engine) -> Validated:
+    """Every issue of one LaueMatching run's parameters (``form``: the create form's values). Reads only."""
+
+    return _validate("laue_matching", form, settings=settings, engine=engine)
+
+
+def _validate(
+    program: Literal["lauego", "laue_matching"], form: Mapping[str, Any], *, settings: Settings, engine: Engine
+) -> Validated:
     issues = Issues()
-    checked = check_form("lauego", form, settings, issues)
+    checked = check_form(program, form, settings, issues)
     params = checked.values
-    if not isinstance(params, LaueGoParamsV1):
+    if not isinstance(params, (LaueGoParamsV1, LaueMatchingParamsV1)):
         return Validated(None, finish(issues))
     check_author(issues, checked)
     source = _check_source(issues, checked, params, engine)
@@ -87,10 +103,15 @@ def validate_indexing(form: Mapping[str, Any], *, settings: Settings, engine: En
         _check_placeholders(issues, checked, params, kind)
     for name in ("geometry_file", "crystal_file", "mask_file"):
         check_file(issues, settings, checked, name)
+    if isinstance(params, LaueMatchingParamsV1):
+        check_file(issues, settings, checked, "background_file")
+        check_laue_matching(issues, settings, checked, params)
+        _check_depths(issues, checked, params, engine)
     check_backend(issues, settings, checked)  # first: the remote rules apply to an offered remote target only
     check_output(issues, settings, checked)
     check_transferred_inputs(issues, settings, checked)
-    _check_output_xml(issues, settings, checked, params)
+    if isinstance(params, LaueGoParamsV1):
+        _check_output_xml(issues, settings, checked, params)
     names = ("filename_prefixes", "scan_points", "depth_range")
     counted = checked.usable(*names) and not issues.has_error(*names) and check_input_count(issues, settings, params)
     if counted and kind is not None and checked.usable("input_path") and not issues.has_error("input_path"):
@@ -101,6 +122,25 @@ def validate_indexing(form: Mapping[str, Any], *, settings: Settings, engine: En
             ),
         )
     return Validated(run_params, finish(issues))
+
+
+def _check_depths(issues: Issues, checked: Checked, params: LaueMatchingParamsV1, engine: Engine) -> None:
+    """A warning when the source reconstruction's depths reach far enough for the depth term LaueMatching lacks to
+    matter. Frames read from files are checked as they are read (``indexing.laue_matching.compute``)."""
+
+    if not checked.usable("reconstruction_id") or params.reconstruction_id is None:
+        return
+    with Session(engine) as session:
+        reconstruction = session.get(ReconstructionRun, params.reconstruction_id)
+        parameters = reconstruction.wire_parameters if reconstruction is not None else None
+        if parameters is None or max(abs(parameters.depth_start), abs(parameters.depth_end)) <= DEEP_DEPTH_UM:
+            return
+    issues.warning(
+        ["reconstruction_id"],
+        "deep_frames",
+        f"This reconstruction reaches beyond {DEEP_DEPTH_UM:g} um: LaueMatching uses the geometry at depth 0, so spots "
+        "of frames that deep are displaced by about half a pixel or more",
+    )
 
 
 def _is_catalog(path: os.PathLike[str]) -> bool:
@@ -121,7 +161,9 @@ class _Source:
     """A reconstruction's scan."""
 
 
-def _check_source(issues: Issues, checked: Checked, params: LaueGoParamsV1, engine: Engine) -> _Source | None:
+def _check_source(
+    issues: Issues, checked: Checked, params: LaueGoParamsV1 | LaueMatchingParamsV1, engine: Engine
+) -> _Source | None:
     """The source scan and reconstruction exist and agree (errors); without either, a warning (unlinked). Returns
     the source's label and path (and a reconstruction's catalog and scan)."""
 
@@ -157,7 +199,9 @@ def _check_source(issues: Issues, checked: Checked, params: LaueGoParamsV1, engi
         return _Source(f"SN{scan_number}", catalog_row.filefolder) if catalog_row is not None else None
 
 
-def _check_placeholders(issues: Issues, checked: Checked, params: LaueGoParamsV1, kind: InputKind) -> None:
+def _check_placeholders(
+    issues: Issues, checked: Checked, params: LaueGoParamsV1 | LaueMatchingParamsV1, kind: InputKind
+) -> None:
     """The ``%d`` placeholders of each file-name template against Scan Indices and Depth Indices (errors)."""
 
     if not checked.usable("filename_prefixes", "depth_range"):

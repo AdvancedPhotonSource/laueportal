@@ -544,4 +544,14 @@ A program is a run kind with its own parameters and compute function. For a new 
    `GET /programs`); a list and a viewer if it has results.
 5. **Remote targets:** the remote runners, the plan and the PBS script name each kind (`jobs/runner.py`,
    `jobs/mpi_runner.py`, `remote/plan.py`, `remote/pbs.py`, `remote/poller.py`), and so do the run summaries
-   (`jobs/summary.py`): a remote program adds its kind there, with tests in `tests/remote/`.
+   (`jobs/summary.py`): a remote program adds its kind there, with tests in `tests/remote/`. A program that computes
+   only on the worker has no `backend` form field, and `remote.plan.REMOTE_KINDS` leaves it out, since several of those
+   modules test only for `lauego_indexing` and treat every other kind as a wire run.
+6. **Places that name programs one by one:** `frontend/src/features/program-form/requests.ts` and `source-mode.ts`, the
+   `Record<ProgramKind, ...>` maps the compiler lists, `jobs/prefill.py`, the run lists (`indexing/service.py`), and
+   the Parameters tab (`features/indexing/parameters.ts`).
+
+`laue_matching` is the example of a second program in one domain: `indexing/laue_matching/` has its parameters, compute
+and data-folder checks, `science/laue_matching.py` reads the crystal and detector, and it writes the same results file
+as LaueGo, so the viewers need only its labels. Its GPU plan is in
+[`laue-matching-remote-gpu.md`](laue-matching-remote-gpu.md).

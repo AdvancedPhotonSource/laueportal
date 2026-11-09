@@ -129,7 +129,7 @@ DM_RETRY_SECONDS = 10
 """Start's ``Retry-After`` when DM did not answer its bind check."""
 
 SCAN = "scan"
-PARTS: dict[str, programs.ProgramKind] = {"reconstruction": "wire", "indexing": "lauego"}
+PARTS: dict[str, programs.LiveCapableKind] = {"reconstruction": "wire", "indexing": "lauego"}
 """The program parts of the form and the program of each (Reconstruction: a live wire run; Indexing: a live LaueGo
 run)."""
 SCAN_SETS: dict[str, str | None] = {
@@ -142,7 +142,7 @@ SCAN_SETS: dict[str, str | None] = {
 }
 """The run fields the Scan card sets, and the Scan card's field a run's issue on each is reported on (None for
 a follower's ``reconstruction_id``, which no form field sets)."""
-RUN_FOLDERS: dict[programs.ProgramKind, str] = {"wire": "rec_%d", "lauego": "index_%d"}
+RUN_FOLDERS: dict[programs.LiveCapableKind, str] = {"wire": "rec_%d", "lauego": "index_%d"}
 """Each run's folder in the session's output folder."""
 RUN_FOLDER_NAMES = re.compile("|".join(re.escape(name).replace("%d", "[0-9]+") for name in RUN_FOLDERS.values()))
 """The names of the session's run folders (``rec_<ID>``, ``index_<ID>``): an output folder holding only these is not
@@ -352,7 +352,7 @@ def _part(issues: Issues, name: str, value: Any) -> Mapping[str, Any] | None:
     return {key: item for key, item in part.items() if key not in SCAN_SETS}
 
 
-def _scan_values(scan: _Scan, kind: programs.ProgramKind) -> dict[str, Any]:
+def _scan_values(scan: _Scan, kind: programs.LiveCapableKind) -> dict[str, Any]:
     """The run fields the Scan card sets. A follower's ``input_path`` and ``reconstruction_id`` are its wire
     run's, set once that run exists; it is validated on the folder (``live.json``'s folder is its wire run's)."""
     folder = os.fspath(scan.real_folder) if scan.real_folder is not None else scan.folder
@@ -369,7 +369,7 @@ def _scan_values(scan: _Scan, kind: programs.ProgramKind) -> dict[str, Any]:
     return values
 
 
-def _check_run(issues: Issues, settings: Settings, kind: programs.ProgramKind, form: Mapping[str, Any]) -> Checked:
+def _check_run(issues: Issues, settings: Settings, kind: programs.LiveCapableKind, form: Mapping[str, Any]) -> Checked:
     """One run's checks: the live model's rules, its files (inside the roots, existing, and loading as lauelab reads
     them), its output folder, and a wire run's depths and skips."""
 
@@ -389,7 +389,7 @@ def _check_run(issues: Issues, settings: Settings, kind: programs.ProgramKind, f
     return checked
 
 
-def _check_loads(issues: Issues, checked: Checked, kind: programs.ProgramKind, sizes: Mapping[str, int]) -> None:
+def _check_loads(issues: Issues, checked: Checked, kind: programs.LiveCapableKind, sizes: Mapping[str, int]) -> None:
     """A live create check: the geometry loads as the run reads it (a wire run's with its wire section and detector 0),
     and an indexing run's crystal; checked once the file passed ``check_file`` (``sizes``: each such file's size, from
     its stat), and never parsed when it is larger than ``science.calibration.MAX_CALIBRATION_BYTES`` (``too_large``):

@@ -24,7 +24,7 @@ test("from the finished R1: New Index gives its scan.h5 with every depth, and th
     )
   ).toEqual({ reconstruction: "1", scan: String(DEMO) })
   await expect(page).toHaveURL(/\/indexing\/new$/)
-  await expect(page).toHaveTitle("New LaueGo Indexation · 3DMN Portal")
+  await expect(page).toHaveTitle("New Indexation · 3DMN Portal")
   await expect(sourceKind(page, "Reconstruction")).toHaveAttribute(
     "aria-pressed",
     "true"

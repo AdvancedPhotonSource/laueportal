@@ -459,6 +459,39 @@ class ReconstructionSettings(_Section):
     defaults: ReconstructionDefaults = Field(default_factory=ReconstructionDefaults)
 
 
+class LaueMatchingDefaults(_Section):
+    """LaueMatching form defaults, by the request field names (``indexing/laue_matching/params.py``)."""
+
+    threshold_method: Literal["percentile", "adaptive", "otsu", "fixed"] = "percentile"
+    threshold_percentile: float = Field(default=99.8, gt=0, le=100)
+    threshold_value: float = Field(default=0, ge=0)
+    min_area: int = Field(default=4, gt=0)
+    watershed_image: bool = True
+    background_file: OptionalPath = None
+    elo: float = Field(default=5, gt=0)
+    ehi: float = Field(default=30, gt=0)
+    max_nr_laue_spots: int = Field(default=30, gt=0)
+    min_nr_spots: int = Field(default=8, gt=0)
+    min_good_spots: int = Field(default=4, ge=0)
+    min_intensity: float = Field(default=50, ge=0)
+    max_angle: float = Field(default=3, gt=0)
+    robust_filter: bool = True
+
+
+class LaueMatchingSettings(_Section):
+    data_root: OptionalPath = None
+    """The folder holding ``100MilOrients.bin`` and one folder per named forward cache
+    (``indexing.laue_matching.cache``). Not set: a LaueMatching run is refused. The indexer maps these files into
+    memory only under ``/dev/shm``; from anywhere else each frame reads all of them."""
+    threads: int = Field(default=16, gt=0)
+    """The indexer's threads for each frame; frames are indexed one at a time. The default suits a machine of about 16
+    cores. Measure a deployment's own host: thread scaling depends on its memory bandwidth."""
+    orientation_spacing: float = Field(default=0.4, gt=0)
+    filter_radius: int = Field(default=101, gt=0)
+    gauss_sigma_max: float = Field(default=2.5, ge=0)
+    defaults: LaueMatchingDefaults = Field(default_factory=LaueMatchingDefaults)
+
+
 class RemoteSection(_Section):
     """Remote execution through DM. Off unless enabled.
 
@@ -578,6 +611,7 @@ class Settings(BaseSettings):
     output_templates: OutputTemplates = Field(default_factory=OutputTemplates)
     indexing: IndexingSettings = Field(default_factory=IndexingSettings)
     reconstruction: ReconstructionSettings = Field(default_factory=ReconstructionSettings)
+    laue_matching: LaueMatchingSettings = Field(default_factory=LaueMatchingSettings)
     remote: RemoteSection = Field(default_factory=RemoteSection)
     live: LiveSettings = Field(default_factory=LiveSettings)
 

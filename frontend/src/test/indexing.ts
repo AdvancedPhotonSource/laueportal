@@ -83,6 +83,7 @@ export function makeIndexingRunDetail(
     notes: null,
     created_at: "2026-10-01T08:00:00Z",
     parameters: makeLaueGoParameters(),
+    laue_matching_parameters: null,
     ...overrides,
   }
 }

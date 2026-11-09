@@ -73,8 +73,10 @@ practice that follows. When one of them conflicts with your task, say so and ask
 - A **point** is one measurement location of a wire scan; reconstruction converts its frames into one frame per depth.
 - A **reconstruction** (`R<id>`; a wire run in the code) is a run of the wire program. Its artifact is a lauelab scan
   catalog (`scan.h5`) with one point file per point.
-- An **indexing run** (`I<id>`; a LaueGo run in the code) is a run of the LaueGo program over frames or over a
-  reconstruction's depths. Its artifact is the results file (`output.h5`, with an Output XML).
+- An **indexing run** (`I<id>`) is a run of an indexing program, LaueGo or LaueMatching (`method`), over frames or over
+  a reconstruction's depths. Its artifact is the results file (`output.h5`; a LaueGo run also has an Output XML).
+- A **forward cache** is LaueMatching's precomputed simulation of every orientation, named by users and shared by the
+  runs whose geometry, crystal, energies and spot count it exactly fits.
 - A **job** is the execution record of one run: its status (Queued, Running, Finished, Failed, Cancelled) and phase.
 - A **run directory** is the folder that contains a run's frozen request, input manifest, outputs and history.
 - An **execution target** is where a run computes: `local` (the worker), `aps` (the APS cluster, through DM and PBS) or
@@ -187,7 +189,7 @@ halves), `check-frontend` and `check-contract`; reproduce a failed job with its 
 
 - `backend/src/laueportal/` has one package per domain (`scans`, `indexing`, `reconstruction`, `jobs`, `files`,
   `system`), the shared `core`, `science` (the only package that calls lauelab, apart from the programs' `compute.py`
-  and `live_compute.py` in `indexing/lauego/` and `reconstruction/wire/`), `remote` (remote execution and the launcher
+  and `live_compute.py` in `indexing/lauego/`, `indexing/laue_matching/` and `reconstruction/wire/`), `remote` (remote execution and the launcher
   that runs on the DM host), `seed` (the synthetic demo data) and `util` (vendored helpers, not linted).
 - `backend/migrations/` contains the Alembic revisions; `backend/tests/` contains the tests and their fixtures.
 - `frontend/src/` contains `routes`, `features` (one folder per page area), `viz` (the Canvas2D and VTK.js views),

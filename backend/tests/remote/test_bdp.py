@@ -816,3 +816,16 @@ def test_a_call_outlives_a_worker_killed_outright_only_until_its_own_limit(tmp_p
     finally:
         worker.kill()
         kill_quietly(_started(pids))
+
+
+def test_a_laue_matching_request_gets_no_plan(tmp_path):
+    """No remote target computes LaueMatching yet; its plan is refused before anything is written."""
+    engine = make_engine(tmp_path)
+    layout = Layout(tmp_path)
+    run = create_lauego_run(engine, layout, count=1, backend="aps")
+    view = job_view(engine, run.job_id)
+    document = json.loads(Path(view.request_path).read_text())
+    document["kind"] = "laue_matching_indexing"
+    Path(view.request_path).write_text(json.dumps(document))
+    with pytest.raises(RemoteSettingsError, match="only on the portal's own worker"):
+        plan.build_plan(view, remote_settings(bdp_settings(layout)), "00000000-0000-4000-8000-000000000000")

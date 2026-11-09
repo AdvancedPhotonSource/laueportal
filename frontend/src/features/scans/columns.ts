@@ -83,7 +83,7 @@ export const SCAN_RECONSTRUCTION_COLUMNS: GridColumn<ReconstructionRunSummary>[]
     },
   ]
 
-// The indexing list sorts and filters every field but `method` (all LaueGo runs).
+// The indexing list sorts and filters every field.
 export const SCAN_INDEXING_COLUMNS: GridColumn<IndexingRunSummary>[] = [
   {
     field: "id",
@@ -101,18 +101,10 @@ export const SCAN_INDEXING_COLUMNS: GridColumn<IndexingRunSummary>[] = [
     link: "reconstruction",
     width: 88,
   },
-  {
-    field: "method",
-    header: "Method",
-    type: "text",
-    width: 88,
-    filterable: false,
-    sortable: false,
-  },
+  { field: "method_label", header: "Method", type: "text", width: 120 },
   { field: "author", header: "Author", type: "text", flex: 1, minWidth: 96 },
   { field: "n_points", header: "Points", type: "number", width: 88 },
   { field: "n_depths", header: "Depth Points", type: "number", width: 124 },
-  { field: "box_size", header: "Box", type: "number", width: 72 },
   {
     field: "crystal_file",
     header: "Structures File",

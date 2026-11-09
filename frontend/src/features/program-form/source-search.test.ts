@@ -20,4 +20,19 @@ describe("sourceQuery", () => {
       sample_name: { filterType: "text", type: "contains", filter: "Ni" },
     })
   })
+
+  it("keeps a form's clone list to its own program's runs, with or without a search", () => {
+    const method = {
+      method: { filterType: "text", type: "equals", filter: "laue_matching" },
+    }
+    expect(
+      JSON.parse(sourceQuery("indexing", "", "laue_matching").filter ?? "")
+    ).toEqual(method)
+    expect(
+      JSON.parse(sourceQuery("indexing", "12", "laue_matching").filter ?? "")
+    ).toEqual({
+      ...method,
+      id: { filterType: "number", type: "equals", filter: 12 },
+    })
+  })
 })

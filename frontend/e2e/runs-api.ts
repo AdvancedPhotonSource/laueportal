@@ -54,6 +54,7 @@ export function indexingRun(
   return {
     id,
     method: "lauego",
+    method_label: "LaueGo",
     scan_number: 990_000 + (id % 7),
     sample_name: "Si",
     reconstruction_id: id % 3 === 0 ? null : id,

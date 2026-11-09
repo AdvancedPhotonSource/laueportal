@@ -27,12 +27,14 @@ from laueportal.core.db import SQLITE_INTEGER_MAX
 from laueportal.core.paging import grid_request
 from laueportal.core.settings import Settings
 from laueportal.indexing import conversion, detector, products, service, tables, validation, viewer
+from laueportal.indexing.laue_matching.data import list_forward_caches
 from laueportal.indexing.schemas import (
     MAX_MIN_PEAKS,
     MIN_PEAKS_DESCRIPTION,
     PATTERN0_ONLY_DESCRIPTION,
     ConversionJob,
     DetectorOverlays,
+    ForwardCacheList,
     IndexingArtifact,
     IndexingResultsSummary,
     IndexingRunDetail,
@@ -127,8 +129,8 @@ async def _viewer_source(sessions: sessionmaker[Session], indexing_id: int, sett
 def list_indexing_runs(
     params: Annotated[RunGridParams, Query()], session: SessionDep, response: Response
 ) -> IndexingRunPage:
-    """The indexations grid of LaueGo runs (the grid query protocol), live (`changed_since`:
-    the active runs and those changed since). Every field but `method` sorts and filters: `id`, `scan_number`
+    """The indexations grid (the grid query protocol), live (`changed_since`:
+    the active runs and those changed since). Every field sorts and filters: `id`, `method`, `scan_number`
     and `reconstruction_id` (the source; both blank for an unlinked run), `n_points`, `n_depths`, `box_size`, the
     counters `n_inputs`, `n_succeeded`, `n_failed`, `n_not_run`, `n_processed` (number), `crystal_file`,
     `author`, `notes`, `status` (text; it sorts in the lifecycle order: queued, running, finished, failed,
@@ -198,6 +200,84 @@ async def create_indexing_run(
     )
 
 
+@router.post(
+    "/indexing-runs/laue-matching/validate",
+    name="validateLaueMatchingRun",
+    summary="Validate a LaueMatching indexing run's parameters",
+    response_model=ValidationReport,
+)
+async def validate_laue_matching_run(
+    form: Annotated[dict[str, Any], Body(description=VALIDATE_BODY.format(schema="laue-matching/v1"))],
+    settings: SettingsDep,
+    engine: EngineDep,
+    request: Request,
+) -> ValidationReport | Response:
+    """Check one LaueMatching run's parameters, as `validateIndexingRun` checks a LaueGo run's, and its energy range,
+    the data folder and the forward cache: a cache to reuse must exactly fit the run's crystal, detector and energies,
+    and a new cache's name must be free. Always a 200 with the issues. A folder read, with its 503 while 16 wait."""
+    validated = await read_folders(
+        request, partial(validation.validate_laue_matching, form, settings=settings, engine=engine)
+    )
+    return validated if isinstance(validated, Response) else ValidationReport(issues=validated.issues)
+
+
+@router.post(
+    "/indexing-runs/laue-matching",
+    name="createLaueMatchingRun",
+    summary="Create and submit a LaueMatching indexing run",
+    status_code=201,
+    response_model=CreatedRun,
+    responses=KEY_CONFLICT,
+)
+async def create_laue_matching_run(
+    form: Annotated[dict[str, Any], Body(description=CREATE_BODY.format(schema="laue-matching/v1"))],
+    idempotency_key: Annotated[
+        str,
+        Header(alias="Idempotency-Key", min_length=1, max_length=IDEMPOTENCY_KEY_LENGTH, description=IDEMPOTENCY_KEY),
+    ],
+    settings: SettingsDep,
+    engine: EngineDep,
+    request: Request,
+) -> CreatedRun | Response:
+    """Create one LaueMatching run from the create form's values and queue it on the portal's worker, as
+    `createIndexingRun` creates a LaueGo run: the same answers, `Idempotency-Key` rules and folder-read turn."""
+    return await read_folders(
+        request,
+        partial(creation.submit, "laue_matching", form, key=idempotency_key, settings=settings, engine=engine),
+    )
+
+
+@router.get(
+    "/laue-matching/forward-caches",
+    name="listForwardCaches",
+    summary="List the forward caches that fit a LaueMatching form's values",
+    response_model=ForwardCacheList,
+)
+async def list_laue_matching_forward_caches(
+    settings: SettingsDep,
+    request: Request,
+    geometry_file: Annotated[str, Query(description="The geometry file, inside the roots.")],
+    crystal_file: Annotated[str, Query(description="The crystal file, inside the roots.")],
+    elo: Annotated[float, Query(gt=0, description="Min Energy (keV).")],
+    ehi: Annotated[float, Query(gt=0, description="Max Energy (keV).")],
+    max_nr_laue_spots: Annotated[int, Query(gt=0, description="Max Spots per Orientation.")],
+) -> ForwardCacheList | Response:
+    """The named forward caches whose record exactly fits these values, and a free name for a new one. A data folder or
+    file that cannot be read is `problem`, not an error. A folder read, with its 503 while 16 wait."""
+    return await read_folders(
+        request,
+        partial(
+            list_forward_caches,
+            settings,
+            geometry_file=geometry_file,
+            crystal_file=crystal_file,
+            elo=elo,
+            ehi=ehi,
+            max_nr_laue_spots=max_nr_laue_spots,
+        ),
+    )
+
+
 @router.get(
     "/indexing-runs/{indexing_id}",
     name="getIndexingRun",
@@ -205,7 +285,7 @@ async def create_indexing_run(
     response_model=IndexingRunDetail,
 )
 def get_indexing_run(indexing_id: IndexingId, session: SessionDep, response: Response) -> IndexingRunDetail:
-    """The run (its source, paths, author and notes), its job's ID and its stored LaueGo parameters (`parameters`,
+    """The run (its source, paths, author and notes), its job's ID and its stored parameters (`parameters` for LaueGo, `laue_matching_parameters` for LaueMatching,
     null without them), read from the database, so a run migrated from v1 has them too.
     Any method. 404 for an unknown run."""
     response.headers["Cache-Control"] = "no-store"

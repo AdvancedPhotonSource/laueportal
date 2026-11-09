@@ -50,7 +50,7 @@ micromamba create -y -p "$root/envs/laue-portal" --file "$root/src/environment.l
 py="$root/envs/laue-portal/bin/python"
 uv pip install --python "$py" --require-hashes --no-deps -r "$root/src/requirements/base.lock"
 micromamba run -p "$root/envs/laue-portal" uv pip install --python "$py" --no-deps \
-    "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@d5de751a8e8a01ac053ddb0b09c4d35a91a005da"
+    "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@6d37e95403aca7b1a0996c17668f83db7584f8bb"
 uv pip install --python "$py" --no-deps -e "$root/src/backend"
 uv pip check --python "$py"
 ```
@@ -359,6 +359,39 @@ Run Monitor, and a file browser listing under each root (a 404 for a root this h
   `supervisorctl ... start <program>`.
 - **At boot** nothing starts unless you add it, e.g. the portal account's crontab:
   `@reboot . /local/laueportal/config/prod.env && supervisord -c /local/laueportal/config/supervisord.conf`.
+
+## 5b. LaueMatching's data folder
+
+LaueMatching needs a folder of its own: the orientation database and one folder per named forward cache. Create it where
+the worker can read and write it, download the database into it, and set `[laue_matching] data_root` in `prod.toml`:
+
+```sh
+laue-index fetch-db --dest <data folder>     # 7.2 GB; checks its SHA-256
+```
+
+```text
+<data folder>/100MilOrients.bin
+<data folder>/Ni_geoN_5-30/forward.bin        a named forward cache: 3 to 12 GB, by Max Spots per Orientation
+<data folder>/Ni_geoN_5-30/forward.bin.meta.json
+<data folder>/Ni_geoN_5-30/hkls.csv
+```
+
+Until it is set, the form refuses a LaueMatching run with one line, and LaueGo and wire runs are unaffected. Restart the
+API and the worker after a change.
+
+- **Speed.** The indexer maps these files into memory only when their path starts with `/dev/shm`; from anywhere else,
+  each frame reads the whole database and forward cache, about 19 GB at 30 spots. On a development workstation (Ryzen
+  AI MAX+ 395, 16 cores, unified memory) with both files in `/dev/shm`, a frame took about 1.4 s; production hardware
+  will differ. Measure one run on the production host and folder (a NAS such as `/gdata`) before relying on it, and set
+  `threads` from that run.
+  If it is too slow, set `data_root` to a folder under `/dev/shm`: a copy of the folder, or a symbolic link to it (the
+  check is on the path's text, so the files are then mapped through the page cache; not yet measured on a NAS).
+- **Memory.** The database and a 30-spot cache take about 19 GB of RAM while mapped.
+- **Caches.** A cache fits one geometry, crystal, energy range and spot count exactly: any change, however small, needs
+  another cache. The portal lists the ones that fit, never overwrites one and has no way to delete one: remove a cache's
+  folder by hand when no run is using it. A finished run keeps the cache's record in its `run.json`.
+- **Install.** `laue-index` compiles its C indexer when the locked requirements are installed, so the portal's host
+  needs a C compiler with OpenMP, as `make setup` provides.
 
 ## 6. Remote execution on or off
 

@@ -59,11 +59,11 @@ def test_db_commands_build_check_and_report_the_configured_database(tmp_path, cl
     assert run(capsys, "db", "check")[0] == 1
     assert not database.exists()
 
-    assert run(capsys, "db", "upgrade") == (0, f"{database}: upgraded (empty) -> 0008\n", "")
-    assert run(capsys, "db", "current") == (0, "0008 (head)\n", "")
+    assert run(capsys, "db", "upgrade") == (0, f"{database}: upgraded (empty) -> 0009\n", "")
+    assert run(capsys, "db", "current") == (0, "0009 (head)\n", "")
     status, out, err = run(capsys, "db", "check")
     assert (status, out.splitlines()[-1], err) == (0, f"{database}: OK", "")
-    assert run(capsys, "db", "upgrade", "head") == (0, f"{database}: already at 0008\n", "")
+    assert run(capsys, "db", "upgrade", "head") == (0, f"{database}: already at 0009\n", "")
 
 
 def test_db_check_and_current_say_what_to_do(tmp_path, clean_env, capsys):
@@ -71,11 +71,11 @@ def test_db_check_and_current_say_what_to_do(tmp_path, clean_env, capsys):
     other = tmp_path / "other.db"
 
     assert run(capsys, "db", "upgrade", "0004", "--db", str(other))[:2] == (0, f"{other}: upgraded (empty) -> 0004\n")
-    assert run(capsys, "db", "current", "--db", str(other))[1] == "0004 (head is 0008: run `laueportal db upgrade`)\n"
+    assert run(capsys, "db", "current", "--db", str(other))[1] == "0004 (head is 0009: run `laueportal db upgrade`)\n"
     status, _out, err = run(capsys, "db", "check", "--db", str(other))
     assert status == 1
     assert (
-        err == f"laueportal db check: database {other} is at revision 0004, head is 0008: run `laueportal db upgrade`\n"
+        err == f"laueportal db check: database {other} is at revision 0004, head is 0009: run `laueportal db upgrade`\n"
     )
 
     status, _out, err = run(capsys, "db", "upgrade", "0099", "--db", str(other))
@@ -91,14 +91,14 @@ def test_a_v1_database_moves_to_head_by_stamp_then_upgrade(tmp_path, clean_env, 
     status, _out, err = run(capsys, "db", "upgrade")
     assert status == 1 and "has tables but no Alembic revision" in err and "laueportal db stamp --detect" in err
     assert run(capsys, "db", "current")[1] == (
-        "none (not under Alembic; head is 0008): a v1 database is stamped with `laueportal db stamp --detect` "
+        "none (not under Alembic; head is 0009): a v1 database is stamped with `laueportal db stamp --detect` "
         "(0001 for v1 dde1bde's schema, 0002 for v1 3ad1557's)\n"
     )
     status, _out, err = run(capsys, "db", "check")
     assert status == 1 and "is not under Alembic" in err
 
     assert run(capsys, "db", "stamp", revision) == (0, f"{v1}: stamped {revision}\n", "")
-    assert run(capsys, "db", "upgrade")[:2] == (0, f"{v1}: upgraded {revision} -> 0008\n")
+    assert run(capsys, "db", "upgrade")[:2] == (0, f"{v1}: upgraded {revision} -> 0009\n")
     assert run(capsys, "db", "check")[0] == 0
 
 
@@ -112,7 +112,7 @@ def test_db_stamp_detect_stamps_the_v1_revision_of_the_schema(tmp_path, clean_en
         f"{v1}: stamped {revision} (detected: v1 {commit}'s schema)\n",
         "",
     )
-    assert run(capsys, "db", "current")[1] == f"{revision} (head is 0008: run `laueportal db upgrade`)\n"
+    assert run(capsys, "db", "current")[1] == f"{revision} (head is 0009: run `laueportal db upgrade`)\n"
     status, _out, err = run(capsys, "db", "stamp", "--detect")
     assert (status, err) == (
         1,
@@ -172,7 +172,7 @@ def test_db_stamp_detect_takes_a_v1_cb1159c_database_once_its_live_sessions_have
         "live_session dropped)\n",
         "",
     )
-    assert run(capsys, "db", "upgrade")[:2] == (0, f"{v1}: upgraded 0002 -> 0008\n")
+    assert run(capsys, "db", "upgrade")[:2] == (0, f"{v1}: upgraded 0002 -> 0009\n")
     assert run(capsys, "db", "check")[0] == 0
 
 
@@ -194,7 +194,7 @@ def test_db_stamp_detect_takes_v1_cb1159cs_schema_without_its_live_tables(tmp_pa
         f"{v1}: stamped 0002 (detected: v1 cb1159c's schema without its live tables)\n",
         "",
     )
-    assert run(capsys, "db", "upgrade")[:2] == (0, f"{v1}: upgraded 0002 -> 0008\n")
+    assert run(capsys, "db", "upgrade")[:2] == (0, f"{v1}: upgraded 0002 -> 0009\n")
     assert run(capsys, "db", "check")[0] == 0
 
 
@@ -232,11 +232,11 @@ def test_db_upgrade_refuses_a_revision_below_the_database(tmp_path, clean_env, c
         status, out, err = run(capsys, "db", "upgrade", revision)
         assert (status, out) == (1, "")
         assert err == (
-            f"laueportal db upgrade: database {database} is at revision 0008, past the requested {revision}: "
+            f"laueportal db upgrade: database {database} is at revision 0009, past the requested {revision}: "
             "upgrade does not go down, and downgrades are not available from the command line\n"
         )
     assert file_digest(database) == digest
-    assert run(capsys, "db", "current")[1] == "0008 (head)\n"
+    assert run(capsys, "db", "current")[1] == "0009 (head)\n"
 
 
 def test_db_commands_refuse_a_database_migrated_with_the_early_numbering(tmp_path, clean_env, capsys):
@@ -325,10 +325,10 @@ def test_reading_works_on_a_read_only_file_and_writing_fails_in_one_line(tmp_pat
     path.chmod(0o444)
     configure(clean_env, tmp_path, path)
 
-    assert run(capsys, "db", "current") == (0, "0008 (head)\n", "")
+    assert run(capsys, "db", "current") == (0, "0009 (head)\n", "")
     status, out, err = run(capsys, "db", "check")
     assert (status, out.splitlines()[-1], err) == (0, f"{path}: OK", "")
-    for argv in (["db", "stamp", "0008"], ["db", "upgrade"]):
+    for argv in (["db", "stamp", "0009"], ["db", "upgrade"]):
         status, out, err = run(capsys, *argv)
         assert (status, out) == (1, "")
         assert err == f"laueportal {argv[0]} {argv[1]}: database {path}: attempt to write a readonly database\n"
@@ -381,7 +381,7 @@ def test_make_db_upgrade_and_db_check(tmp_path):
 
     for target, expected in (
         ("db-check", f"database {database} does not exist"),
-        ("db-upgrade", f"{database}: upgraded (empty) -> 0008"),
+        ("db-upgrade", f"{database}: upgraded (empty) -> 0009"),
         ("db-check", f"{database}: OK"),
     ):
         result = subprocess.run(
@@ -544,11 +544,11 @@ def test_db_check_reports_the_counts_of_a_healthy_database(tmp_path, clean_env, 
     assert run(capsys, "db", "check") == (
         0,
         "journal: wal on ext4 (local, mounted at /)\n"
-        "revision: 0008 (head)\n"
+        "revision: 0009 (head)\n"
         "quick_check: ok\n"
         "foreign_key_check: 0 violations\n"
         "timestamps: 5 values, 0 not UTC\n"
-        "rows: catalog 0, conversion 0, idempotency_key 0, indexing_run 0, job 2, lauego_indexing_parameters 0, "
+        "rows: catalog 0, conversion 0, idempotency_key 0, indexing_run 0, job 2, laue_matching_indexing_parameters 0, lauego_indexing_parameters 0, "
         "metadata 0, reconstruction_run 0, scan 0, wire_reconstruction_parameters 0, worker 0\n"
         "runs stuck in created or published: 0\n"
         f"{database}: OK\n",
@@ -631,7 +631,7 @@ def test_db_stamp_refuses_0005_or_later_while_timestamps_are_naive(tmp_path, cle
         "not stamped 0005: "
     )
     assert migrations.current_revision(DatabaseSettings(path=database)) == "0004"
-    assert run(capsys, "db", "upgrade")[:2] == (0, f"{database}: upgraded 0004 -> 0008\n")
+    assert run(capsys, "db", "upgrade")[:2] == (0, f"{database}: upgraded 0004 -> 0009\n")
     assert run(capsys, "db", "check")[0] == 0
 
 

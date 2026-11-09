@@ -12,6 +12,7 @@ function run(
   return {
     id,
     method: "lauego",
+    method_label: "LaueGo",
     scan_number,
     sample_name: null,
     reconstruction_id,
@@ -32,6 +33,16 @@ function run(
 }
 
 describe("indexingActions", () => {
+  it("clones a LaueMatching run on the LaueMatching form", () => {
+    const actions = indexingActions([
+      { ...run(70, 990001, 2), method: "laue_matching" },
+    ])
+    expect(actions.newIndex).toEqual({
+      indexing: "70",
+      program: "laue_matching",
+    })
+  })
+
   it("disables both buttons without a selection", () => {
     expect(indexingActions([])).toEqual({ count: 0 })
   })

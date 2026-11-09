@@ -174,13 +174,13 @@ test("the navbar and its Menu reach every page", async ({ page }) => {
   for (const [item, path, section] of [
     ["Import Scans", "/scans/import", "Scans"],
     ["New Wire Reconstruction", "/reconstructions/new", "Reconstructions"],
-    ["New LaueGo Indexation", "/indexing/new", "Indexations"],
+    ["New Indexation", "/indexing/new", "Indexations"],
   ] as const) {
     await nav.getByRole("button", { name: "Menu" }).click()
     await expect(page.getByRole("menuitem")).toHaveText([
       "Import Scans",
       "New Wire Reconstruction",
-      "New LaueGo Indexation",
+      "New Indexation",
     ])
     await page.getByRole("menuitem", { name: item }).click()
     await expect(page).toHaveURL(new RegExp(`${path}$`))
@@ -214,7 +214,7 @@ test("below 1024 px the Live link is the Menu's first item", async ({
     "Live",
     "Import Scans",
     "New Wire Reconstruction",
-    "New LaueGo Indexation",
+    "New Indexation",
   ])
   await page.getByRole("menuitem", { name: "Live" }).click()
   await expect(page).toHaveURL(/\/live$/)

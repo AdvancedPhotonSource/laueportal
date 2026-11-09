@@ -108,9 +108,17 @@ allowed_importers = [
     "laueportal.science",
     "laueportal.indexing.lauego.compute",
     "laueportal.indexing.lauego.live_compute",
+    "laueportal.indexing.laue_matching.compute",
     "laueportal.reconstruction.wire.compute",
     "laueportal.reconstruction.wire.live_compute",
 ]
+
+[[tool.importlinter.contracts]]
+id = "rule-2b-laue-index"
+name = "2b. Only the LaueMatching compute module imports laue_index and skimage"
+type = "protected"
+protected_modules = ["laue_index", "skimage"]
+allowed_importers = ["laueportal.indexing.laue_matching.compute"]
 
 [[tool.importlinter.contracts]]
 id = "rule-3-alcf-seam"

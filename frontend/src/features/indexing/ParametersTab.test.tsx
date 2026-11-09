@@ -96,7 +96,7 @@ describe("the indexing viewer's Parameters tab", () => {
       />
     )
     expect(container.textContent).toContain(
-      "No LaueGo parameters stored (method laue_matching)."
+      "No parameters stored (method laue_matching)."
     )
     expect(cards(container).map(titleOf)).toEqual([
       "Identity",

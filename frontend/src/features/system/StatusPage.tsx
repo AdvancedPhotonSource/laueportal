@@ -36,7 +36,7 @@ const QUICK_ACTIONS = [
   },
   {
     to: "/indexing/new",
-    label: "New LaueGo Indexation",
+    label: "New Indexation",
     icon: ScanSearchIcon,
   },
   { to: "/runs", label: "Run Monitor", icon: ActivityIcon },

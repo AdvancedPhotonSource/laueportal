@@ -15,6 +15,7 @@ psutil==7.2.2
 mpi4py==4.1.1
 
 # lauelab's own runtime dependencies (it is installed with --no-deps), as in base.in. Only
-# lauelab.visualization imports them, but lauelab declares them.
+# lauelab.visualization imports pandas and plotly, but lauelab declares them.
 pandas>=2.0
 plotly>=6.0
+scipy>=1.13

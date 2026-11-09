@@ -403,7 +403,7 @@ def run_record(job: Job) -> RunRecord:
     kind = display_id = results_path = None
     if job.indexing_run is not None:
         results_path = job.indexing_run.results_path
-        kind, display_id = "lauego_indexing", f"Indexing I{job.indexing_run.id}"
+        kind, display_id = f"{job.indexing_run.method}_indexing", f"Indexing I{job.indexing_run.id}"
     elif job.reconstruction_run is not None:
         kind = f"{job.reconstruction_run.method}_reconstruction"
         display_id = f"Reconstruction R{job.reconstruction_run.id}"

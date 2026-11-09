@@ -114,11 +114,7 @@ describe("page titles", () => {
     ],
     ["/indexing", "Indexations · 3DMN Portal", "Indexations"],
     ["/indexing/70", "Indexing I70 · 3DMN Portal", "Indexing I70"],
-    [
-      "/indexing/new",
-      "New LaueGo Indexation · 3DMN Portal",
-      "New LaueGo Indexation",
-    ],
+    ["/indexing/new", "New Indexation · 3DMN Portal", "New Indexation"],
     ["/runs", "Run Monitor · 3DMN Portal", "Run Monitor"],
     ["/live", "Live · 3DMN Portal", "Live"],
     ["/jobs/5", "Job 5 · 3DMN Portal", "Job 5"],
@@ -181,7 +177,7 @@ describe("create-form prefill", () => {
     const { router, history } = await openApp(url)
     await vi.waitFor(() => {
       expect(router.state.location.href).toBe("/indexing/new")
-      expect(byRole("heading", "New LaueGo Indexation")).toHaveLength(1)
+      expect(byRole("heading", "New Indexation")).toHaveLength(1)
     })
     await vi.waitFor(() => {
       expect(prefillsAsked()).toEqual(asked)

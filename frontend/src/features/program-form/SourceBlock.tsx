@@ -23,6 +23,8 @@ import { CloneField, SourceField } from "./SourcePicker"
 
 const SWITCH_HINT: Record<ProgramKind, string> = {
   wire: "Scan: its files (none: paths by hand). Clone: a reconstruction's values and scan.",
+  laue_matching:
+    "Scan: its files (none: paths by hand). Reconstruction: its scan.h5 and scan. Clone: an indexing run's values, scan and reconstruction.",
   lauego:
     "Scan: its files (none: paths by hand). Reconstruction: its scan.h5 and scan. Clone: an indexing run's values, scan and reconstruction.",
 }

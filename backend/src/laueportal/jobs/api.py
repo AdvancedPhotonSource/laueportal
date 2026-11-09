@@ -171,7 +171,7 @@ SOURCE_QUERY = "One {what}'s ID (blank is none)."
     response_model=ProgramPrefill,
 )
 def prefill_program(
-    kind: Annotated[programs.ProgramKind, Path(description="The program: `lauego` or `wire`.")],
+    kind: Annotated[programs.ProgramKind, Path(description="The program: `lauego`, `laue_matching` or `wire`.")],
     settings: SettingsDep,
     engine: EngineDep,
     response: Response,

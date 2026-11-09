@@ -133,10 +133,16 @@ def register_live_compute_function(kind: str, function: LiveComputeFunction) -> 
     _LIVE_REGISTRY[kind] = function
 
 
+LAUE_MATCHING_KIND = "laue_matching_indexing"
+"""Imported only for this kind: a remote compute node has no ``laue_index``, and runs no such run."""
+
+
 def get_compute_function(kind: str) -> ComputeFunction:
     try:
         return _REGISTRY[kind]
     except KeyError:
+        if kind == LAUE_MATCHING_KIND:
+            from laueportal.indexing.laue_matching import compute as _laue_matching  # noqa: F401
         # Importing a program module registers its compute function (lazily, so lauelab loads only here).
         from laueportal.indexing.lauego import compute as _lauego  # noqa: F401
         from laueportal.reconstruction.wire import compute as _wire  # noqa: F401

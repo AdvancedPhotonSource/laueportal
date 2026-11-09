@@ -60,6 +60,7 @@ function indexingRun(
   return {
     id,
     method: "lauego",
+    method_label: "LaueGo",
     scan_number: 42,
     sample_name: "Si",
     reconstruction_id: reconstructionId,

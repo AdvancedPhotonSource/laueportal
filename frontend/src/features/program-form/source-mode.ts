@@ -14,6 +14,7 @@ export type SourceMode = "scan" | "reconstruction" | "clone"
 export const SOURCE_MODES: Record<ProgramKind, readonly SourceMode[]> = {
   wire: ["scan", "clone"],
   lauego: ["scan", "reconstruction", "clone"],
+  laue_matching: ["scan", "reconstruction", "clone"],
 }
 
 export const SOURCE_MODE_LABELS: Record<SourceMode, string> = {
@@ -32,7 +33,7 @@ export function sourceModeOf(
   prefill: CreatePrefill
 ): SourceMode {
   if (prefill[CLONE_SOURCE[program]] !== undefined) return "clone"
-  if (program === "lauego" && prefill.reconstruction !== undefined)
+  if (program !== "wire" && prefill.reconstruction !== undefined)
     return "reconstruction"
   return "scan"
 }

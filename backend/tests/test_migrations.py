@@ -52,7 +52,7 @@ from tests.migration_support import (
     v1_schema_objects,
 )
 
-REVISIONS = ["0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008"]
+REVISIONS = ["0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008", "0009"]
 
 
 UTC_FROM_0007 = {
@@ -218,7 +218,7 @@ def unstamped_v1_database(tmp_path: Path, *, name: str = "unstamped.db") -> Data
 
 def test_the_history_is_linear_and_ends_at_head():
     assert migrations.revision_ids() == REVISIONS
-    assert migrations.head_revision() == "0008"
+    assert migrations.head_revision() == "0009"
     names = sorted(path.name for path in (migrations.MIGRATIONS_DIRECTORY / "versions").glob("*.py"))
     assert names == [
         "0001_v1_baseline.py",
@@ -229,6 +229,7 @@ def test_the_history_is_linear_and_ends_at_head():
         "0006_selected_xml.py",
         "0007_job_table_queue.py",
         "0008_remote_observation.py",
+        "0009_laue_matching_parameters.py",
     ]
     assert migrations.V1_REVISIONS == {"0001": "v1 dde1bde", "0002": "v1 3ad1557"}
     assert migrations.V1_REVISIONS == {revision: f"v1 {commit}" for revision, commit in V1_SCHEMAS.items()}
@@ -273,6 +274,7 @@ def test_head_on_an_empty_database_matches_the_models(tmp_path):
         "idempotency_key",
         "indexing_run",
         "job",
+        "laue_matching_indexing_parameters",
         "lauego_indexing_parameters",
         "metadata",
         "reconstruction_run",
@@ -292,7 +294,7 @@ def test_every_revision_downgrades_to_the_v1_baseline_and_to_nothing(tmp_path):
 
     assert migrations.downgrade(database, "base") == ("0001", None)
     assert schema_objects(database.path) == []
-    assert migrations.upgrade(database) == (None, "0008")
+    assert migrations.upgrade(database) == (None, "0009")
     assert migrations.check(database) == []
 
 
@@ -377,7 +379,7 @@ def test_v1s_own_upgrade_of_a_dde1bde_database_is_stamped_0002(tmp_path):
 
     assert migrations.detect_v1_schema(database) == migrations.V1Schema("0002", "v1 3ad1557")
     migrations.stamp(database, "0002")
-    assert migrations.upgrade(database) == ("0002", "0008")
+    assert migrations.upgrade(database) == ("0002", "0009")
     assert migrations.check(database) == []
     # Where v1 put them, then revision 0008's after external_url and revision 0007's after the last column.
     last = [*REMOTE_COLUMNS, "remote_observation", *QUEUE_COLUMNS]
@@ -405,10 +407,10 @@ def test_productions_job_table_after_v1s_own_upgrade_is_stamped_0002_and_comes_b
     rows = _rows(database, "job")
 
     assert migrations.stamp_detected(database) == migrations.V1Schema("0002", "v1 3ad1557")
-    assert migrations.upgrade(database) == ("0002", "0008")
+    assert migrations.upgrade(database) == ("0002", "0009")
     assert migrations.check(database) == []
 
-    assert migrations.downgrade(database, "0002") == ("0008", "0002")
+    assert migrations.downgrade(database, "0002") == ("0009", "0002")
     assert _job_sql(database) == expected
     assert _rows(database, "job") == rows
 
@@ -776,9 +778,9 @@ def test_0007_adds_the_tables_and_job_columns_keeps_the_rows_and_downgrades_to_t
     _insert(database, "worker", {"name": "worker", "host": "h", "pid": 7, "started_at": now})
     _insert(database, "idempotency_key", {"key": "k", "fingerprint": "f", "state": "pending", "claimed_at": now,
                                           "expires_at": now})  # fmt: skip
-    assert migrations.upgrade(database) == ("0007", "0008")
+    assert migrations.upgrade(database) == ("0007", "0009")
     assert migrations.check(database) == []
-    assert migrations.downgrade(database, "0006") == ("0008", "0006")
+    assert migrations.downgrade(database, "0006") == ("0009", "0006")
     assert (schema_objects(database.path), _rows(database, "job")) == (schema, rows)
 
 
@@ -863,7 +865,7 @@ def test_0008_adds_the_column_after_external_url_and_downgrades_to_the_same_text
     migrations.upgrade(database, "0007")
     schema, rows = schema_objects(database.path), _rows(database, "job")
 
-    assert migrations.upgrade(database) == ("0007", "0008")
+    assert migrations.upgrade(database) == ("0007", "0009")
     assert migrations.check(database) == []
     names = columns(database, "job")
     at = names.index("external_url") + 1
@@ -872,7 +874,7 @@ def test_0008_adds_the_column_after_external_url_and_downgrades_to_the_same_text
 
     execute(database, "UPDATE job SET remote_observation = ?", (json.dumps(OBSERVATION),))
     assert migrations.check(database) == []
-    assert migrations.downgrade(database, "0007") == ("0008", "0007")
+    assert migrations.downgrade(database, "0007") == ("0009", "0007")
     assert (schema_objects(database.path), _rows(database, "job")) == (schema, rows)
 
 
@@ -899,8 +901,10 @@ def test_a_v1_cb1159c_job_keeps_its_observations_to_head(tmp_path, appended):
     assert CB1159C_COLUMN in _job_sql(database)
     assert execute(database, "SELECT job_id, remote_observation FROM job ORDER BY 1") == [(1, stored), (2, None)]
     schema, rows = schema_objects(database.path), _rows(database, "job")
-    assert migrations.upgrade(database) == ("0007", "0008")
+    assert migrations.upgrade(database, "0008") == ("0007", "0008")
     assert (schema_objects(database.path), _rows(database, "job")) == (schema, rows)
+    assert migrations.upgrade(database) == ("0008", "0009")
+    assert _rows(database, "job") == rows
     assert migrations.check(database) == []
     if not appended:
         head = database_at(tmp_path, "head", name="head.db")
@@ -1004,7 +1008,7 @@ def test_stamp_detect_drops_an_ended_v1_cb1159c_databases_live_tables_and_the_ch
     assert migrations.current_revision(database) == "0002"
     assert schema_objects(database.path) == [item for item in schema if item["tbl_name"] not in CB1159C_LIVE_TABLES]
     assert {table: _rows(database, table) for table in V1_ROWS} == rows
-    assert migrations.upgrade(database) == ("0002", "0008")
+    assert migrations.upgrade(database) == ("0002", "0009")
     assert migrations.check(database) == []
     engine = database_engine(database)
     try:
@@ -1210,7 +1214,7 @@ def test_a_v1_database_is_stamped_then_upgraded(tmp_path, commit, revision):
 
     assert migrations.detect_v1_schema(database) == migrations.V1Schema(revision, f"v1 {commit}")
     migrations.stamp(database, revision)
-    assert migrations.upgrade(database) == (revision, "0008")
+    assert migrations.upgrade(database) == (revision, "0009")
     assert migrations.check(database) == []
 
 
@@ -1325,7 +1329,7 @@ def test_check_reports_what_is_wrong(tmp_path):
 
     behind = database_at(tmp_path, "0004", name="behind.db")
     assert migrations.check(behind) == [
-        f"database {behind.path} is at revision 0004, head is 0008: run `laueportal db upgrade`"
+        f"database {behind.path} is at revision 0004, head is 0009: run `laueportal db upgrade`"
     ]
 
     drifted = database_at(tmp_path, "head", name="drifted.db")
@@ -1470,12 +1474,12 @@ def test_upgrade_never_goes_down_and_changes_nothing_when_refused(tmp_path):
         with pytest.raises(migrations.MigrationError) as error:
             migrations.upgrade(database, revision)
         assert str(error.value) == (
-            f"database {database.path} is at revision 0008, past the requested {named}: upgrade does not go down, "
+            f"database {database.path} is at revision 0009, past the requested {named}: upgrade does not go down, "
             "and downgrades are not available from the command line"
         )
-    assert migrations.current_revision(database) == "0008"
+    assert migrations.current_revision(database) == "0009"
     assert file_digest(database.path) == digest
-    assert migrations.upgrade(database, "0008") == ("0008", "0008")
+    assert migrations.upgrade(database, "0009") == ("0009", "0009")
 
 
 def test_upgrade_creates_a_new_database_but_not_its_directory(tmp_path):
@@ -1489,6 +1493,48 @@ def test_upgrade_creates_a_new_database_but_not_its_directory(tmp_path):
 
     database = DatabaseSettings(path=tmp_path / "new.db", journal_mode="wal")
     assert migrations.upgrade(database, "0003") == (None, "0003")
-    assert migrations.upgrade(database) == ("0003", "0008")
-    assert migrations.upgrade(database) == ("0008", "0008")
+    assert migrations.upgrade(database) == ("0003", "0009")
+    assert migrations.upgrade(database) == ("0009", "0009")
     assert execute(database, "PRAGMA journal_mode") == [("wal",)]
+
+
+# ---------------------------------------------------------------------------
+# 0009: LaueMatching's parameters
+
+
+def test_0009_adds_the_table_and_its_downgrade_refuses_to_drop_a_runs_parameters(tmp_path):
+    database = database_at(tmp_path, "0008")
+    assert migrations.upgrade(database) == ("0008", "0009")
+    assert migrations.check(database) == []
+    columns = [row[1] for row in execute(database, "PRAGMA table_info(laue_matching_indexing_parameters)")]
+    assert columns[:2] == ["indexing_id", "filename_prefixes"]
+
+    execute(database, "PRAGMA foreign_keys = OFF")
+    values = (1, "[]", "1", 1, "g", "c", "n", 0, "percentile", 99.8, 0.0, 4, 1, 5.0, 30.0, 30, 8, 4, 50.0, 3.0, 1)
+    execute(
+        database,
+        "INSERT INTO laue_matching_indexing_parameters (indexing_id, filename_prefixes, scan_points, scan_points_len, "
+        "geometry_file, crystal_file, forward_cache, create_forward_cache, threshold_method, threshold_percentile, "
+        "threshold_value, min_area, watershed_image, elo, ehi, max_nr_laue_spots, min_nr_spots, min_good_spots, "
+        f"min_intensity, max_angle, robust_filter) VALUES ({', '.join('?' * len(values))})",
+        values,
+    )
+    digest = file_digest(database.path)
+    with pytest.raises(migrations.MigrationError, match="holds the parameters of 1 run"):
+        migrations.downgrade(database, "0008")
+    assert migrations.current_revision(database) == "0009"
+    assert file_digest(database.path) == digest
+
+    execute(database, "DELETE FROM laue_matching_indexing_parameters")
+    assert migrations.downgrade(database, "0008") == ("0009", "0008")
+    assert execute(database, "SELECT name FROM sqlite_master WHERE name = 'laue_matching_indexing_parameters'") == []
+
+
+def test_0009_refuses_a_database_that_already_has_the_table(tmp_path):
+    database = database_at(tmp_path, "0008")
+    execute(database, "CREATE TABLE laue_matching_indexing_parameters (indexing_id INTEGER)")
+    digest = file_digest(database.path)
+    with pytest.raises(migrations.MigrationError, match="already has laue_matching_indexing_parameters"):
+        migrations.upgrade(database)
+    assert migrations.current_revision(database) == "0008"
+    assert file_digest(database.path) == digest

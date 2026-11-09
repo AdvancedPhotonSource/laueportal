@@ -23,7 +23,7 @@ for part in "$@"; do
 done
 
 # Pins (bump deliberately).
-LAUELAB_COMMIT=d5de751a8e8a01ac053ddb0b09c4d35a91a005da
+LAUELAB_COMMIT=6d37e95403aca7b1a0996c17668f83db7584f8bb
 LAUELAB_URL="git+https://github.com/AdvancedPhotonSource/lauelab.git@$LAUELAB_COMMIT"
 PNPM_VERSION=12.10.1
 PNPM_SHA256=502a275984a4cd01e5579ac72049a241091cac5118e44becf84951130c3e079e   # pnpm-linux-x64.tar.gz
@@ -96,7 +96,8 @@ if [ "$BACKEND" = 1 ]; then
   # The lock is complete except numpy, h5py, cffi and pycparser (conda's cffi brings it), which stay
   # conda's (constrained at compile time, left out of the lock; CONDA_PY in the Makefile). So install
   # exactly the lock with --no-deps, then check consistency.
-  uv pip install -q --python "$PY" --require-hashes --no-deps -r requirements/dev.lock
+  # micromamba run activates the env: laue-index compiles its C indexer here, with the conda compilers. CPU only.
+  LAUEMATCHING_CUDA=0 "$MM" run -p "$ENV" uv pip install -q --python "$PY" --require-hashes --no-deps -r requirements/dev.lock
   uv pip check -q --python "$PY"
   "$PY" - <<'EOF'
 import importlib.metadata as md, json, pathlib, sys
@@ -132,7 +133,7 @@ EOF
   # The remote runners merge multi-node results with lauelab.indexing's merge APIs (cd9318b); live runs grow a
   # scan point by point with the incremental PreparedScan (d5de751).
   "$PY" -c "import lauelab, lauelab.visualization
-from lauelab.indexing import merge_results_files, merge_xml_files
+from lauelab.indexing import merge_results_files, merge_xml_files, read_frame
 from lauelab.reconstruct import PreparedScan
 assert all(hasattr(PreparedScan, name) for name in ('add', 'outcomes', 'export_state', 'restore')), 'no incremental PreparedScan'
 print('    lauelab imports OK (with the merge and live APIs)')"

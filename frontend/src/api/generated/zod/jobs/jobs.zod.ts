@@ -557,8 +557,8 @@ export const GetLiveSessionResponse = zod.object({
 export const ListProgramsResponse = zod.object({
   "programs": zod.array(zod.object({
   "json_schema": zod.record(zod.string(), zod.unknown()).describe('The parameter model\'s JSON Schema: one property per `request.json` key, in `request.json`\'s order,\neach with its `title` (the form label), `description`, limits (`minimum`, `exclusiveMinimum`, `maximum`),\n`default` (the configured one), and the form\'s hints: `x-source` (`form`: the user\'s; `config`: a fixed setting,\nnever on the form; `derived`: set by the portal), `x-config` (the setting it comes from), `x-unit`, `x-group` (the\nform section), `x-widget`, `x-placeholder` and `x-options` (the choices in order, each `{value, label}`;\nfor `backend` where it is a form field, the targets this deployment offers, the first being the `default`; a live\nrun\'s is derived, `local`). The portal\'s own values are\n`readOnly`, and `required` lists only the form fields a client must send. `x-layout` is the form layout: its\nsections in order, each `{group, fields}` with the form fields in order.'),
-  "kind": zod.enum(['lauego', 'wire', 'lauego-live', 'wire-live']).describe('The program: `lauego` (LaueGo indexing) or `wire` (wire reconstruction), the create forms\'; `lauego-live` or\n`wire-live`, their live schemas (the Live page\'s runs), listed only while live processing is enabled.'),
-  "schema_id": zod.string().describe('The parameter schema\'s version (`lauego/v1`, `wire/v1`, `lauego-live/v1`, `wire-live/v1`), which\nevery `request.json` it writes holds.'),
+  "kind": zod.enum(['lauego', 'laue_matching', 'wire', 'lauego-live', 'wire-live']).describe('The program: `lauego` (LaueGo indexing), `laue_matching` (LaueMatching indexing) or `wire` (wire reconstruction), the create forms\'; `lauego-live` or\n`wire-live`, their live schemas (the Live page\'s runs), listed only while live processing is enabled.'),
+  "schema_id": zod.string().describe('The parameter schema\'s version (`lauego/v1`, `laue-matching/v1`, `wire/v1`, `lauego-live/v1`, `wire-live/v1`), which\nevery `request.json` it writes holds.'),
   "title": zod.string()
 }).describe('A program a run is created with, and its parameter model.'))
 }).describe('The programs (`GET /api/v1/programs`): the batch programs, then the live ones while live processing is\nenabled (so their presence says the Live page is).')
@@ -577,7 +577,7 @@ export const ListProgramsResponse = zod.object({
  * @summary Fill a create form from one source
  */
 export const PrefillProgramParams = zod.object({
-  "kind": zod.enum(['lauego', 'wire']).describe('The program: `lauego` or `wire`.')
+  "kind": zod.enum(['lauego', 'laue_matching', 'wire']).describe('The program: `lauego`, `laue_matching` or `wire`.')
 })
 
 export const PrefillProgramQueryParams = zod.object({
@@ -592,7 +592,7 @@ export const PrefillProgramResponse = zod.object({
   "kind": zod.enum(['indexing', 'reconstruction']).describe('What a job runs: an indexing run (``I12``) or a reconstruction run (``R3``).'),
   "label": zod.string().describe('``I`` (indexing) or ``R`` (reconstruction) and the run\'s ID.')
 }).describe('The run a job executes, for links and labels: kind, ID and label (``I12``, ``R3``).'),zod.null()]).describe('The run whose parameters were copied (a clone: an indexing run on the LaueGo form, a reconstruction on the\nwire form); null when the values come from a scan or a reconstruction as the source, or from the defaults.'),
-  "kind": zod.enum(['lauego', 'wire']),
+  "kind": zod.enum(['lauego', 'laue_matching', 'wire']),
   "schema_id": zod.string().describe('The parameter schema the values are for (`lauego/v1`, `wire/v1`).'),
   "values": zod.record(zod.string(), zod.unknown()).describe('One value per form field of the program (its JSON Schema\'s `x-source` `form`, `GET /api/v1/programs`), as\nthe create and validate endpoints take them: the configured defaults, the source\'s values over them, null where\nthere is neither. Not validated: a copied value the model refuses is the validate endpoint\'s to report.')
 }).describe('A create form\'s values from one source context (`GET /api/v1/programs/{kind}/prefill`): the\nURL\'s prefill, and the clone of a run.')

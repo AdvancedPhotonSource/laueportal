@@ -1,9 +1,9 @@
-"""Indexing services: LaueGo run creation and retrieval, and the indexations grid. A run's
+"""Indexing services: LaueGo and LaueMatching run creation and retrieval, and the indexations grid. A run's
 source is its ``scan_number`` and ``reconstruction_id`` (the create form's pickers)."""
 
 from typing import Any, Unpack
 
-from sqlalchemy import Engine, Select, select
+from sqlalchemy import Engine, Select, case, func, select
 from sqlalchemy.orm import Session, joinedload
 
 from laueportal.core.paging import GridField, GridSpec, fetch_page
@@ -14,9 +14,11 @@ from laueportal.files.inputs import (
     format_output_path,
     resolve_request_inputs,
 )
+from laueportal.indexing.laue_matching.data import with_instrument
+from laueportal.indexing.laue_matching.params import LaueMatchingParamsV1
 from laueportal.indexing.lauego.live_params import LaueGoLiveParamsV1
 from laueportal.indexing.lauego.params import DEFAULT_OUTPUT_XML, LaueGoParamsV1
-from laueportal.indexing.models import IndexingRun, LaueGoIndexingParameters
+from laueportal.indexing.models import IndexingRun, LaueGoIndexingParameters, LaueMatchingIndexingParameters
 from laueportal.indexing.schemas import IndexingRunPage, IndexingRunSummary
 from laueportal.jobs.live import LiveDocument, live_template
 from laueportal.jobs.models import Job
@@ -28,12 +30,11 @@ from laueportal.jobs.validation import check_creatable, check_paths_creatable
 from laueportal.reconstruction.models import ReconstructionRun
 from laueportal.scans.models import Catalog
 
-LISTED_METHOD = "lauego"
-"""The indexations grid lists LaueGo runs."""
-
 INDEXING_RUN_GRID = GridSpec(
     fields={
         "id": GridField("number"),
+        "method": GridField("text"),
+        "method_label": GridField("text"),
         "scan_number": GridField("number"),
         "sample_name": GridField("text"),
         "reconstruction_id": GridField("number"),
@@ -50,12 +51,30 @@ INDEXING_RUN_GRID = GridSpec(
     default_sort="-id",
     changed_since=active_or_changed_since,
 )
-"""The indexations grid: every field but ``method`` (always ``lauego`` here) sorts and filters (stored columns,
+"""The indexations grid: every field sorts and filters (stored columns,
 the status, by name and by code as on every run list, and the counters); newest first. The source is
 the stored ``scan_number`` and
 ``reconstruction_id`` (both blank: "Unlinked"), with the scan's catalog ``sample_name`` (the create form's pickers).
 Live: the active runs and those changed since
 (``jobs.progress.active_or_changed_since``)."""
+
+
+def create_laue_matching(
+    request: LaueMatchingParamsV1,
+    *,
+    engine: Engine,
+    settings: Settings | None = None,
+    progress_callback: ProgressCallback | None = None,
+) -> IndexingRun:
+    """Create a LaueMatching run as :func:`create_indexing` creates a LaueGo run. The crystal and detector values are
+    read from the run's files first, and frozen in its ``request.json``."""
+
+    if settings is None:
+        raise ValueError("A LaueMatching run needs the settings (laue_matching.data_root)")
+    check_creatable(request, settings=settings)
+    return _create_indexing(
+        with_instrument(request, settings), engine=engine, settings=settings, progress_callback=progress_callback
+    )
 
 
 def create_indexing(
@@ -80,6 +99,20 @@ def create_indexing(
     # Filtering is disabled for new runs, including reruns of historical settings.
     request = request.with_values(cosmic_filter=False)
     check_creatable(request, settings=settings)
+    return _create_indexing(request, engine=engine, settings=settings, progress_callback=progress_callback)
+
+
+def _create_indexing(
+    request: LaueGoParamsV1 | LaueMatchingParamsV1,
+    *,
+    engine: Engine,
+    settings: Settings | None,
+    progress_callback: ProgressCallback | None,
+) -> IndexingRun:
+    """Resolve the inputs, save the run and its job, then publish the run's files (``create_indexing``'s docstring)."""
+
+    matching = isinstance(request, LaueMatchingParamsV1)
+    method = "laue_matching" if matching else "lauego"
     inputs = resolve_request_inputs(
         request.input_path,
         request.filename_prefixes,
@@ -122,7 +155,7 @@ def create_indexing(
                 scan_number=scan_number,
                 reconstruction=parent,
                 job=job,
-                method="lauego",
+                method=method,
                 input_path=request.input_path,
                 output_path=None,
                 author=request.author,
@@ -135,28 +168,29 @@ def create_indexing(
             run_directory = format_output_path(request.output_path_template, run.id)
             run.output_path = run_directory
             job.run_directory = run_directory
-            run.lauego_parameters = _lauego_parameters(request, scan_points_len=request.scan_point_count)
+            if isinstance(request, LaueMatchingParamsV1):
+                run.laue_matching_parameters = _laue_matching_parameters(request)
+            else:
+                run.lauego_parameters = _lauego_parameters(request, scan_points_len=request.scan_point_count)
         run_id = run.id
         job_id = job.job_id
 
     with publishing(engine, job_id=job_id, display_id=f"Indexing I{run_id}", now=request.submitted_at):
         # saved: from here on, any failure is a RunPublicationError for this run, which is Failed
         payload = {
-            "kind": "lauego_indexing",
+            "kind": f"{method}_indexing",
             "run": {
                 "indexing_id": run_id,
                 "job_id": job_id,
                 "scan_number": scan_number,
                 "reconstruction_id": request.reconstruction_id,
-                "method": "lauego",
+                "method": method,
             },
             "request": request_document(request),
-            "output": {
-                "directory": run_directory,
-                "results": RESULTS_FILENAME,
-                "xml": request.output_xml or DEFAULT_OUTPUT_XML,
-            },
+            "output": {"directory": run_directory, "results": RESULTS_FILENAME},
         }
+        if isinstance(request, LaueGoParamsV1):
+            payload["output"]["xml"] = request.output_xml or DEFAULT_OUTPUT_XML
         publish_run_inputs(
             engine,
             job_id=job_id,
@@ -311,6 +345,35 @@ def _lauego_parameters(
     )
 
 
+def _laue_matching_parameters(request: LaueMatchingParamsV1) -> LaueMatchingIndexingParameters:
+    return LaueMatchingIndexingParameters(
+        filename_prefixes=list(request.filename_prefixes),
+        scan_points=request.scan_points,
+        scan_points_len=request.scan_point_count,
+        depth_range=request.depth_range,
+        depth_range_len=request.depth_count,
+        geometry_file=request.geometry_file,
+        crystal_file=request.crystal_file,
+        mask_file=request.mask_file,
+        background_file=request.background_file,
+        forward_cache=request.forward_cache,
+        create_forward_cache=request.create_forward_cache,
+        threshold_method=request.threshold_method,
+        threshold_percentile=request.threshold_percentile,
+        threshold_value=request.threshold_value,
+        min_area=request.min_area,
+        watershed_image=request.watershed_image,
+        elo=request.elo,
+        ehi=request.ehi,
+        max_nr_laue_spots=request.max_nr_laue_spots,
+        min_nr_spots=request.min_nr_spots,
+        min_good_spots=request.min_good_spots,
+        min_intensity=request.min_intensity,
+        max_angle=request.max_angle,
+        robust_filter=request.robust_filter,
+    )
+
+
 def get_indexing(indexing_id: int, *, engine: Engine) -> IndexingRun | None:
     """Load an indexing run with its parameters, parent, and job."""
 
@@ -319,6 +382,7 @@ def get_indexing(indexing_id: int, *, engine: Engine) -> IndexingRun | None:
         .where(IndexingRun.id == indexing_id)
         .options(
             joinedload(IndexingRun.lauego_parameters),
+            joinedload(IndexingRun.laue_matching_parameters),
             joinedload(IndexingRun.reconstruction),
             joinedload(IndexingRun.job),
         )
@@ -331,7 +395,7 @@ def get_indexing(indexing_id: int, *, engine: Engine) -> IndexingRun | None:
 
 
 def indexing_run_list_query(scan_id: int | None = None) -> Select[Unpack[tuple[Any, ...]]]:
-    """The indexations grid's select: one row per LaueGo run, with its scan's sample, its parameters' columns and its
+    """The indexations grid's select: one row per indexing run, with its scan's sample, its parameters' columns and its
     job's status and counters; only the runs of scan ``scan_id`` when given.
 
     A run without its parameters row is listed too (those columns blank)."""
@@ -340,13 +404,20 @@ def indexing_run_list_query(scan_id: int | None = None) -> Select[Unpack[tuple[A
         select(
             IndexingRun.id.label("id"),
             IndexingRun.method.label("method"),
+            case((IndexingRun.method == "laue_matching", "LaueMatching"), else_="LaueGo").label("method_label"),
             IndexingRun.scan_number.label("scan_number"),
             Catalog.sample_name.label("sample_name"),
             IndexingRun.reconstruction_id.label("reconstruction_id"),
-            LaueGoIndexingParameters.scan_points_len.label("n_points"),
-            LaueGoIndexingParameters.depth_range_len.label("n_depths"),
+            func.coalesce(
+                LaueGoIndexingParameters.scan_points_len, LaueMatchingIndexingParameters.scan_points_len
+            ).label("n_points"),
+            func.coalesce(
+                LaueGoIndexingParameters.depth_range_len, LaueMatchingIndexingParameters.depth_range_len
+            ).label("n_depths"),
             LaueGoIndexingParameters.box_size.label("box_size"),
-            LaueGoIndexingParameters.crystal_file.label("crystal_file"),
+            func.coalesce(LaueGoIndexingParameters.crystal_file, LaueMatchingIndexingParameters.crystal_file).label(
+                "crystal_file"
+            ),
             IndexingRun.author.label("author"),
             IndexingRun.notes.label("notes"),
             IndexingRun.created_at.label("created_at"),
@@ -355,8 +426,8 @@ def indexing_run_list_query(scan_id: int | None = None) -> Select[Unpack[tuple[A
         .select_from(IndexingRun)
         .join(Job, Job.job_id == IndexingRun.job_id)
         .outerjoin(LaueGoIndexingParameters, LaueGoIndexingParameters.indexing_id == IndexingRun.id)
+        .outerjoin(LaueMatchingIndexingParameters, LaueMatchingIndexingParameters.indexing_id == IndexingRun.id)
         .outerjoin(Catalog, Catalog.scan_number == IndexingRun.scan_number)  # one catalog per scan at most
-        .where(IndexingRun.method == LISTED_METHOD)
     )
     if scan_id is not None:
         query = query.where(IndexingRun.scan_number == scan_id)

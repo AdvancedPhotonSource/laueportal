@@ -23,13 +23,14 @@ class _ApiModel(BaseModel):
 
 
 class IndexingRunSummary(_ApiModel):
-    """One row of the indexations grid (``GET /api/v1/indexing-runs``: LaueGo runs) and
-    of the scan detail's peak indexing card."""
+    """One row of the indexations grid (``GET /api/v1/indexing-runs``) and of the scan detail's peak indexing card."""
 
     id: int
     """The indexing run's ID (shown as ``I<id>``)."""
     method: str
-    """The indexing method: ``lauego`` (the list holds LaueGo runs only)."""
+    """The indexing method: ``lauego`` or ``laue_matching``."""
+    method_label: str
+    """The method as the lists show it: LaueGo or LaueMatching."""
     scan_number: int | None
     """Its source scan; null when it has none (with no ``reconstruction_id`` either: "Unlinked")."""
     sample_name: str | None
@@ -37,11 +38,11 @@ class IndexingRunSummary(_ApiModel):
     reconstruction_id: int | None
     """The reconstruction it indexes (its other source); null when it indexes the scan's images."""
     n_points: int | None
-    """The scan points it indexes; null without LaueGo parameters."""
+    """The scan points it indexes; null without stored parameters."""
     n_depths: int | None
     """The depths it indexes per point (the card's Depth Points); null when it indexes no depths."""
     box_size: int | None
-    """The peak search box."""
+    """The peak search box; null for a LaueMatching run."""
     crystal_file: str | None
     """The structure file (the card's Structures File)."""
     author: str | None
@@ -116,6 +117,51 @@ class LaueGoParameters(_ApiModel):
     beamline: str
 
 
+class LaueMatchingParameters(_ApiModel):
+    """A LaueMatching run's stored parameters (``laue_matching_indexing_parameters``)."""
+
+    filename_prefixes: list[str]
+    """The image file name patterns."""
+    scan_points: str
+    """The scan point indices (a range text)."""
+    scan_points_len: int
+    depth_range: str | None
+    """The depth indices (a range text); null when the run indexes no depths."""
+    depth_range_len: int | None
+    geometry_file: str
+    crystal_file: str
+    mask_file: str | None
+    background_file: str | None
+    forward_cache: str
+    """The forward cache's name."""
+    create_forward_cache: bool
+    """Whether this run built the cache."""
+    threshold_method: str
+    threshold_percentile: float
+    threshold_value: float
+    min_area: int
+    watershed_image: bool
+    elo: float
+    ehi: float
+    max_nr_laue_spots: int
+    min_nr_spots: int
+    min_good_spots: int
+    min_intensity: float
+    max_angle: float
+    robust_filter: bool
+
+
+class ForwardCacheList(_ApiModel):
+    """The forward caches that fit a form's values (``GET /api/v1/laue-matching/forward-caches``)."""
+
+    caches: list[str]
+    """Their names, sorted."""
+    suggested_name: str | None
+    """A free name for a new cache; null while the values cannot be read."""
+    problem: str | None
+    """Why the caches cannot be listed; null when they can."""
+
+
 class IndexingRunDetail(_ApiModel):
     """One indexing run (``GET /api/v1/indexing-runs/{id}``): the results viewer's header and Parameters tab."""
 
@@ -139,6 +185,8 @@ class IndexingRunDetail(_ApiModel):
     """When the run was submitted."""
     parameters: LaueGoParameters | None
     """The stored LaueGo parameters; null for another method or a run recorded without them."""
+    laue_matching_parameters: LaueMatchingParameters | None
+    """The stored LaueMatching parameters; null for another method."""
 
 
 class ArtifactState(StrEnum):

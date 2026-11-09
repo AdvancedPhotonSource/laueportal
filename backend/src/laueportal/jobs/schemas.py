@@ -608,12 +608,12 @@ class JobLog(_ApiModel):
 class Program(_ApiModel):
     """A program a run is created with, and its parameter model."""
 
-    kind: Literal["lauego", "wire", "lauego-live", "wire-live"]
-    """The program: `lauego` (LaueGo indexing) or `wire` (wire reconstruction), the create forms'; `lauego-live` or
+    kind: Literal["lauego", "laue_matching", "wire", "lauego-live", "wire-live"]
+    """The program: `lauego` (LaueGo indexing), `laue_matching` (LaueMatching indexing) or `wire` (wire reconstruction), the create forms'; `lauego-live` or
     `wire-live`, their live schemas (the Live page's runs), listed only while live processing is enabled."""
     title: str
     schema_id: str
-    """The parameter schema's version (`lauego/v1`, `wire/v1`, `lauego-live/v1`, `wire-live/v1`), which
+    """The parameter schema's version (`lauego/v1`, `laue-matching/v1`, `wire/v1`, `lauego-live/v1`, `wire-live/v1`), which
     every `request.json` it writes holds."""
     json_schema: dict[str, Any]
     """The parameter model's JSON Schema: one property per `request.json` key, in `request.json`'s order,
@@ -668,7 +668,7 @@ class ProgramPrefill(_ApiModel):
     """A create form's values from one source context (`GET /api/v1/programs/{kind}/prefill`): the
     URL's prefill, and the clone of a run."""
 
-    kind: Literal["lauego", "wire"]
+    kind: Literal["lauego", "laue_matching", "wire"]
     schema_id: str
     """The parameter schema the values are for (`lauego/v1`, `wire/v1`)."""
     clone_of: RunReference | None

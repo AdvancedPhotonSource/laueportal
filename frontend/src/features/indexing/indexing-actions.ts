@@ -1,7 +1,7 @@
 // What the indexations page's buttons do with the selected run: the create forms get its one source
 // context as their prefill (src/lib/prefill.ts).
 import type { IndexingRunSummary } from "@/api"
-import { sourcePrefill, type CreatePrefill } from "@/lib/prefill"
+import { programSearch, sourcePrefill, type CreatePrefill } from "@/lib/prefill"
 
 export interface IndexingActions {
   /** The runs selected. */
@@ -24,7 +24,10 @@ export function indexingActions(
   if (selected.length !== 1 || !run) return { count: selected.length }
   const actions: IndexingActions = {
     count: 1,
-    newIndex: sourcePrefill({ indexing: run.id }),
+    newIndex: {
+      ...sourcePrefill({ indexing: run.id }),
+      ...programSearch(run.method),
+    },
   }
   if (run.scan_number !== null || run.reconstruction_id !== null) {
     actions.newRecon = sourcePrefill({

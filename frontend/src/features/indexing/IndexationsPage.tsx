@@ -18,7 +18,7 @@ const fetchIndexations: FetchRows<IndexingRunSummary> = (query) =>
 const indexingRowId = (run: IndexingRunSummary) => String(run.id)
 
 /**
- * The indexations: every LaueGo indexing run, live. One checked row: New Recon reconstructs the
+ * The indexations: every indexing run, live. One checked row: New Recon reconstructs the
  * selected run's source, New Index clones the selected run.
  */
 export function IndexationsPage() {

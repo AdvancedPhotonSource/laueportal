@@ -1301,7 +1301,7 @@ export function useListPrograms<TData = Awaited<ReturnType<typeof listPrograms>>
 
 
 
-export const getPrefillProgramUrl = (kind: 'lauego' | 'wire',
+export const getPrefillProgramUrl = (kind: 'lauego' | 'laue_matching' | 'wire',
     params?: PrefillProgramParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1330,7 +1330,7 @@ export const getPrefillProgramUrl = (kind: 'lauego' | 'wire',
  * endpoint does).
  * @summary Fill a create form from one source
  */
-export const prefillProgram = async (kind: 'lauego' | 'wire',
+export const prefillProgram = async (kind: 'lauego' | 'laue_matching' | 'wire',
     params?: PrefillProgramParams, options?: Parameters<typeof apiFetch>[1]): Promise<ProgramPrefill> => {
 
   return apiFetch<ProgramPrefill>(getPrefillProgramUrl(kind,params),
@@ -1346,7 +1346,7 @@ export const prefillProgram = async (kind: 'lauego' | 'wire',
 
 
 
-export const getPrefillProgramQueryKey = (kind: 'lauego' | 'wire',
+export const getPrefillProgramQueryKey = (kind: 'lauego' | 'laue_matching' | 'wire',
     params?: PrefillProgramParams,) => {
     return [
     `/api/v1/programs/${kind}/prefill`, ...(params ? [params] : [])
@@ -1354,7 +1354,7 @@ export const getPrefillProgramQueryKey = (kind: 'lauego' | 'wire',
     }
 
 
-export const getPrefillProgramQueryOptions = <TData = Awaited<ReturnType<typeof prefillProgram>>, TError = ErrorType<Problem>>(kind: 'lauego' | 'wire',
+export const getPrefillProgramQueryOptions = <TData = Awaited<ReturnType<typeof prefillProgram>>, TError = ErrorType<Problem>>(kind: 'lauego' | 'laue_matching' | 'wire',
     params?: PrefillProgramParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof prefillProgram>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
@@ -1378,7 +1378,7 @@ export type PrefillProgramQueryError = ErrorType<Problem>
 
 
 export function usePrefillProgram<TData = Awaited<ReturnType<typeof prefillProgram>>, TError = ErrorType<Problem>>(
- kind: 'lauego' | 'wire',
+ kind: 'lauego' | 'laue_matching' | 'wire',
     params: undefined |  PrefillProgramParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof prefillProgram>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof prefillProgram>>,
@@ -1389,7 +1389,7 @@ export function usePrefillProgram<TData = Awaited<ReturnType<typeof prefillProgr
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function usePrefillProgram<TData = Awaited<ReturnType<typeof prefillProgram>>, TError = ErrorType<Problem>>(
- kind: 'lauego' | 'wire',
+ kind: 'lauego' | 'laue_matching' | 'wire',
     params?: PrefillProgramParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof prefillProgram>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof prefillProgram>>,
@@ -1400,7 +1400,7 @@ export function usePrefillProgram<TData = Awaited<ReturnType<typeof prefillProgr
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function usePrefillProgram<TData = Awaited<ReturnType<typeof prefillProgram>>, TError = ErrorType<Problem>>(
- kind: 'lauego' | 'wire',
+ kind: 'lauego' | 'laue_matching' | 'wire',
     params?: PrefillProgramParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof prefillProgram>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -1409,7 +1409,7 @@ export function usePrefillProgram<TData = Awaited<ReturnType<typeof prefillProgr
  */
 
 export function usePrefillProgram<TData = Awaited<ReturnType<typeof prefillProgram>>, TError = ErrorType<Problem>>(
- kind: 'lauego' | 'wire',
+ kind: 'lauego' | 'laue_matching' | 'wire',
     params?: PrefillProgramParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof prefillProgram>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

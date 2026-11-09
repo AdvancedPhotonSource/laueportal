@@ -195,21 +195,22 @@ def test_programs_lists_the_live_programs_with_their_configured_defaults_only_wh
     with portal(off[0]) as client:
         batch = client.get("/api/v1/programs").json()["programs"]
 
-    assert [program["kind"] for program in batch] == ["lauego", "wire"]
+    assert [program["kind"] for program in batch] == ["lauego", "laue_matching", "wire"]
     assert [(program["kind"], program["schema_id"]) for program in listed] == [
         ("lauego", "lauego/v1"),
+        ("laue_matching", "laue-matching/v1"),
         ("wire", "wire/v1"),
         ("lauego-live", "lauego-live/v1"),
         ("wire-live", "wire-live/v1"),
     ]
-    for program in listed[2:]:
+    for program in listed[3:]:
         schema = program["json_schema"]
         assert schema == programs.parameters_schema(program["kind"], place.settings)
         model = programs.MODELS[program["kind"]]
         assert set(schema["required"]) <= set(model.fields_from("form"))
         assert "x-options" not in schema["properties"]["backend"]  # derived: local
         assert "scan_points" not in [name for group in schema["x-layout"] for name in group["fields"]]
-    wire = listed[3]["json_schema"]["properties"]
+    wire = listed[4]["json_schema"]["properties"]
     assert wire["depth_start"]["default"] == place.settings.reconstruction.defaults.depth_start
 
 

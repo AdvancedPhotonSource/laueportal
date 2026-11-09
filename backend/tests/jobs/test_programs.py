@@ -22,6 +22,7 @@ from pydantic import ValidationError
 
 from laueportal.app import create_app
 from laueportal.core.settings import Settings
+from laueportal.indexing.laue_matching.params import LaueMatchingParamsV1
 from laueportal.indexing.lauego import compute as lauego
 from laueportal.indexing.lauego.params import LaueGoParamsV1
 from laueportal.jobs import programs
@@ -380,9 +381,10 @@ def test_programs_lists_both_programs_with_their_parameter_schemas(tmp_path):
     found = {program["kind"]: program for program in response.json()["programs"]}
     assert {kind: (program["title"], program["schema_id"]) for kind, program in found.items()} == {
         "lauego": ("LaueGo indexing", "lauego/v1"),
+        "laue_matching": ("LaueMatching indexing", "laue-matching/v1"),
         "wire": ("Wire reconstruction", "wire/v1"),
     }
-    for kind, model in (("lauego", LaueGoParamsV1), ("wire", WireParamsV1)):
+    for kind, model in (("lauego", LaueGoParamsV1), ("laue_matching", LaueMatchingParamsV1), ("wire", WireParamsV1)):
         properties = found[kind]["json_schema"]["properties"]
         assert list(properties) == list(model.model_fields)
         assert all(
@@ -495,7 +497,7 @@ def _without_defaults(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def test_the_form_kits_programs_fixture_is_the_served_schema_but_for_its_defaults(tmp_path):
-    """The frontend's fixture cannot drift from the models: every program (the batch two, and the live two the Live
+    """The frontend's fixture cannot drift from the models: every program (the batch three, and the live two the Live
     page reads, listed while live processing is on), every field (its type and nullability, title, hint, placeholder,
     widget, limits, options), the layout and the required list are the served ones; only the configured defaults are
     the dev config's. Refresh it from the API when the models change."""
@@ -514,7 +516,7 @@ DEVELOPER_TEXT = re.compile(r"`|\bv1\b|lauelab|LaueGo|reconstructN|\[|settings|c
 """What a user hint leaves to the developer ``description``: code, v1 history, lauelab names, config keys."""
 
 
-@pytest.mark.parametrize("kind", ["lauego", "wire"])
+@pytest.mark.parametrize("kind", ["lauego", "laue_matching", "wire"])
 def test_every_form_field_has_a_user_hint_and_at_most_a_terse_value_pattern_as_placeholder(tmp_path, kind):
     """The form shows labels and values; a field's hint (``x-hint``) is the label's tooltip, in the user's words (the
     ``description`` stays the API's documentation), and a placeholder reads as a value (``Si_%d.h5``, ``Automatic``),
@@ -556,6 +558,9 @@ def test_programs_offers_the_deployments_execution_targets(tmp_path, targets, of
 
     assert response.status_code == 200
     for program in response.json()["programs"]:
+        if program["kind"] == "laue_matching":  # computes on the portal's worker: no target to choose
+            assert program["json_schema"]["properties"]["backend"]["readOnly"]
+            continue
         backend = program["json_schema"]["properties"]["backend"]
         assert [(option["value"], option["label"]) for option in backend["x-options"]] == offered
         assert backend["default"] == offered[0][0]

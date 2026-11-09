@@ -1,5 +1,5 @@
-"""The programs a run is created with: ``lauego`` (LaueGo indexing, ``lauego/v1``) and ``wire`` (wire reconstruction,
-``wire/v1``), their live schemas ``lauego-live`` and ``wire-live`` (``lauego-live/v1``, ``wire-live/v1``), and what the
+"""The programs a run is created with: ``lauego`` (LaueGo indexing, ``lauego/v1``), ``laue_matching`` (LaueMatching
+indexing, ``laue-matching/v1``) and ``wire`` (wire reconstruction, ``wire/v1``), the live schemas of LaueGo and wire ``lauego-live`` and ``wire-live`` (``lauego-live/v1``, ``wire-live/v1``), and what the
 portal fills in from config.
 
 The parameter models (``indexing/lauego/params.py``, ``reconstruction/wire/params.py`` and their ``live_params.py``)
@@ -20,6 +20,7 @@ from laueportal.core.params import ProgramParams
 from laueportal.core.problems import ProblemError
 from laueportal.core.settings import Settings
 from laueportal.files.inputs import normalize_output_path_template
+from laueportal.indexing.laue_matching.params import LaueMatchingParamsV1
 from laueportal.indexing.lauego.live_params import LaueGoLiveParamsV1
 from laueportal.indexing.lauego.params import LaueGoParamsV1
 from laueportal.jobs.schemas import Program, ProgramList
@@ -27,19 +28,25 @@ from laueportal.reconstruction.wire.live_params import WireLiveParamsV1
 from laueportal.reconstruction.wire.params import WireParamsV1
 from laueportal.remote.settings import RemoteSettingsError, available_backends, portal_settings
 
-ProgramKind = Literal["lauego", "wire"]
+ProgramKind = Literal["lauego", "laue_matching", "wire"]
 """A batch program (a create form's)."""
+LiveCapableKind = Literal["lauego", "wire"]
+"""A batch program that also runs live."""
 LiveProgramKind = Literal["lauego-live", "wire-live"]
 """A live program (the Live page's runs)."""
-AnyProgramKind = Literal["lauego", "wire", "lauego-live", "wire-live"]
+AnyProgramKind = Literal["lauego", "laue_matching", "wire", "lauego-live", "wire-live"]
 """Any program ``GET /programs`` lists."""
 
-PROGRAMS: dict[ProgramKind, type[ProgramParams]] = {"lauego": LaueGoParamsV1, "wire": WireParamsV1}
+PROGRAMS: dict[ProgramKind, type[ProgramParams]] = {
+    "lauego": LaueGoParamsV1,
+    "laue_matching": LaueMatchingParamsV1,
+    "wire": WireParamsV1,
+}
 """Each program's parameter model."""
-LIVE_PROGRAMS: dict[ProgramKind, type[ProgramParams]] = {"lauego": LaueGoLiveParamsV1, "wire": WireLiveParamsV1}
+LIVE_PROGRAMS: dict[LiveCapableKind, type[ProgramParams]] = {"lauego": LaueGoLiveParamsV1, "wire": WireLiveParamsV1}
 """Each program's live parameter model (``lauego-live/v1``, ``wire-live/v1``): a live run of it
 (``jobs.creation.create_live_run``), listed as ``LIVE_KINDS``' kind."""
-LIVE_KINDS: dict[ProgramKind, LiveProgramKind] = {"lauego": "lauego-live", "wire": "wire-live"}
+LIVE_KINDS: dict[LiveCapableKind, LiveProgramKind] = {"lauego": "lauego-live", "wire": "wire-live"}
 """Each program's live kind."""
 MODELS: dict[AnyProgramKind, type[ProgramParams]] = {
     **PROGRAMS,
@@ -48,6 +55,7 @@ MODELS: dict[AnyProgramKind, type[ProgramParams]] = {
 """Every listed program's parameter model, by kind."""
 TITLES: dict[AnyProgramKind, str] = {
     "lauego": "LaueGo indexing",
+    "laue_matching": "LaueMatching indexing",
     "wire": "Wire reconstruction",
     "lauego-live": "Live LaueGo indexing",
     "wire-live": "Live wire reconstruction",
@@ -164,8 +172,8 @@ def _nullable(schema: Mapping[str, Any]) -> bool:
 
 def listed_kinds(settings: Settings) -> list[AnyProgramKind]:
     """The programs ``GET /programs`` lists: the batch ones, then the live ones while ``[live] enabled``."""
-    batch: list[AnyProgramKind] = ["lauego", "wire"]
-    return [*batch, *(LIVE_KINDS[kind] for kind in PROGRAMS)] if settings.live.enabled else batch
+    batch: list[AnyProgramKind] = ["lauego", "laue_matching", "wire"]
+    return [*batch, *(LIVE_KINDS[kind] for kind in LIVE_PROGRAMS)] if settings.live.enabled else batch
 
 
 def list_programs(settings: Settings) -> ProgramList:

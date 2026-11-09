@@ -6,11 +6,12 @@
 // form (the user's edits kept, the kit's rule); another kind, a cleared picker or a refused source clears the
 // source, its IDs and the data fields, so the form never mixes two sources.
 import { useNavigate } from "@tanstack/react-router"
-import { type ReactNode, useCallback, useMemo, useState } from "react"
+import { type ReactNode, useCallback, useMemo, useRef, useState } from "react"
 
 import { type ProgramKind, useListPrograms } from "@/api"
 import { LoadingState } from "@/components/LoadingState"
 import { type CreatePrefill, singleId, useConsumedPrefill } from "@/lib/prefill"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { surface } from "@/lib/styles"
 import { cn } from "@/lib/utils"
 import type { RequestValues } from "./form-values"
@@ -53,6 +54,34 @@ function cleared(source: CreatePrefill, mode: SourceMode): Applied {
 
 const hasSource = (source: CreatePrefill) => Object.keys(source).length > 0
 
+/** The fields kept when the program is switched: what the two programs share and a user sets. */
+const SHARED_FIELDS = [
+  "scan_number",
+  "reconstruction_id",
+  "author",
+  "input_path",
+  "filename_prefixes",
+  "scan_points",
+  "depth_range",
+  "geometry_file",
+  "crystal_file",
+  "mask_file",
+  "output_path_template",
+  "notes",
+] as const
+
+/** What survives a switch of program: the shared fields and a scan's or a reconstruction's source. */
+export interface ProgramCarry {
+  values: RequestValues
+  source: CreatePrefill
+}
+
+/** A create page's choice of program, drawn beside its title. */
+export interface ProgramSwitch {
+  options: readonly { value: ProgramKind; label: string }[]
+  onChange: (next: ProgramKind, carry: ProgramCarry) => void
+}
+
 /**
  * The create page of `kind`. `search` is the route's prefill (`validateCreatePrefill`); the page removes it
  * from the URL itself, with replace (a pushed entry would bring Back to the consumed URL again).
@@ -61,11 +90,16 @@ export function CreateRunPage({
   kind,
   title,
   search,
+  programSwitch,
+  carried,
 }: {
   kind: ProgramKind
   title: string
   /** The route's prefill parameters. */
   search: CreatePrefill
+  programSwitch?: ProgramSwitch
+  /** The values kept from the program this page was switched from. */
+  carried?: RequestValues
 }) {
   const navigate = useNavigate()
   const clearSearch = useCallback(() => {
@@ -138,9 +172,31 @@ export function CreateRunPage({
   const showForm = formShown || !(loading && prefill === undefined)
   if (showForm && !formShown) setFormShown(true)
 
+  const valuesRef = useRef<(() => RequestValues) | null>(null)
+  const switchProgram = (next: ProgramKind) => {
+    const current = valuesRef.current?.() ?? {}
+    const values: RequestValues = {}
+    for (const name of SHARED_FIELDS) {
+      if (name in current) values[name] = current[name]
+    }
+    // A clone is of this program's run: it does not carry over.
+    programSwitch?.onChange(next, {
+      values,
+      source: mode === "clone" ? {} : source,
+    })
+  }
   const layout = (parts: FormParts) => (
     <CreateLayout
       title={title}
+      toggle={
+        programSwitch && (
+          <ProgramToggle
+            kind={kind}
+            options={programSwitch.options}
+            onChange={switchProgram}
+          />
+        )
+      }
       nav={<SectionNav sections={spec?.sections ?? []} />}
       alert={
         error && (
@@ -156,6 +212,8 @@ export function CreateRunPage({
         <ProgramForm
           kind={kind}
           values={applied.values}
+          carried={carried}
+          valuesRef={valuesRef}
           fills={applied.fills}
           source={
             spec &&
@@ -188,6 +246,7 @@ export function CreateRunPage({
  */
 function CreateLayout({
   title,
+  toggle,
   nav,
   alert,
   actions,
@@ -195,7 +254,12 @@ function CreateLayout({
   summary,
   answer,
   sections,
-}: FormParts & { title: string; nav: ReactNode; alert: ReactNode }) {
+}: FormParts & {
+  title: string
+  toggle?: ReactNode
+  nav: ReactNode
+  alert: ReactNode
+}) {
   return (
     <div className="flex flex-col gap-4">
       <div
@@ -204,7 +268,9 @@ function CreateLayout({
         className="z-30 -mx-4 -mt-4 flex flex-col gap-3 border-b bg-canvas p-4 md:sticky md:top-12"
       >
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="mr-auto text-xl font-semibold">{title}</h1>
+          <h1 className="text-xl font-semibold">{title}</h1>
+          {toggle}
+          <div className="mr-auto" />
           {actions}
         </div>
         {message}
@@ -229,6 +295,40 @@ function CreateLayout({
  */
 const BELOW_HEADER =
   "[&_:is(a,button,input,select,textarea,[tabindex])]:scroll-mt-[calc(var(--form-header,0px)+4rem)]"
+
+/** The program of the form, as the Source switch draws its kinds. */
+function ProgramToggle({
+  kind,
+  options,
+  onChange,
+}: {
+  kind: ProgramKind
+  options: ProgramSwitch["options"]
+  onChange: (next: ProgramKind) => void
+}) {
+  return (
+    <ToggleGroup
+      aria-label="Program"
+      variant="outline"
+      spacing={0}
+      value={[kind]}
+      onValueChange={(value) => {
+        const next = value[0] as ProgramKind | undefined
+        if (next !== undefined && next !== kind) onChange(next)
+      }}
+    >
+      {options.map((option) => (
+        <ToggleGroupItem
+          key={option.value}
+          value={option.value}
+          className="aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:hover:bg-primary"
+        >
+          {option.label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  )
+}
 
 /**
  * Keeps the header's height in `--form-header` on its parent, the frame. When the header grows over the

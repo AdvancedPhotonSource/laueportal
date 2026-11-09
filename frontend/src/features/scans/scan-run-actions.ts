@@ -3,7 +3,7 @@
 // of this scan's, so the source context is this scan with the selected run, or this scan alone when
 // nothing is selected.
 import type { IndexingRunSummary, ReconstructionRunSummary } from "@/api"
-import { sourcePrefill, type CreatePrefill } from "@/lib/prefill"
+import { programSearch, sourcePrefill, type CreatePrefill } from "@/lib/prefill"
 
 /** What the Reconstructions card keeps of a selected run. */
 export type SelectedReconstruction = Pick<
@@ -14,7 +14,7 @@ export type SelectedReconstruction = Pick<
 /** What the Peak Indexing card keeps of a selected run. */
 export type SelectedIndexing = Pick<
   IndexingRunSummary,
-  "id" | "reconstruction_id"
+  "id" | "reconstruction_id" | "method"
 >
 
 export interface RunCardLinks {
@@ -52,6 +52,9 @@ export function indexingCardLinks(
   const reconstruction = selected?.reconstruction_id
   return {
     newRecon: sourcePrefill({ scan, reconstruction }),
-    newIndex: sourcePrefill({ scan, reconstruction, indexing: selected?.id }),
+    newIndex: {
+      ...sourcePrefill({ scan, reconstruction, indexing: selected?.id }),
+      ...(selected ? programSearch(selected.method) : {}),
+    },
   }
 }

@@ -296,6 +296,7 @@ def test_openapi_contract_names(tmp_path: Path) -> None:
         "IndexingArtifact",
         "ArtifactState",
         "ConversionJob",
+        "ForwardCacheList",
         "ConversionStatus",
         "XmlChoice",
         "XmlSource",
@@ -310,6 +311,7 @@ def test_openapi_contract_names(tmp_path: Path) -> None:
         # the viewer's run: its job and stored parameters
         "IndexingRunDetail",
         "LaueGoParameters",
+        "LaueMatchingParameters",
         # its products: the map's and pole figure's choices, the legend, point details, selection stats
         "MapColor",
         "Palette",

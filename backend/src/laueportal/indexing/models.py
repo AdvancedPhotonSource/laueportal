@@ -1,5 +1,5 @@
-"""Indexing runs (``indexing_run``), LaueGo parameters (``lauego_indexing_parameters``) and results conversions
-(``conversion``).
+"""Indexing runs (``indexing_run``), LaueGo parameters (``lauego_indexing_parameters``), LaueMatching parameters
+(``laue_matching_indexing_parameters``, revision 0009) and results conversions (``conversion``).
 
 The table, column and attribute names are v1's (``dde1bde``); ``created_at`` is UTC since revision 0005, revision
 0006 adds ``indexing_run.selected_xml`` and revision 0007 ``conversion``.
@@ -67,6 +67,12 @@ class IndexingRun(Base):
         single_parent=True,
         uselist=False,
     )
+    laue_matching_parameters: Mapped["LaueMatchingIndexingParameters | None"] = relationship(
+        back_populates="indexing",
+        cascade="all, delete-orphan",
+        single_parent=True,
+        uselist=False,
+    )
 
     def __repr__(self) -> str:
         return f"Indexing I{self.id} ({self.method})"
@@ -118,6 +124,41 @@ class LaueGoIndexingParameters(Base):
     beamline: Mapped[str] = mapped_column(String, nullable=False)
 
     indexing: Mapped[IndexingRun] = relationship(back_populates="lauego_parameters")
+
+
+class LaueMatchingIndexingParameters(Base):
+    """Configuration used by a LaueMatching indexing run (the form's values; ``request.json`` also has the derived
+    crystal and detector values)."""
+
+    __tablename__ = "laue_matching_indexing_parameters"
+
+    indexing_id: Mapped[int] = mapped_column(ForeignKey("indexing_run.id", ondelete="CASCADE"), primary_key=True)
+    filename_prefixes: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    scan_points: Mapped[str] = mapped_column(String, nullable=False)
+    scan_points_len: Mapped[int] = mapped_column(Integer, nullable=False)
+    depth_range: Mapped[str | None] = mapped_column(String, nullable=True)
+    depth_range_len: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    geometry_file: Mapped[str] = mapped_column(String, nullable=False)
+    crystal_file: Mapped[str] = mapped_column(String, nullable=False)
+    mask_file: Mapped[str | None] = mapped_column(String, nullable=True)
+    background_file: Mapped[str | None] = mapped_column(String, nullable=True)
+    forward_cache: Mapped[str] = mapped_column(String, nullable=False)
+    create_forward_cache: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    threshold_method: Mapped[str] = mapped_column(String, nullable=False)
+    threshold_percentile: Mapped[float] = mapped_column(Float, nullable=False)
+    threshold_value: Mapped[float] = mapped_column(Float, nullable=False)
+    min_area: Mapped[int] = mapped_column(Integer, nullable=False)
+    watershed_image: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    elo: Mapped[float] = mapped_column(Float, nullable=False)
+    ehi: Mapped[float] = mapped_column(Float, nullable=False)
+    max_nr_laue_spots: Mapped[int] = mapped_column(Integer, nullable=False)
+    min_nr_spots: Mapped[int] = mapped_column(Integer, nullable=False)
+    min_good_spots: Mapped[int] = mapped_column(Integer, nullable=False)
+    min_intensity: Mapped[float] = mapped_column(Float, nullable=False)
+    max_angle: Mapped[float] = mapped_column(Float, nullable=False)
+    robust_filter: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    indexing: Mapped[IndexingRun] = relationship(back_populates="laue_matching_parameters")
 
 
 class Conversion(Base):

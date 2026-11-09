@@ -8,8 +8,8 @@ import * as zod from 'zod';
 
 
 /**
- * The indexations grid of LaueGo runs (the grid query protocol), live (`changed_since`:
- * the active runs and those changed since). Every field but `method` sorts and filters: `id`, `scan_number`
+ * The indexations grid (the grid query protocol), live (`changed_since`:
+ * the active runs and those changed since). Every field sorts and filters: `id`, `method`, `scan_number`
  * and `reconstruction_id` (the source; both blank for an unlinked run), `n_points`, `n_depths`, `box_size`, the
  * counters `n_inputs`, `n_succeeded`, `n_failed`, `n_not_run`, `n_processed` (number), `crystal_file`,
  * `author`, `notes`, `status` (text; it sorts in the lifecycle order: queued, running, finished, failed,
@@ -43,16 +43,17 @@ export const ListIndexingRunsResponse = zod.object({
   "as_of": zod.iso.datetime({"offset":true}).describe('The server\'s time (UTC) just before the page was read: a live list sends it back as the next `changed_since`.'),
   "rows": zod.array(zod.object({
   "author": zod.union([zod.string(),zod.null()]),
-  "box_size": zod.union([zod.int(),zod.null()]).describe('The peak search box.'),
+  "box_size": zod.union([zod.int(),zod.null()]).describe('The peak search box; null for a LaueMatching run.'),
   "created_at": zod.iso.datetime({"offset":true}).describe('When the run was submitted.'),
   "crystal_file": zod.union([zod.string(),zod.null()]).describe('The structure file (the card\'s Structures File).'),
   "id": zod.int().describe('The indexing run\'s ID (shown as ``I<id>``).'),
-  "method": zod.string().describe('The indexing method: ``lauego`` (the list holds LaueGo runs only).'),
+  "method": zod.string().describe('The indexing method: ``lauego`` or ``laue_matching``.'),
+  "method_label": zod.string().describe('The method as the lists show it: LaueGo or LaueMatching.'),
   "n_depths": zod.union([zod.int(),zod.null()]).describe('The depths it indexes per point (the card\'s Depth Points); null when it indexes no depths.'),
   "n_failed": zod.int(),
   "n_inputs": zod.int(),
   "n_not_run": zod.int(),
-  "n_points": zod.union([zod.int(),zod.null()]).describe('The scan points it indexes; null without LaueGo parameters.'),
+  "n_points": zod.union([zod.int(),zod.null()]).describe('The scan points it indexes; null without stored parameters.'),
   "n_processed": zod.int().describe('Inputs processed, with or without an error (``n_succeeded`` + ``n_failed``).'),
   "n_succeeded": zod.int(),
   "notes": zod.union([zod.string(),zod.null()]),
@@ -60,7 +61,7 @@ export const ListIndexingRunsResponse = zod.object({
   "sample_name": zod.union([zod.string(),zod.null()]).describe('Its scan\'s sample (the scan\'s catalog); null without a scan or a sample.'),
   "scan_number": zod.union([zod.int(),zod.null()]).describe('Its source scan; null when it has none (with no ``reconstruction_id`` either: "Unlinked").'),
   "status": zod.enum(['queued', 'running', 'finished', 'failed', 'cancelled']).describe('A run\'s status in the API (lower-case strings); the ``job`` table stores\n``jobs.state.JobStatus``\'s integers.')
-}).describe('One row of the indexations grid (``GET /api/v1/indexing-runs``: LaueGo runs) and\nof the scan detail\'s peak indexing card.')),
+}).describe('One row of the indexations grid (``GET /api/v1/indexing-runs``) and of the scan detail\'s peak indexing card.')),
   "total": zod.int().describe('Rows matching the filter (and changed_since): AG Grid\'s `lastRow`.')
 }).describe('A page of the indexations grid.')
 
@@ -105,6 +106,57 @@ export const CreateIndexingRunResponse = zod.object({
 }).describe('What a create endpoint answers (201): the new run and its job, and whether the run was queued.\nThe same `Idempotency-Key` with the same body answers the same again.')
 
 /**
+ * Create one LaueMatching run from the create form's values and queue it on the portal's worker, as
+ * `createIndexingRun` creates a LaueGo run: the same answers, `Idempotency-Key` rules and folder-read turn.
+ *
+ * Needs the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.
+ * @summary Create and submit a LaueMatching indexing run
+ */
+export const createLaueMatchingRunHeaderIdempotencyKeyMax = 255;
+
+
+
+export const CreateLaueMatchingRunHeader = zod.object({
+  "Idempotency-Key": zod.string().min(1).max(createLaueMatchingRunHeaderIdempotencyKeyMax).describe('The create form\'s key (a UUID made when the form opens; at most 255 characters): the same key with the same body answers the run created the first time, for 24 hours; with another body, a 409.')
+})
+
+export const CreateLaueMatchingRunBody = zod.record(zod.string(), zod.unknown()).describe('One run\'s parameters, as the validate endpoint takes them (`laue-matching/v1`): one run per request; a list or any other multi-run payload is refused, and nothing is created.')
+
+export const CreateLaueMatchingRunResponse = zod.object({
+  "failure": zod.union([zod.string(),zod.null()]).describe('Why the created run could not be published or queued (the job is then Failed, or, when DM\'s reply was lost,\nleft for the remote poller to reconcile); null when it was queued.'),
+  "job_id": zod.int(),
+  "queue_id": zod.union([zod.string(),zod.null()]).describe('The run\'s queue ID (`run_<job_id>`) for a local run, DM\'s processing job ID for a remote one; null when the\nrun was not queued.'),
+  "run": zod.object({
+  "id": zod.int(),
+  "kind": zod.enum(['indexing', 'reconstruction']).describe('What a job runs: an indexing run (``I12``) or a reconstruction run (``R3``).'),
+  "label": zod.string().describe('``I`` (indexing) or ``R`` (reconstruction) and the run\'s ID.')
+}).describe('The run a job executes, for links and labels: kind, ID and label (``I12``, ``R3``).'),
+  "status": zod.enum(['queued', 'running', 'finished', 'failed', 'cancelled']).describe('The job\'s status after the submission: `queued` once it is on its target\'s queue, `failed` when its\npublication or its queueing failed (`failure` says why).'),
+  "target": zod.string().describe('Where the run executes: `local`, or the remote `aps` or `crux`, reached through DM (`jobs.backends`).')
+}).describe('What a create endpoint answers (201): the new run and its job, and whether the run was queued.\nThe same `Idempotency-Key` with the same body answers the same again.')
+
+/**
+ * Check one LaueMatching run's parameters, as `validateIndexingRun` checks a LaueGo run's, and its energy range,
+ * the data folder and the forward cache: a cache to reuse must exactly fit the run's crystal, detector and energies,
+ * and a new cache's name must be free. Always a 200 with the issues. A folder read, with its 503 while 16 wait.
+ *
+ * Needs the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.
+ * @summary Validate a LaueMatching indexing run's parameters
+ */
+export const ValidateLaueMatchingRunBody = zod.record(zod.string(), zod.unknown()).describe('One run\'s parameters: the create form\'s values, one per form field of `laue-matching/v1` (`GET /api/v1/programs`; the portal sets the config and derived ones, and refuses them here as on creation).')
+
+export const validateLaueMatchingRunResponseIssuesItemSeverityDefault = `error`;
+
+export const ValidateLaueMatchingRunResponse = zod.object({
+  "issues": zod.array(zod.object({
+  "code": zod.string(),
+  "loc": zod.array(zod.union([zod.string(),zod.int()])),
+  "message": zod.string(),
+  "severity": zod.enum(['error', 'warning']).default(validateLaueMatchingRunResponseIssuesItemSeverityDefault)
+}).describe('One problem with one input, located by ``loc``.')).describe('Each problem found, in the order found: `loc` names the field (`["box_size"]`; a file-name template\n`["filename_prefixes", 1]`; `[]` for the whole), `severity` is `error` (the run cannot be created) or `warning`\n(it can), `code` is stable (pydantic\'s type for a field\'s own rule, e.g. `greater_than`, `missing`; the portal\'s\notherwise, e.g. `not_found`, `path_not_allowed`, `source_path_differs`) and `message` is for people. Empty when\nthe parameters are fine. At most 50 (the last then says how many more there were, `more_issues`).')
+}).describe('What a validate endpoint answers for one run\'s parameters: a 200 whatever\nit finds; the create endpoint refuses the same parameters with a 422 when an issue is an error.')
+
+/**
  * Check one LaueGo run's parameters, the create form's values: the model's rules, the cross-field
  * rules (the `%d` placeholders against Scan Indices and Depth Indices) and the context checks (every path inside
  * the roots and existing, the error `not_responding` when its file system does not answer; the input a folder of files or a reconstruction's `scan.h5`; the source scan and
@@ -130,7 +182,7 @@ export const ValidateIndexingRunResponse = zod.object({
 }).describe('What a validate endpoint answers for one run\'s parameters: a 200 whatever\nit finds; the create endpoint refuses the same parameters with a 422 when an issue is an error.')
 
 /**
- * The run (its source, paths, author and notes), its job's ID and its stored LaueGo parameters (`parameters`,
+ * The run (its source, paths, author and notes), its job's ID and its stored parameters (`parameters` for LaueGo, `laue_matching_parameters` for LaueMatching,
  * null without them), read from the database, so a run migrated from v1 has them too.
  * Any method. 404 for an unknown run.
  * @summary Get an indexing run
@@ -150,6 +202,32 @@ export const GetIndexingRunResponse = zod.object({
   "id": zod.int().describe('The indexing run\'s ID (shown as ``I<id>``).'),
   "input_path": zod.string().describe('The folder its inputs were read from.'),
   "job_id": zod.int().describe('The run\'s job (the run monitor\'s page).'),
+  "laue_matching_parameters": zod.union([zod.object({
+  "background_file": zod.union([zod.string(),zod.null()]),
+  "create_forward_cache": zod.boolean().describe('Whether this run built the cache.'),
+  "crystal_file": zod.string(),
+  "depth_range": zod.union([zod.string(),zod.null()]).describe('The depth indices (a range text); null when the run indexes no depths.'),
+  "depth_range_len": zod.union([zod.int(),zod.null()]),
+  "ehi": zod.number(),
+  "elo": zod.number(),
+  "filename_prefixes": zod.array(zod.string()).describe('The image file name patterns.'),
+  "forward_cache": zod.string().describe('The forward cache\'s name.'),
+  "geometry_file": zod.string(),
+  "mask_file": zod.union([zod.string(),zod.null()]),
+  "max_angle": zod.number(),
+  "max_nr_laue_spots": zod.int(),
+  "min_area": zod.int(),
+  "min_good_spots": zod.int(),
+  "min_intensity": zod.number(),
+  "min_nr_spots": zod.int(),
+  "robust_filter": zod.boolean(),
+  "scan_points": zod.string().describe('The scan point indices (a range text).'),
+  "scan_points_len": zod.int(),
+  "threshold_method": zod.string(),
+  "threshold_percentile": zod.number(),
+  "threshold_value": zod.number(),
+  "watershed_image": zod.boolean()
+}).describe('A LaueMatching run\'s stored parameters (``laue_matching_indexing_parameters``).'),zod.null()]).describe('The stored LaueMatching parameters; null for another method.'),
   "method": zod.string().describe('The indexing method (``lauego`` or ``laue_matching``).'),
   "notes": zod.union([zod.string(),zod.null()]),
   "output_path": zod.union([zod.string(),zod.null()]).describe('Its output folder as recorded.'),
@@ -908,4 +986,31 @@ export const GetIndexingSummaryResponse = zod.object({
   "steps": zod.array(zod.int()).describe('The steps (frame positions) the scope keeps, in order.'),
   "structure": zod.union([zod.string(),zod.null()]).describe('The crystal structure\'s name; null when the results hold no structure.')
 }).describe('The results viewer\'s summary of a run (``GET /api/v1/indexing-runs/{id}/summary``), within the\nscope (``pattern0_only``, ``min_peaks``).')
+
+/**
+ * The named forward caches whose record exactly fits these values, and a free name for a new one. A data folder or
+ * file that cannot be read is `problem`, not an error. A folder read, with its 503 while 16 wait.
+ * @summary List the forward caches that fit a LaueMatching form's values
+ */
+export const listForwardCachesQueryEloExclusiveMin = 0;
+
+export const listForwardCachesQueryEhiExclusiveMin = 0;
+
+export const listForwardCachesQueryMaxNrLaueSpotsExclusiveMin = 0;
+
+
+
+export const ListForwardCachesQueryParams = zod.object({
+  "geometry_file": zod.string().describe('The geometry file, inside the roots.'),
+  "crystal_file": zod.string().describe('The crystal file, inside the roots.'),
+  "elo": zod.number().gt(listForwardCachesQueryEloExclusiveMin).describe('Min Energy (keV).'),
+  "ehi": zod.number().gt(listForwardCachesQueryEhiExclusiveMin).describe('Max Energy (keV).'),
+  "max_nr_laue_spots": zod.int().gt(listForwardCachesQueryMaxNrLaueSpotsExclusiveMin).describe('Max Spots per Orientation.')
+})
+
+export const ListForwardCachesResponse = zod.object({
+  "caches": zod.array(zod.string()).describe('Their names, sorted.'),
+  "problem": zod.union([zod.string(),zod.null()]).describe('Why the caches cannot be listed; null when they can.'),
+  "suggested_name": zod.union([zod.string(),zod.null()]).describe('A free name for a new cache; null while the values cannot be read.')
+}).describe('The forward caches that fit a form\'s values (``GET /api/v1/laue-matching/forward-caches``).')
 

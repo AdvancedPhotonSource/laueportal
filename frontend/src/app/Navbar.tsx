@@ -32,7 +32,7 @@ const LIVE_LINK = { to: "/live", label: "Live" } as const
 const MENU_LINKS = [
   { to: "/scans/import", label: "Import Scans" },
   { to: "/reconstructions/new", label: "New Wire Reconstruction" },
-  { to: "/indexing/new", label: "New LaueGo Indexation" },
+  { to: "/indexing/new", label: "New Indexation" },
 ] as const
 
 const navLinkClass = cn(

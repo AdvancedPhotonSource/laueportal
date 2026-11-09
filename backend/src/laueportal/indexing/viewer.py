@@ -66,6 +66,7 @@ from laueportal.indexing.schemas import (
     IndexingResultsSummary,
     IndexingRunDetail,
     LaueGoParameters,
+    LaueMatchingParameters,
     OutputPath,
     OutputPathState,
     ResultsCounts,
@@ -233,6 +234,7 @@ def run_detail(session: Session, indexing_id: int) -> IndexingRunDetail:
     """The run, its job and its stored parameters (the viewer's header and Parameters tab); 404 for an unknown run."""
     run = load_run(session, indexing_id)
     stored = run.lauego_parameters
+    matching = run.laue_matching_parameters
     return IndexingRunDetail(
         id=run.id,
         method=run.method,
@@ -245,6 +247,9 @@ def run_detail(session: Session, indexing_id: int) -> IndexingRunDetail:
         notes=run.notes,
         created_at=run.created_at,
         parameters=None if stored is None else LaueGoParameters.model_validate(stored, from_attributes=True),
+        laue_matching_parameters=(
+            None if matching is None else LaueMatchingParameters.model_validate(matching, from_attributes=True)
+        ),
     )
 
 

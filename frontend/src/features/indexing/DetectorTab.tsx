@@ -8,6 +8,7 @@ import {
   type DetectorPattern,
   type IndexingResultsSummary,
 } from "@/api"
+import { useGoodnessLabel } from "./goodness-label"
 import { EmptyState } from "@/components/EmptyState"
 import { ErrorState } from "@/components/ErrorState"
 import { LoadingState } from "@/components/LoadingState"
@@ -451,10 +452,15 @@ function SummaryCard({
 }
 
 function PatternRow({ pattern }: { pattern: DetectorPattern }) {
-  const quality =
+  const goodness = useGoodnessLabel().toLowerCase()
+  const rms =
     pattern.rms_error_deg !== null
-      ? `, RMS ${formatSignificant(pattern.rms_error_deg)}°, goodness ${significant(pattern.goodness)}`
+      ? `, RMS ${formatSignificant(pattern.rms_error_deg)}°`
       : ""
+  const quality =
+    rms === "" && pattern.goodness === null
+      ? ""
+      : `${rms}${pattern.goodness === null ? "" : `, ${goodness} ${significant(pattern.goodness)}`}`
   const simulated = pattern.simulated
     ? `, ${String(pattern.simulated.length)} simulated missing`
     : ""

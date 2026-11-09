@@ -54,6 +54,25 @@ Then set the parameters, choose **Run on**, and **Submit**, as for a reconstruct
    scan's paths; the parameters stay.
 3. **Submit**.
 
+### Index with LaueMatching
+
+**New Indexation** opens on LaueGo; the switch beside the title changes the form to LaueMatching. The source, file paths,
+geometry, crystal, author and notes stay when you switch. LaueMatching compares each frame with a precomputed database
+of 100 million orientations, so it can find several grains in one frame.
+
+- **Forward Cache** lists the caches that exactly fit the form's geometry, crystal, energies and spot count. If none
+  fits, choose **New…** and give it a name. The first frame then builds it, which takes minutes: the run shows Running
+  at 0 until it is done. Later runs with the same values reuse it.
+- Frames must be the full detector, unbinned; any other frame fails on its own and the rest continue.
+- The geometry has no depth term: frames more than about 100 µm from depth 0 have spots displaced by about half a
+  pixel or more, and the portal warns about them.
+- Raw frames use your **Background File**, or the median of the run's first frame. Reconstructed frames use none.
+
+In the results, **Quality** replaces Goodness for these runs. It is `NMatches × √Intensity`, so do not compare it with a
+LaueGo run's Goodness. RMS error is empty, because LaueMatching records only predicted spot positions. Peaks are
+connected groups of pixels, without a fitted shape, and a predicted spot with no peak within 5 pixels is left out of the
+peak tables. The run folder's `laue_matching.h5` keeps every orientation and spot as the indexer wrote them.
+
 ## Inspect results
 
 **Indexing results:** open an I… link (Indexations, a scan's page, or the job page).

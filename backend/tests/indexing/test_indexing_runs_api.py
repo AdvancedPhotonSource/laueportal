@@ -49,7 +49,7 @@ def ids(client: TestClient, **params: Any) -> list[int]:
     return [row["id"] for row in get_rows(client, RUNS, **params)]
 
 
-def test_list_indexing_runs_returns_the_lauego_runs_newest_first(
+def test_list_indexing_runs_returns_every_method_newest_first(
     seeded: tuple[TestClient, dict[str, Seeded]],
 ) -> None:
     client, seeded_ids = seeded
@@ -60,13 +60,13 @@ def test_list_indexing_runs_returns_the_lauego_runs_newest_first(
     assert response.headers["cache-control"] == "no-store"
     body = response.json()
     assert before <= parse_z(body["as_of"]) <= after
-    # I4 is a LaueMatching run: not on this list (the indexations page lists LaueGo runs)
-    assert seeded_ids["i_matching"].run_id == 4
-    assert ([row["id"] for row in body["rows"]], body["total"]) == ([5, 3, 2, 1], 4)
+    assert seeded_ids["i_matching"].run_id == 4  # a LaueMatching run, on the same list
+    assert ([row["id"] for row in body["rows"]], body["total"]) == ([5, 4, 3, 2, 1], 5)
     by_id = {row["id"]: row for row in body["rows"]}
     assert by_id[1] == {
         "id": 1,
         "method": "lauego",
+        "method_label": "LaueGo",
         "scan_number": 101,
         "sample_name": "Si",  # its scan's catalog
         "reconstruction_id": seeded_ids["r_finished"].run_id,
@@ -105,6 +105,7 @@ def test_list_indexing_runs_returns_the_lauego_runs_newest_first(
     assert by_id[5] == {
         "id": 5,
         "method": "lauego",
+        "method_label": "LaueGo",
         "scan_number": 103,
         "sample_name": None,  # a scan without a catalog
         "reconstruction_id": None,
@@ -127,7 +128,7 @@ def test_list_indexing_runs_returns_the_lauego_runs_newest_first(
 def test_scan_id_lists_one_scans_indexations(client: TestClient) -> None:
     assert ids(client, scan_id=101) == [1]
     assert ids(client, scan_id=102) == [2]
-    assert ids(client, scan_id=103) == [5]  # not its LaueMatching run, I4
+    assert ids(client, scan_id=103) == [5, 4]  # its LaueGo run and its LaueMatching run
     assert problem_items(client.get(RUNS, params={"scan_id": 2**63})) == [(["query", "scan_id"], "less_than_equal")]
 
 
@@ -138,36 +139,42 @@ def test_list_indexing_runs_sorts_filters_and_pages(client: TestClient) -> None:
     assert ids(client, filter={"box_size": {"filterType": "number", "type": "lessThan", "filter": 15}}) == [2]
     assert ids(client, filter={"n_depths": {"filterType": "number", "type": "notBlank"}}) == [2]
     assert ids(client, filter={"crystal_file": {"filterType": "text", "type": "endsWith", "filter": "SI.XTAL"}}) == [2]
-    assert ids(client, filter={"status": {"filterType": "text", "type": "notEqual", "filter": "failed"}}) == [5, 3, 1]
+    assert ids(client, filter={"status": {"filterType": "text", "type": "notEqual", "filter": "failed"}}) == [
+        5,
+        4,
+        3,
+        1,
+    ]
     assert ids(client, filter={"author": {"type": "startsWith", "filter": "D"}}) == [3]
     assert ids(client, filter={"sample_name": {"type": "equals", "filter": "ni"}}) == [2]
     day = {"filterType": "date", "type": "inRange", "dateFrom": "2026-10-18", "dateTo": "2026-10-18"}
-    assert ids(client, filter={"created_at": day}) == [5, 3, 2, 1]
-    assert ids(client, filter={"n_points": {"filterType": "number", "type": "blank"}}) == [5]
-    assert ids(client, sort="box_size,-id") == [5, 2, 3, 1]  # blank first
-    assert ids(client, sort="-n_points") == [3, 1, 2, 5]  # ties by ID, blank last
-    assert ids(client, sort="scan_number") == [3, 1, 2, 5]  # blank first
+    assert ids(client, filter={"created_at": day}) == [5, 4, 3, 2, 1]
+    assert ids(client, filter={"n_points": {"filterType": "number", "type": "blank"}}) == [5, 4]
+    assert ids(client, sort="box_size,-id") == [5, 4, 2, 3, 1]  # blank first
+    assert ids(client, sort="-n_points") == [3, 1, 2, 4, 5]  # ties by ID, blank last
+    assert ids(client, sort="scan_number") == [3, 1, 2, 4, 5]  # blank first
     page = client.get(RUNS, params={"offset": 2, "limit": 5}).json()
-    assert ([row["id"] for row in page["rows"]], page["total"]) == ([2, 1], 4)
+    assert ([row["id"] for row in page["rows"]], page["total"]) == ([3, 2, 1], 5)
+
+
+def test_method_filters_and_sorts_the_list(client: TestClient) -> None:
+    assert ids(client, filter={"method": {"type": "equals", "filter": "laue_matching"}}) == [4]
+    assert ids(client, filter={"method_label": {"type": "contains", "filter": "LaueMatching"}}) == [4]
+    assert ids(client, sort="method,id") == [4, 1, 2, 3, 5]
 
 
 def test_status_sorts_in_lifecycle_order(client: TestClient) -> None:
     """Queued, Running, Finished, Failed, Cancelled (the lifecycle order, by status code), not alphabetically."""
     rows = get_rows(client, RUNS, sort="status")
-    assert [row["id"] for row in rows] == [3, 1, 2, 5]  # queued, finished, failed, cancelled
+    assert [row["id"] for row in rows] == [3, 1, 4, 2, 5]  # queued, finished (two), failed, cancelled
     assert in_lifecycle_order(rows)
     rows = get_rows(client, RUNS, sort="-status")
-    assert [row["id"] for row in rows] == [5, 2, 1, 3]
+    assert [row["id"] for row in rows] == [5, 2, 1, 4, 3]
     assert in_lifecycle_order(rows, descending=True)
 
 
 def test_list_indexing_runs_rejects_bad_grid_parameters(client: TestClient) -> None:
-    # method is always lauego here: no grid field
-    assert problem_items(client.get(RUNS, params={"sort": "method"})) == [(["query", "sort"], "unknown_field")]
-    method = json.dumps({"method": {"type": "equals", "filter": "laue_matching"}})
-    assert problem_items(client.get(RUNS, params={"filter": method})) == [
-        (["query", "filter", "method"], "unknown_field")
-    ]
+    assert problem_items(client.get(RUNS, params={"sort": "nope"})) == [(["query", "sort"], "unknown_field")]
     assert problem_items(client.get(RUNS, params={"limit": 0})) == [(["query", "limit"], "greater_than_equal")]
 
 
@@ -218,6 +225,7 @@ def test_get_indexing_run_returns_the_run_its_job_and_its_stored_parameters(
         "author": "alice",
         "notes": None,
         "created_at": "2026-10-18T11:35:00Z",
+        "laue_matching_parameters": None,
     }
     # every stored column but the key, as stored (the database, not request.json: a run migrated from v1 has them)
     assert parameters == {

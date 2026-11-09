@@ -129,6 +129,29 @@ wire_skip = 1
 author = ""
 notes = ""
 
+[laue_matching]                         # LaueMatching indexing (docs/runbooks/deploy.md)
+data_root = ""                        # 100MilOrients.bin and one folder per named forward cache; "" = no LaueMatching runs
+threads = 16                            # the indexer's threads per frame (frames run one at a time)
+orientation_spacing = 0.4               # the orientation database's spacing, in degrees
+filter_radius = 101                     # median filter for a background computed from a raw frame, in pixels
+gauss_sigma_max = 2.5                   # cap on the matching blur, in pixels
+
+[laue_matching.defaults]                # form defaults
+threshold_method = "percentile"         # percentile, adaptive, otsu or fixed
+threshold_percentile = 99.8
+threshold_value = 0
+min_area = 4
+watershed_image = true
+background_file = ""
+elo = 5
+ehi = 30
+max_nr_laue_spots = 30
+min_nr_spots = 8
+min_good_spots = 4
+min_intensity = 50
+max_angle = 3
+robust_filter = true
+
 [remote]                                # remote execution through DM (off in development)
 enabled = false                         # true: remote targets (aps, crux) and the worker's remote poller thread
 settings_file = ""                      # the private bdp.yaml (deploy/remote/bdp.yaml.template), outside the checkout;

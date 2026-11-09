@@ -26,8 +26,10 @@ import type {
 import type {
   ConversionJob,
   CreateIndexingRunBody,
+  CreateLaueMatchingRunBody,
   CreatedRun,
   DetectorOverlays,
+  ForwardCacheList,
   GetIndexingDetectorOverlaysParams,
   GetIndexingLegendParams,
   GetIndexingMapParams,
@@ -39,6 +41,7 @@ import type {
   IndexingRunDetail,
   IndexingRunPage,
   KeyConflict,
+  ListForwardCachesParams,
   ListIndexingPatternsParams,
   ListIndexingPeaksParams,
   ListIndexingRunsParams,
@@ -49,6 +52,7 @@ import type {
   SelectionStats,
   SelectionStatsRequest,
   ValidateIndexingRunBody,
+  ValidateLaueMatchingRunBody,
   ValidationReport,
   XmlChoice
 } from '../../model';
@@ -92,8 +96,8 @@ export const getListIndexingRunsUrl = (params?: ListIndexingRunsParams,) => {
 }
 
 /**
- * The indexations grid of LaueGo runs (the grid query protocol), live (`changed_since`:
- * the active runs and those changed since). Every field but `method` sorts and filters: `id`, `scan_number`
+ * The indexations grid (the grid query protocol), live (`changed_since`:
+ * the active runs and those changed since). Every field sorts and filters: `id`, `method`, `scan_number`
  * and `reconstruction_id` (the source; both blank for an unlinked run), `n_points`, `n_depths`, `box_size`, the
  * counters `n_inputs`, `n_succeeded`, `n_failed`, `n_not_run`, `n_processed` (number), `crystal_file`,
  * `author`, `notes`, `status` (text; it sorts in the lifecycle order: queued, running, finished, failed,
@@ -290,6 +294,189 @@ export const useCreateIndexingRun = <TError = ErrorType<Problem | KeyConflict>,
       > => {
       return useMutation(getCreateIndexingRunMutationOptions(options), queryClient);
     }
+    export const getCreateLaueMatchingRunUrl = () => {
+
+
+
+
+  return `/api/v1/indexing-runs/laue-matching`
+}
+
+/**
+ * Create one LaueMatching run from the create form's values and queue it on the portal's worker, as
+ * `createIndexingRun` creates a LaueGo run: the same answers, `Idempotency-Key` rules and folder-read turn.
+ *
+ * Needs the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.
+ * @summary Create and submit a LaueMatching indexing run
+ */
+export const createLaueMatchingRun = async (createLaueMatchingRunBody: CreateLaueMatchingRunBody, options?: Parameters<typeof apiFetch>[1]): Promise<CreatedRun> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetch<CreatedRun>(getCreateLaueMatchingRunUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createLaueMatchingRunBody)
+  }
+);}
+
+
+
+
+
+export const getCreateLaueMatchingRunMutationKey = () => ['createLaueMatchingRun'] as const;
+
+export const getCreateLaueMatchingRunMutationOptions = <TError = ErrorType<Problem | KeyConflict>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLaueMatchingRun>>, TError,CreateLaueMatchingRunMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createLaueMatchingRun>>, TError,CreateLaueMatchingRunMutationVariables, TContext> => {
+
+const mutationKey = getCreateLaueMatchingRunMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createLaueMatchingRun>>, CreateLaueMatchingRunMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createLaueMatchingRun(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateLaueMatchingRunMutationResult = NonNullable<Awaited<ReturnType<typeof createLaueMatchingRun>>>
+    export type CreateLaueMatchingRunMutationBody = BodyType<CreateLaueMatchingRunBody>
+    export type CreateLaueMatchingRunMutationError = ErrorType<Problem | KeyConflict>
+    export type CreateLaueMatchingRunMutationVariables = {data: BodyType<CreateLaueMatchingRunBody>}
+
+    /**
+ * @summary Create and submit a LaueMatching indexing run
+ */
+export const useCreateLaueMatchingRun = <TError = ErrorType<Problem | KeyConflict>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLaueMatchingRun>>, TError,CreateLaueMatchingRunMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createLaueMatchingRun>>,
+        TError,
+        CreateLaueMatchingRunMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateLaueMatchingRunMutationOptions(options), queryClient);
+    }
+    export const getValidateLaueMatchingRunUrl = () => {
+
+
+
+
+  return `/api/v1/indexing-runs/laue-matching/validate`
+}
+
+/**
+ * Check one LaueMatching run's parameters, as `validateIndexingRun` checks a LaueGo run's, and its energy range,
+ * the data folder and the forward cache: a cache to reuse must exactly fit the run's crystal, detector and energies,
+ * and a new cache's name must be free. Always a 200 with the issues. A folder read, with its 503 while 16 wait.
+ *
+ * Needs the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.
+ * @summary Validate a LaueMatching indexing run's parameters
+ */
+export const validateLaueMatchingRun = async (validateLaueMatchingRunBody: ValidateLaueMatchingRunBody, options?: Parameters<typeof apiFetch>[1]): Promise<ValidationReport> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetch<ValidationReport>(getValidateLaueMatchingRunUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(validateLaueMatchingRunBody)
+  }
+);}
+
+
+
+
+
+export const getValidateLaueMatchingRunMutationKey = () => ['validateLaueMatchingRun'] as const;
+
+export const getValidateLaueMatchingRunMutationOptions = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateLaueMatchingRun>>, TError,ValidateLaueMatchingRunMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof validateLaueMatchingRun>>, TError,ValidateLaueMatchingRunMutationVariables, TContext> => {
+
+const mutationKey = getValidateLaueMatchingRunMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof validateLaueMatchingRun>>, ValidateLaueMatchingRunMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  validateLaueMatchingRun(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ValidateLaueMatchingRunMutationResult = NonNullable<Awaited<ReturnType<typeof validateLaueMatchingRun>>>
+    export type ValidateLaueMatchingRunMutationBody = BodyType<ValidateLaueMatchingRunBody>
+    export type ValidateLaueMatchingRunMutationError = ErrorType<Problem>
+    export type ValidateLaueMatchingRunMutationVariables = {data: BodyType<ValidateLaueMatchingRunBody>}
+
+    /**
+ * @summary Validate a LaueMatching indexing run's parameters
+ */
+export const useValidateLaueMatchingRun = <TError = ErrorType<Problem>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateLaueMatchingRun>>, TError,ValidateLaueMatchingRunMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof validateLaueMatchingRun>>,
+        TError,
+        ValidateLaueMatchingRunMutationVariables,
+        TContext
+      > => {
+      return useMutation(getValidateLaueMatchingRunMutationOptions(options), queryClient);
+    }
     export const getValidateIndexingRunUrl = () => {
 
 
@@ -395,7 +582,7 @@ export const useValidateIndexingRun = <TError = ErrorType<Problem>,
 }
 
 /**
- * The run (its source, paths, author and notes), its job's ID and its stored LaueGo parameters (`parameters`,
+ * The run (its source, paths, author and notes), its job's ID and its stored parameters (`parameters` for LaueGo, `laue_matching_parameters` for LaueMatching,
  * null without them), read from the database, so a run migrated from v1 has them too.
  * Any method. 404 for an unknown run.
  * @summary Get an indexing run
@@ -1978,6 +2165,115 @@ export function useGetIndexingSummary<TData = Awaited<ReturnType<typeof getIndex
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetIndexingSummaryQueryOptions(indexingId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getListForwardCachesUrl = (params: ListForwardCachesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/laue-matching/forward-caches?${stringifiedParams}` : `/api/v1/laue-matching/forward-caches`
+}
+
+/**
+ * The named forward caches whose record exactly fits these values, and a free name for a new one. A data folder or
+ * file that cannot be read is `problem`, not an error. A folder read, with its 503 while 16 wait.
+ * @summary List the forward caches that fit a LaueMatching form's values
+ */
+export const listForwardCaches = async (params: ListForwardCachesParams, options?: Parameters<typeof apiFetch>[1]): Promise<ForwardCacheList> => {
+
+  return apiFetch<ForwardCacheList>(getListForwardCachesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListForwardCachesQueryKey = (params?: ListForwardCachesParams,) => {
+    return [
+    `/api/v1/laue-matching/forward-caches`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListForwardCachesQueryOptions = <TData = Awaited<ReturnType<typeof listForwardCaches>>, TError = ErrorType<Problem>>(params: ListForwardCachesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listForwardCaches>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListForwardCachesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listForwardCaches>>> = ({ signal }) => listForwardCaches(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listForwardCaches>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListForwardCachesQueryResult = NonNullable<Awaited<ReturnType<typeof listForwardCaches>>>
+export type ListForwardCachesQueryError = ErrorType<Problem>
+
+
+export function useListForwardCaches<TData = Awaited<ReturnType<typeof listForwardCaches>>, TError = ErrorType<Problem>>(
+ params: ListForwardCachesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listForwardCaches>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listForwardCaches>>,
+          TError,
+          Awaited<ReturnType<typeof listForwardCaches>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListForwardCaches<TData = Awaited<ReturnType<typeof listForwardCaches>>, TError = ErrorType<Problem>>(
+ params: ListForwardCachesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listForwardCaches>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listForwardCaches>>,
+          TError,
+          Awaited<ReturnType<typeof listForwardCaches>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListForwardCaches<TData = Awaited<ReturnType<typeof listForwardCaches>>, TError = ErrorType<Problem>>(
+ params: ListForwardCachesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listForwardCaches>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List the forward caches that fit a LaueMatching form's values
+ */
+
+export function useListForwardCaches<TData = Awaited<ReturnType<typeof listForwardCaches>>, TError = ErrorType<Problem>>(
+ params: ListForwardCachesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listForwardCaches>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListForwardCachesQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

@@ -25,6 +25,8 @@ import-linter checks these (its contracts are in `backend/pyproject.toml`; `make
 - nothing imports `redis` or `rq` (the contract `no-redis-rq`; the job table is the queue);
 - only `api.py` modules (including `core/api.py`, the shared dependencies), `app.py` and `core/errors.py` touch FastAPI;
 - only `science`, the `*/compute.py` modules and the `*/live_compute.py` modules import lauelab;
+- only `indexing.laue_matching.compute` imports `laue_index` and `skimage` (a remote compute node has neither, so
+  `jobs.contract` imports that module only for its own run kind);
 - `jobs.contract`, `jobs.rundir`, `jobs.backends`, the remote runners (`jobs.runner`, `jobs.mpi_runner`,
   `jobs.processes`), `remote.paths`, `remote.observation`, the launcher-side `remote` modules (`settings`, `plan`,
   `transport`, `stage`, `dm`, `flow`, `pbs`, `auth`, `health`), `*/compute.py` and `*/live_compute.py` never import `core.db` or
@@ -51,7 +53,9 @@ with (`tests/indexing/test_live_lauego_compute.py`:
 `point_path`, `unsafe_stem`) and `._scan_writer` (`parameter_values`, `write_catalog`), the wire catalogs in
 `science/recon.py` and `science/merge.py`, which the viewer and merge tests build through them
 (`tests/recon_support.py`); and `lauelab.reconstruct.inspection`'s names in `science/recon.py` (a public module whose
-names `lauelab.reconstruct` does not export).
+names `lauelab.reconstruct` does not export); and `lauelab.indexing.indexer.PEAK_DTYPE`, the peak table
+`indexing.laue_matching.compute` builds (`tests/indexing/test_laue_matching.py`:
+`::test_a_frame_becomes_a_validated_results_file_and_the_native_tables`).
 
 ## Endpoints
 

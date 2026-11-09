@@ -34,6 +34,7 @@ const PLACEHOLDER = "ID or sample"
 /** A source picker: `value` is the chosen ID (null for none); `onChange` gives the new one and its match. */
 export function SourcePicker({
   kind,
+  method,
   value,
   onChange,
   id,
@@ -43,6 +44,8 @@ export function SourcePicker({
   describedBy,
 }: {
   kind: SourceKind
+  /** Only the indexing runs of this method. */
+  method?: string
   value: number | null
   onChange: (id: number | null, option: SourceOption | null) => void
   id?: string
@@ -76,8 +79,8 @@ export function SourcePicker({
   const typed =
     value !== null && query === sourceLabel(kind, value) ? "" : query
   const matches = useQuery({
-    queryKey: ["program-form", "sources", kind, typed],
-    queryFn: ({ signal }) => searchSources(kind, typed, signal),
+    queryKey: ["program-form", "sources", kind, typed, method],
+    queryFn: ({ signal }) => searchSources(kind, typed, signal, method),
     enabled: open,
     staleTime: 10_000,
   })
@@ -222,6 +225,7 @@ export function CloneField({
       <SourcePicker
         id={id}
         kind={CLONE_SOURCE[program]}
+        method={program === "wire" ? undefined : program}
         value={value}
         onChange={onChange}
       />

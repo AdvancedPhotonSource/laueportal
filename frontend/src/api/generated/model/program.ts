@@ -24,12 +24,12 @@ export interface Program {
      */
   json_schema: ProgramJsonSchema;
   /**
-     * The program: `lauego` (LaueGo indexing) or `wire` (wire reconstruction), the create forms'; `lauego-live` or
+     * The program: `lauego` (LaueGo indexing), `laue_matching` (LaueMatching indexing) or `wire` (wire reconstruction), the create forms'; `lauego-live` or
      * `wire-live`, their live schemas (the Live page's runs), listed only while live processing is enabled.
      */
   kind: ProgramKind;
   /**
-     * The parameter schema's version (`lauego/v1`, `wire/v1`, `lauego-live/v1`, `wire-live/v1`), which
+     * The parameter schema's version (`lauego/v1`, `laue-matching/v1`, `wire/v1`, `lauego-live/v1`, `wire-live/v1`), which
      * every `request.json` it writes holds.
      */
   schema_id: string;

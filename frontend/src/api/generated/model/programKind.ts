@@ -6,7 +6,7 @@
  */
 
 /**
- * The program: `lauego` (LaueGo indexing) or `wire` (wire reconstruction), the create forms'; `lauego-live` or
+ * The program: `lauego` (LaueGo indexing), `laue_matching` (LaueMatching indexing) or `wire` (wire reconstruction), the create forms'; `lauego-live` or
  * `wire-live`, their live schemas (the Live page's runs), listed only while live processing is enabled.
  */
 export type ProgramKind = typeof ProgramKind[keyof typeof ProgramKind];
@@ -14,6 +14,7 @@ export type ProgramKind = typeof ProgramKind[keyof typeof ProgramKind];
 
 export const ProgramKind = {
   lauego: 'lauego',
+  laue_matching: 'laue_matching',
   wire: 'wire',
   'lauego-live': 'lauego-live',
   'wire-live': 'wire-live',

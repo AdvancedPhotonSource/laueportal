@@ -49,8 +49,8 @@ from laueportal.core.settings import Settings
 from laueportal.files.inputs import WorkflowValidationError
 from laueportal.indexing.lauego.live_params import LaueGoLiveParamsV1
 from laueportal.indexing.models import IndexingRun
-from laueportal.indexing.service import create_indexing, create_live_indexing
-from laueportal.indexing.validation import validate_indexing
+from laueportal.indexing.service import create_indexing, create_laue_matching, create_live_indexing
+from laueportal.indexing.validation import validate_indexing, validate_laue_matching
 from laueportal.jobs import state
 from laueportal.jobs.backends import LOCAL, is_remote
 from laueportal.jobs.idempotency import Claim, IdempotencyStore
@@ -85,6 +85,9 @@ class _Program:
 
 PROGRAMS: dict[ProgramKind, _Program] = {
     "lauego": _Program("createIndexingRun", RunKind.INDEXING, "I", IndexingRun, validate_indexing, create_indexing),
+    "laue_matching": _Program(
+        "createLaueMatchingRun", RunKind.INDEXING, "I", IndexingRun, validate_laue_matching, create_laue_matching
+    ),
     "wire": _Program(
         "createReconstructionRun",
         RunKind.RECONSTRUCTION,

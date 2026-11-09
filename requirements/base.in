@@ -19,3 +19,13 @@ pyyaml
 # --no-deps (VCS installs can't be hash-locked), so its dependencies are locked here.
 pandas>=2.0
 plotly>=6.0
+# lauelab's numerical dependency from its a5e4637 on, and LaueMatching preprocessing's.
+scipy>=1.13
+
+# LaueMatching (the `laue_matching` program, indexing/laue_matching/compute.py). laue-index ships only an sdist: its C
+# indexer compiles at install time. Its optional packages are required here: without scikit-image, Otsu thresholding
+# silently becomes adaptive, and without diplib another median filter runs, so a run would compute different numbers.
+laue-index==0.8.0
+opencv-python-headless
+scikit-image
+diplib

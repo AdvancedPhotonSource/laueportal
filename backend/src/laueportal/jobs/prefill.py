@@ -125,7 +125,8 @@ def _blank(kind: programs.ProgramKind, settings: Settings) -> dict[str, Any]:
     values: dict[str, Any] = dict.fromkeys(programs.PROGRAMS[kind].fields_from("form"))
     values["filename_prefixes"] = []
     values |= programs.form_defaults(kind, settings)
-    values["backend"] = _target(None, settings)
+    if "backend" in values:
+        values["backend"] = _target(None, settings)
     return values
 
 
@@ -145,6 +146,13 @@ def _clone_lauego(run: IndexingRun, values: dict[str, Any]) -> dict[str, Any]:
     if isinstance(depth, str) and depth.strip().lower() == "nan":  # automatic
         copied["depth"] = None
     return copied | {"input_path": run.input_path}
+
+
+def _clone_laue_matching(run: IndexingRun, values: dict[str, Any]) -> dict[str, Any]:
+    """A LaueMatching run's values for the form: it reuses the run's cache, whichever run built it."""
+    copied = _copied(run.laue_matching_parameters, values)
+    copied["filename_prefixes"] = _run_templates(copied.get("filename_prefixes"))
+    return copied | {"input_path": run.input_path, "create_forward_cache": False}
 
 
 def _clone_wire(run: ReconstructionRun, values: dict[str, Any]) -> dict[str, Any]:
@@ -216,8 +224,11 @@ def prefill(
         source: dict[str, Any] = {}
         if indexing_id is not None:
             run = session.get(IndexingRun, indexing_id)
-            if run is None or run.method != "lauego" or run.lauego_parameters is None:
-                raise _not_found("Indexing run not found", f"No LaueGo indexing run I{indexing_id}")
+            method_parameters = None
+            if run is not None and run.method == kind:
+                method_parameters = run.lauego_parameters if kind == "lauego" else run.laue_matching_parameters
+            if run is None or method_parameters is None:
+                raise _not_found("Indexing run not found", f"No {programs.TITLES[kind]} run I{indexing_id}")
             scan_number = _agree(
                 "scan",
                 scan_number,
@@ -230,8 +241,11 @@ def prefill(
                 run.reconstruction_id,
                 f"Indexing run I{indexing_id} indexes reconstruction R{run.reconstruction_id}, not R{reconstruction_id}",
             )
-            source = _clone_lauego(run, values)
-            values["backend"] = _target(run.job, settings)
+            if kind == "lauego":
+                source = _clone_lauego(run, values)
+                values["backend"] = _target(run.job, settings)
+            else:
+                source = _clone_laue_matching(run, values)
             clone_of = RunReference(kind=RunKind.INDEXING, id=indexing_id, label=f"I{indexing_id}")
         if reconstruction_id is not None:
             parent = session.get(ReconstructionRun, reconstruction_id)
@@ -260,10 +274,11 @@ def prefill(
         source["input_path"] = _catalog_or_folder(source["input_path"])
     values |= source
     values["scan_number"] = scan_number
-    if kind == "lauego":
+    indexes = kind in ("lauego", "laue_matching")
+    if indexes:
         values["reconstruction_id"] = reconstruction_id
     values[programs.OUTPUT_PATH_TEMPLATE] = programs.output_path_template(
-        kind, settings, scan_number=scan_number, reconstruction_id=reconstruction_id if kind == "lauego" else None
+        kind, settings, scan_number=scan_number, reconstruction_id=reconstruction_id if indexes else None
     )
     return ProgramPrefill(
         kind=kind, schema_id=programs.PROGRAMS[kind].model_fields["schema_id"].default, clone_of=clone_of, values=values

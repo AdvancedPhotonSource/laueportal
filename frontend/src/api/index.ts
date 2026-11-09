@@ -82,22 +82,28 @@ export { UpdateScanCatalogBody } from "./generated/zod/index.zod"
 // the file helpers, validation and run creation (the Idempotency-Key goes through the request options)
 export {
   createIndexingRun,
+  createLaueMatchingRun,
   createReconstructionRun,
   findFileIndices,
   findFilePatterns,
   getListProgramsQueryKey,
   listPrograms,
   prefillProgram,
+  useListForwardCaches,
   useListPrograms,
   usePrefillProgram,
   validateIndexingRun,
+  validateLaueMatchingRun,
   validateReconstructionRun,
 } from "./generated/endpoints"
 import type { ProgramKind as ListedProgramKind } from "./generated/model"
 /** Every program `GET /programs` lists: the batch ones and, while live processing is enabled, the live ones. */
 export type { ListedProgramKind }
 /** A create form's program (the batch ones); the live ones are the Live page's. */
-export type ProgramKind = Extract<ListedProgramKind, "lauego" | "wire">
+export type ProgramKind = Extract<
+  ListedProgramKind,
+  "lauego" | "laue_matching" | "wire"
+>
 /** The Live page's programs (listed while live processing is enabled). */
 export type LiveProgramKind = Exclude<ListedProgramKind, ProgramKind>
 export type {
@@ -114,9 +120,11 @@ export type {
 } from "./generated/model"
 export {
   CreateIndexingRunBody as CreateIndexingRunBodySchema,
+  CreateLaueMatchingRunBody as CreateLaueMatchingRunBodySchema,
   CreateReconstructionRunBody as CreateReconstructionRunBodySchema,
   GetIndexingRunResponse as IndexingRunDetailSchema,
   ValidateIndexingRunBody as ValidateIndexingRunBodySchema,
+  ValidateLaueMatchingRunBody as ValidateLaueMatchingRunBodySchema,
   ValidateReconstructionRunBody as ValidateReconstructionRunBodySchema,
 } from "./generated/zod/index.zod"
 

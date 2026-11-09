@@ -47,8 +47,10 @@ class Place:
             "geometry_file": os.fspath(self.geometry),
             "author": "tester",
         }
-        if kind == "lauego":
+        if kind in ("lauego", "laue_matching"):
             paths |= {"reconstruction_id": None, "crystal_file": os.fspath(self.crystal)}
+        if kind == "laue_matching":
+            paths |= {"forward_cache": "cache", "create_forward_cache": False}
         return {**programs.form_defaults(kind, self.settings), **paths, **values}
 
 

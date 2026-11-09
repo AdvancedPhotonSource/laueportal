@@ -155,6 +155,7 @@ DOMAIN_MODELS = [
     "IndexingRun",
     "Job",
     "LaueGoIndexingParameters",
+    "LaueMatchingIndexingParameters",
     "Metadata",
     "ReconstructionRun",
     "Scan",

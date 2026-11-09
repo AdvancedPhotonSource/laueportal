@@ -29,7 +29,7 @@ export const INDEXING_COLUMNS: GridColumn<IndexingRunSummary>[] = [
   { field: "n_points", header: "Points", type: "number", width: 80 },
   { field: "author", header: "Author", type: "text", flex: 1, minWidth: 84 },
   { field: "notes", header: "Notes", type: "text", flex: 2, minWidth: 76 },
-  { field: "box_size", header: "Box", type: "number", width: 64 },
+  { field: "method_label", header: "Method", type: "text", width: 120 },
   { field: "created_at", header: "Date", type: "date", width: 150 },
   {
     field: "status",

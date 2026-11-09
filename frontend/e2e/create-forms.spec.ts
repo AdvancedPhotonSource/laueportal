@@ -10,7 +10,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test"
 
 const FORMS = [
   ["/reconstructions/new", "New Wire Reconstruction"],
-  ["/indexing/new", "New LaueGo Indexation"],
+  ["/indexing/new", "New Indexation"],
 ] as const
 
 async function box(locator: Locator) {

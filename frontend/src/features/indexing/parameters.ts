@@ -70,6 +70,64 @@ const GROUPS: readonly { title: string; fields: readonly Field[] }[] = [
   { title: "Notes", fields: [["notes", "Notes"]] },
 ]
 
+/** A LaueMatching run's groups: the create form's sections and order. */
+const MATCHING_GROUPS: readonly { title: string; fields: readonly Field[] }[] =
+  [
+    {
+      title: "Identity",
+      fields: [
+        ["scan_number", "Scan"],
+        ["reconstruction_id", "Reconstruction"],
+        ["author", "Author"],
+      ],
+    },
+    {
+      title: "File Paths",
+      fields: [
+        ["input_path", "Folder Path"],
+        ["filename_prefixes", "Filename"],
+        ["scan_points", "Scan Indices"],
+        ["depth_range", "Depth Indices"],
+        ["geometry_file", "Geometry File"],
+        ["crystal_file", "Structures File"],
+        ["mask_file", "Mask File", "none"],
+        ["output_path", "Output Path"],
+      ],
+    },
+    {
+      title: "Forward Cache",
+      fields: [
+        ["forward_cache", "Forward Cache"],
+        ["create_forward_cache", "Built by this run"],
+      ],
+    },
+    {
+      title: "Spot Finding",
+      fields: [
+        ["threshold_method", "Threshold Method"],
+        ["threshold_percentile", "Threshold Percentile [%]"],
+        ["threshold_value", "Threshold [counts]"],
+        ["min_area", "Min Spot Area [px]"],
+        ["watershed_image", "Split Overlapping Spots"],
+        ["background_file", "Background File", "first frame's median"],
+      ],
+    },
+    {
+      title: "Indexing Parameters",
+      fields: [
+        ["elo", "Min Energy [keV]"],
+        ["ehi", "Max Energy [keV]"],
+        ["max_nr_laue_spots", "Max Spots per Orientation"],
+        ["min_nr_spots", "Min Matching Spots"],
+        ["min_good_spots", "Min Exclusive Spots"],
+        ["min_intensity", "Min Intensity [counts]"],
+        ["max_angle", "Min Misorientation [deg]"],
+        ["robust_filter", "Keep Twins"],
+      ],
+    },
+    { title: "Notes", fields: [["notes", "Notes"]] },
+  ]
+
 /** The paths and file names, shown in a monospace font. */
 const FILE_KEYS: ReadonlySet<string> = new Set([
   "input_path",
@@ -79,6 +137,8 @@ const FILE_KEYS: ReadonlySet<string> = new Set([
   "output_path",
   "output_xml",
   "mask_file",
+  "background_file",
+  "forward_cache",
 ])
 
 /** Keys shown as one row: the central HKL. */
@@ -127,6 +187,18 @@ function rowsOf(
     })
 }
 
+function groupsOf(
+  definitions: readonly { title: string; fields: readonly Field[] }[],
+  values: Record<string, unknown>
+): ParameterGroup[] {
+  const groups: ParameterGroup[] = []
+  for (const { title, fields } of definitions) {
+    const rows = rowsOf(fields, values)
+    if (rows.length > 0) groups.push({ title, rows })
+  }
+  return groups
+}
+
 /**
  * The groups of a run's parameters; a group with none of its values is left out. Without stored
  * parameters (another method, or a run recorded without them) only the run's own values are shown.
@@ -140,17 +212,17 @@ export function parameterGroups(run: IndexingRunDetail): ParameterGroup[] {
     output_path: run.output_path,
     notes: run.notes,
   }
+  if (run.laue_matching_parameters) {
+    Object.assign(values, run.laue_matching_parameters)
+    return groupsOf(MATCHING_GROUPS, values)
+  }
   const stored = run.parameters
   if (stored) {
     Object.assign(values, stored)
     values.index_hkl = HKL_KEYS.map((key) => formatValue(stored[key])).join(" ")
     values.detector_crop = `x ${String(stored.detector_crop_x1)}–${String(stored.detector_crop_x2)}, y ${String(stored.detector_crop_y1)}–${String(stored.detector_crop_y2)}`
   }
-  const groups: ParameterGroup[] = []
-  for (const { title, fields } of GROUPS) {
-    const rows = rowsOf(fields, values)
-    if (rows.length > 0) groups.push({ title, rows })
-  }
+  const groups = groupsOf(GROUPS, values)
   const other = rowsOf(OTHER_FIELDS, values)
   if (other.length > 0) {
     groups.push({ title: "Other recorded values", rows: other })

@@ -5,6 +5,7 @@
  * OpenAPI spec version: 2.0.0.dev0
  */
 import type { LaueGoParameters } from './laueGoParameters';
+import type { LaueMatchingParameters } from './laueMatchingParameters';
 
 /**
  * One indexing run (``GET /api/v1/indexing-runs/{id}``): the results viewer's header and Parameters tab.
@@ -19,6 +20,8 @@ export interface IndexingRunDetail {
   input_path: string;
   /** The run's job (the run monitor's page). */
   job_id: number;
+  /** The stored LaueMatching parameters; null for another method. */
+  laue_matching_parameters: LaueMatchingParameters | null;
   /** The indexing method (``lauego`` or ``laue_matching``). */
   method: string;
   notes: string | null;

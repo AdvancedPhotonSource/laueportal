@@ -1354,6 +1354,50 @@
         "title": "FileState",
         "type": "string"
       },
+      "ForwardCacheList": {
+        "description": "The forward caches that fit a form's values (``GET /api/v1/laue-matching/forward-caches``).",
+        "properties": {
+          "caches": {
+            "description": "Their names, sorted.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Caches",
+            "type": "array"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the caches cannot be listed; null when they can.",
+            "title": "Problem"
+          },
+          "suggested_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A free name for a new cache; null while the values cannot be read.",
+            "title": "Suggested Name"
+          }
+        },
+        "required": [
+          "caches",
+          "suggested_name",
+          "problem"
+        ],
+        "title": "ForwardCacheList",
+        "type": "object"
+      },
       "GeometrySource": {
         "enum": [
           "embedded",
@@ -1714,6 +1758,17 @@
             "title": "Job Id",
             "type": "integer"
           },
+          "laue_matching_parameters": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LaueMatchingParameters"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The stored LaueMatching parameters; null for another method."
+          },
           "method": {
             "description": "The indexing method (``lauego`` or ``laue_matching``).",
             "title": "Method",
@@ -1789,7 +1844,8 @@
           "author",
           "notes",
           "created_at",
-          "parameters"
+          "parameters",
+          "laue_matching_parameters"
         ],
         "title": "IndexingRunDetail",
         "type": "object"
@@ -1825,7 +1881,7 @@
         "type": "object"
       },
       "IndexingRunSummary": {
-        "description": "One row of the indexations grid (``GET /api/v1/indexing-runs``: LaueGo runs) and\nof the scan detail's peak indexing card.",
+        "description": "One row of the indexations grid (``GET /api/v1/indexing-runs``) and of the scan detail's peak indexing card.",
         "properties": {
           "author": {
             "anyOf": [
@@ -1847,7 +1903,7 @@
                 "type": "null"
               }
             ],
-            "description": "The peak search box.",
+            "description": "The peak search box; null for a LaueMatching run.",
             "title": "Box Size"
           },
           "created_at": {
@@ -1874,8 +1930,13 @@
             "type": "integer"
           },
           "method": {
-            "description": "The indexing method: ``lauego`` (the list holds LaueGo runs only).",
+            "description": "The indexing method: ``lauego`` or ``laue_matching``.",
             "title": "Method",
+            "type": "string"
+          },
+          "method_label": {
+            "description": "The method as the lists show it: LaueGo or LaueMatching.",
+            "title": "Method Label",
             "type": "string"
           },
           "n_depths": {
@@ -1911,7 +1972,7 @@
                 "type": "null"
               }
             ],
-            "description": "The scan points it indexes; null without LaueGo parameters.",
+            "description": "The scan points it indexes; null without stored parameters.",
             "title": "N Points"
           },
           "n_processed": {
@@ -1977,6 +2038,7 @@
         "required": [
           "id",
           "method",
+          "method_label",
           "scan_number",
           "sample_name",
           "reconstruction_id",
@@ -3059,6 +3121,171 @@
           "beamline"
         ],
         "title": "LaueGoParameters",
+        "type": "object"
+      },
+      "LaueMatchingParameters": {
+        "description": "A LaueMatching run's stored parameters (``laue_matching_indexing_parameters``).",
+        "properties": {
+          "background_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Background File"
+          },
+          "create_forward_cache": {
+            "description": "Whether this run built the cache.",
+            "title": "Create Forward Cache",
+            "type": "boolean"
+          },
+          "crystal_file": {
+            "title": "Crystal File",
+            "type": "string"
+          },
+          "depth_range": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The depth indices (a range text); null when the run indexes no depths.",
+            "title": "Depth Range"
+          },
+          "depth_range_len": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth Range Len"
+          },
+          "ehi": {
+            "title": "Ehi",
+            "type": "number"
+          },
+          "elo": {
+            "title": "Elo",
+            "type": "number"
+          },
+          "filename_prefixes": {
+            "description": "The image file name patterns.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Filename Prefixes",
+            "type": "array"
+          },
+          "forward_cache": {
+            "description": "The forward cache's name.",
+            "title": "Forward Cache",
+            "type": "string"
+          },
+          "geometry_file": {
+            "title": "Geometry File",
+            "type": "string"
+          },
+          "mask_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mask File"
+          },
+          "max_angle": {
+            "title": "Max Angle",
+            "type": "number"
+          },
+          "max_nr_laue_spots": {
+            "title": "Max Nr Laue Spots",
+            "type": "integer"
+          },
+          "min_area": {
+            "title": "Min Area",
+            "type": "integer"
+          },
+          "min_good_spots": {
+            "title": "Min Good Spots",
+            "type": "integer"
+          },
+          "min_intensity": {
+            "title": "Min Intensity",
+            "type": "number"
+          },
+          "min_nr_spots": {
+            "title": "Min Nr Spots",
+            "type": "integer"
+          },
+          "robust_filter": {
+            "title": "Robust Filter",
+            "type": "boolean"
+          },
+          "scan_points": {
+            "description": "The scan point indices (a range text).",
+            "title": "Scan Points",
+            "type": "string"
+          },
+          "scan_points_len": {
+            "title": "Scan Points Len",
+            "type": "integer"
+          },
+          "threshold_method": {
+            "title": "Threshold Method",
+            "type": "string"
+          },
+          "threshold_percentile": {
+            "title": "Threshold Percentile",
+            "type": "number"
+          },
+          "threshold_value": {
+            "title": "Threshold Value",
+            "type": "number"
+          },
+          "watershed_image": {
+            "title": "Watershed Image",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "filename_prefixes",
+          "scan_points",
+          "scan_points_len",
+          "depth_range",
+          "depth_range_len",
+          "geometry_file",
+          "crystal_file",
+          "mask_file",
+          "background_file",
+          "forward_cache",
+          "create_forward_cache",
+          "threshold_method",
+          "threshold_percentile",
+          "threshold_value",
+          "min_area",
+          "watershed_image",
+          "elo",
+          "ehi",
+          "max_nr_laue_spots",
+          "min_nr_spots",
+          "min_good_spots",
+          "min_intensity",
+          "max_angle",
+          "robust_filter"
+        ],
+        "title": "LaueMatchingParameters",
         "type": "object"
       },
       "LegendColor": {
@@ -4613,9 +4840,10 @@
             "type": "object"
           },
           "kind": {
-            "description": "The program: `lauego` (LaueGo indexing) or `wire` (wire reconstruction), the create forms'; `lauego-live` or\n`wire-live`, their live schemas (the Live page's runs), listed only while live processing is enabled.",
+            "description": "The program: `lauego` (LaueGo indexing), `laue_matching` (LaueMatching indexing) or `wire` (wire reconstruction), the create forms'; `lauego-live` or\n`wire-live`, their live schemas (the Live page's runs), listed only while live processing is enabled.",
             "enum": [
               "lauego",
+              "laue_matching",
               "wire",
               "lauego-live",
               "wire-live"
@@ -4624,7 +4852,7 @@
             "type": "string"
           },
           "schema_id": {
-            "description": "The parameter schema's version (`lauego/v1`, `wire/v1`, `lauego-live/v1`, `wire-live/v1`), which\nevery `request.json` it writes holds.",
+            "description": "The parameter schema's version (`lauego/v1`, `laue-matching/v1`, `wire/v1`, `lauego-live/v1`, `wire-live/v1`), which\nevery `request.json` it writes holds.",
             "title": "Schema Id",
             "type": "string"
           },
@@ -4676,6 +4904,7 @@
           "kind": {
             "enum": [
               "lauego",
+              "laue_matching",
               "wire"
             ],
             "title": "Kind",
@@ -8677,7 +8906,7 @@
     },
     "/api/v1/indexing-runs": {
       "get": {
-        "description": "The indexations grid of LaueGo runs (the grid query protocol), live (`changed_since`:\nthe active runs and those changed since). Every field but `method` sorts and filters: `id`, `scan_number`\nand `reconstruction_id` (the source; both blank for an unlinked run), `n_points`, `n_depths`, `box_size`, the\ncounters `n_inputs`, `n_succeeded`, `n_failed`, `n_not_run`, `n_processed` (number), `crystal_file`,\n`author`, `notes`, `status` (text; it sorts in the lifecycle order: queued, running, finished, failed,\ncancelled) and `created_at` (date). Default sort `-id`. `scan_id` lists one scan's runs.",
+        "description": "The indexations grid (the grid query protocol), live (`changed_since`:\nthe active runs and those changed since). Every field sorts and filters: `id`, `method`, `scan_number`\nand `reconstruction_id` (the source; both blank for an unlinked run), `n_points`, `n_depths`, `box_size`, the\ncounters `n_inputs`, `n_succeeded`, `n_failed`, `n_not_run`, `n_processed` (number), `crystal_file`,\n`author`, `notes`, `status` (text; it sorts in the lifecycle order: queued, running, finished, failed,\ncancelled) and `created_at` (date). Default sort `-id`. `scan_id` lists one scan's runs.",
         "operationId": "listIndexingRuns",
         "parameters": [
           {
@@ -8837,6 +9066,16 @@
             "filterable": true,
             "sortable": true
           },
+          "method": {
+            "filterType": "text",
+            "filterable": true,
+            "sortable": true
+          },
+          "method_label": {
+            "filterType": "text",
+            "filterable": true,
+            "sortable": true
+          },
           "n_depths": {
             "filterType": "number",
             "filterable": true,
@@ -8988,6 +9227,161 @@
         ]
       }
     },
+    "/api/v1/indexing-runs/laue-matching": {
+      "post": {
+        "description": "Create one LaueMatching run from the create form's values and queue it on the portal's worker, as\n`createIndexingRun` creates a LaueGo run: the same answers, `Idempotency-Key` rules and folder-read turn.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
+        "operationId": "createLaueMatchingRun",
+        "parameters": [
+          {
+            "description": "The create form's key (a UUID made when the form opens; at most 255 characters): the same key with the same body answers the run created the first time, for 24 hours; with another body, a 409.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "The create form's key (a UUID made when the form opens; at most 255 characters): the same key with the same body answers the run created the first time, for 24 hours; with another body, a 409.",
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "description": "One run's parameters, as the validate endpoint takes them (`laue-matching/v1`): one run per request; a list or any other multi-run payload is refused, and nothing is created.",
+                "title": "Form",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Cross-site request refused: the request lacks `X-Laue-Portal: 1`, or comes from a page on another origin."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyConflict"
+                }
+              }
+            },
+            "description": "The Idempotency-Key is in use: with another body, or by a request still running or that did not finish. Another body after the key's run was created is of type `urn:laueportal:problem:key-created`, with `created`, the run's kept answer."
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request body too large: more than 1 MiB, refused by its `Content-Length` before it is read, or (chunked) once that much has arrived."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation failed"
+          }
+        },
+        "summary": "Create and submit a LaueMatching indexing run",
+        "tags": [
+          "indexing"
+        ]
+      }
+    },
+    "/api/v1/indexing-runs/laue-matching/validate": {
+      "post": {
+        "description": "Check one LaueMatching run's parameters, as `validateIndexingRun` checks a LaueGo run's, and its energy range,\nthe data folder and the forward cache: a cache to reuse must exactly fit the run's crystal, detector and energies,\nand a new cache's name must be free. Always a 200 with the issues. A folder read, with its 503 while 16 wait.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
+        "operationId": "validateLaueMatchingRun",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "description": "One run's parameters: the create form's values, one per form field of `laue-matching/v1` (`GET /api/v1/programs`; the portal sets the config and derived ones, and refuses them here as on creation).",
+                "title": "Form",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Cross-site request refused: the request lacks `X-Laue-Portal: 1`, or comes from a page on another origin."
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request body too large: more than 1 MiB, refused by its `Content-Length` before it is read, or (chunked) once that much has arrived."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation failed"
+          }
+        },
+        "summary": "Validate a LaueMatching indexing run's parameters",
+        "tags": [
+          "indexing"
+        ]
+      }
+    },
     "/api/v1/indexing-runs/validate": {
       "post": {
         "description": "Check one LaueGo run's parameters, the create form's values: the model's rules, the cross-field\nrules (the `%d` placeholders against Scan Indices and Depth Indices) and the context checks (every path inside\nthe roots and existing, the error `not_responding` when its file system does not answer; the input a folder of files or a reconstruction's `scan.h5`; the source scan and\nreconstruction; the output folder; input resolution). Always a 200 with the issues (`[]` when there are none):\nan `error` stops the run's creation, a `warning` does not. Reads only: nothing is created or written. A folder\nread (it lists the input folder): four at once with the file browser's listings, Find Matching Files and Find\nIndices; while 16 wait, a 503 with `Retry-After`.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
@@ -9055,7 +9449,7 @@
     },
     "/api/v1/indexing-runs/{indexing_id}": {
       "get": {
-        "description": "The run (its source, paths, author and notes), its job's ID and its stored LaueGo parameters (`parameters`,\nnull without them), read from the database, so a run migrated from v1 has them too.\nAny method. 404 for an unknown run.",
+        "description": "The run (its source, paths, author and notes), its job's ID and its stored parameters (`parameters` for LaueGo, `laue_matching_parameters` for LaueMatching,\nnull without them), read from the database, so a run migrated from v1 has them too.\nAny method. 404 for an unknown run.",
         "operationId": "getIndexingRun",
         "parameters": [
           {
@@ -11234,6 +11628,98 @@
         ]
       }
     },
+    "/api/v1/laue-matching/forward-caches": {
+      "get": {
+        "description": "The named forward caches whose record exactly fits these values, and a free name for a new one. A data folder or\nfile that cannot be read is `problem`, not an error. A folder read, with its 503 while 16 wait.",
+        "operationId": "listForwardCaches",
+        "parameters": [
+          {
+            "description": "The geometry file, inside the roots.",
+            "in": "query",
+            "name": "geometry_file",
+            "required": true,
+            "schema": {
+              "description": "The geometry file, inside the roots.",
+              "title": "Geometry File",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The crystal file, inside the roots.",
+            "in": "query",
+            "name": "crystal_file",
+            "required": true,
+            "schema": {
+              "description": "The crystal file, inside the roots.",
+              "title": "Crystal File",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Min Energy (keV).",
+            "in": "query",
+            "name": "elo",
+            "required": true,
+            "schema": {
+              "description": "Min Energy (keV).",
+              "exclusiveMinimum": 0,
+              "title": "Elo",
+              "type": "number"
+            }
+          },
+          {
+            "description": "Max Energy (keV).",
+            "in": "query",
+            "name": "ehi",
+            "required": true,
+            "schema": {
+              "description": "Max Energy (keV).",
+              "exclusiveMinimum": 0,
+              "title": "Ehi",
+              "type": "number"
+            }
+          },
+          {
+            "description": "Max Spots per Orientation.",
+            "in": "query",
+            "name": "max_nr_laue_spots",
+            "required": true,
+            "schema": {
+              "description": "Max Spots per Orientation.",
+              "exclusiveMinimum": 0,
+              "title": "Max Nr Laue Spots",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForwardCacheList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation failed"
+          }
+        },
+        "summary": "List the forward caches that fit a LaueMatching form's values",
+        "tags": [
+          "indexing"
+        ]
+      }
+    },
     "/api/v1/live-runs": {
       "post": {
         "description": "Start a live session: validated as `validateLiveRuns` validates it (a 422 problem with\nevery issue when one is an error), then, while no live run is Queued or Running (else a 409\n`urn:laueportal:problem:live-session-open` naming the oldest, `open_run`), its runs are created (a live wire run,\na live LaueGo run on the folder's raw frames, or both, the LaueGo run following the wire run) and queued\ntogether, all under one lock: two Starts never make two sessions, and the dispatcher never takes a wire run\nbefore its follower is queued. A 201 with the runs and their jobs once they exist (`failure` on a run that could\nnot be created, published or queued: then none was queued). The same `Idempotency-Key` with the same body\nanswers the same 201 again (24 hours); with another body, or while the first request runs, a 409 (another body\nafter the session was started: `urn:laueportal:problem:key-created`, with `created`). A 503 with `Retry-After`,\nnothing created and the key released, when DM does not answer the DAQ bind check\n(`urn:laueportal:problem:dm-unavailable`) or the DAQ's folders do not (`urn:laueportal:problem:not-responding`),\nand before the key is claimed while 16 folder reads wait. A folder or file of the form whose file system does not\nanswer the validation is an issue `not_responding` on its field, so a 422 that names it (as a batch create's\nvalidation); one that stops answering between the validation and the run's creation is a 503 `not-responding`\nthat keeps the key claimed, as a batch create's. Stop a session with `cancelJob` on its first run (a follower\ndrains once its wire run has ended). 404 while live processing is off.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
@@ -11521,14 +12007,15 @@
         "operationId": "prefillProgram",
         "parameters": [
           {
-            "description": "The program: `lauego` or `wire`.",
+            "description": "The program: `lauego`, `laue_matching` or `wire`.",
             "in": "path",
             "name": "kind",
             "required": true,
             "schema": {
-              "description": "The program: `lauego` or `wire`.",
+              "description": "The program: `lauego`, `laue_matching` or `wire`.",
               "enum": [
                 "lauego",
+                "laue_matching",
                 "wire"
               ],
               "title": "Kind",

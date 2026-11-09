@@ -176,7 +176,7 @@ export function FilenamePatternField({
     try {
       const answer = await findFilePatterns({
         folder: folder.trim(),
-        program: kind,
+        program: kind === "wire" ? "wire" : "lauego",
       })
       setLookup({ state: "done", answer })
     } catch (error) {
@@ -269,7 +269,7 @@ export function IndicesField({
       const answer = await findFileIndices({
         folder: folder.trim(),
         pattern: template || null,
-        program: kind,
+        program: kind === "wire" ? "wire" : "lauego",
       })
       setLookup({ state: "done", answer })
       onFound?.(answer)
@@ -277,7 +277,7 @@ export function IndicesField({
       setLookup({ state: "failed", message: messageOf(error) })
     }
   }
-  const needsTemplate = kind === "lauego" && template === ""
+  const needsTemplate = kind !== "wire" && template === ""
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       <div className="flex flex-col gap-4 md:flex-row md:items-start">

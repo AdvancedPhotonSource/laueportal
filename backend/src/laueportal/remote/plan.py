@@ -29,6 +29,8 @@ from laueportal.remote.pbs import build_script
 from laueportal.remote.settings import RemoteSettings, RemoteSettingsError, collection_path
 
 SUBMISSION_LOCK_NAME = ".bdp-submission.lock"
+REMOTE_KINDS = ("lauego_indexing", "wire_reconstruction")
+"""The run kinds a remote target computes: the runners and the poller name each of them."""
 
 
 def submission_path(settings: RemoteSettings, submission_id: str) -> Path:
@@ -51,6 +53,8 @@ def build_plan(
     verify_manifest(job.manifest_path, expected_digest=job.manifest_digest, expected_count=job.n_inputs)
     progress()
     document = read_request(job.request_path)
+    if document["kind"] not in REMOTE_KINDS:
+        raise RemoteSettingsError(f"A {document['kind']} run computes only on the portal's own worker")
     xml = document.get("output", {}).get("xml")
     if xml and os.path.isabs(xml):
         child_path(run, xml)  # Remote jobs must publish all outputs inside their run.

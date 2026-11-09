@@ -98,6 +98,54 @@ describe("the Parameters tab's groups", () => {
     ])
   })
 
+  it("shows a LaueMatching run's stored parameters", () => {
+    const groups = parameterGroups(
+      makeIndexingRunDetail({
+        method: "laue_matching",
+        parameters: null,
+        laue_matching_parameters: {
+          filename_prefixes: ["f_%d.h5"],
+          scan_points: "1-2",
+          scan_points_len: 2,
+          depth_range: null,
+          depth_range_len: null,
+          geometry_file: "/g.xml",
+          crystal_file: "/c.xml",
+          mask_file: null,
+          background_file: null,
+          forward_cache: "Ni_5-30",
+          create_forward_cache: true,
+          threshold_method: "percentile",
+          threshold_percentile: 99.8,
+          threshold_value: 0,
+          min_area: 4,
+          watershed_image: true,
+          elo: 5,
+          ehi: 30,
+          max_nr_laue_spots: 30,
+          min_nr_spots: 8,
+          min_good_spots: 4,
+          min_intensity: 50,
+          max_angle: 3,
+          robust_filter: true,
+        },
+      })
+    )
+    expect(groups.map((group) => group.title)).toEqual([
+      "Identity",
+      "File Paths",
+      "Forward Cache",
+      "Spot Finding",
+      "Indexing Parameters",
+      "Notes",
+    ])
+    const cache = groups.find((group) => group.title === "Forward Cache")
+    expect(cache?.rows).toEqual([
+      { label: "Forward Cache", value: "Ni_5-30", mono: true },
+      { label: "Built by this run", value: "yes" },
+    ])
+  })
+
   it("shows only the run's own values for a run without stored parameters", () => {
     const groups = parameterGroups(
       makeIndexingRunDetail({ method: "laue_matching", parameters: null })

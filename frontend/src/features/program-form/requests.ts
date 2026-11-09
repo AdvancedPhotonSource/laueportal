@@ -4,12 +4,16 @@
 import {
   createIndexingRun,
   CreateIndexingRunBodySchema,
+  createLaueMatchingRun,
+  CreateLaueMatchingRunBodySchema,
   createReconstructionRun,
   CreateReconstructionRunBodySchema,
   type CreatedRun,
   type ProgramKind,
   validateIndexingRun,
   ValidateIndexingRunBodySchema,
+  validateLaueMatchingRun,
+  ValidateLaueMatchingRunBodySchema,
   validateReconstructionRun,
   ValidateReconstructionRunBodySchema,
   type ValidationReport,
@@ -21,14 +25,24 @@ export function validateProgram(
   body: RequestValues,
   signal?: AbortSignal
 ): Promise<ValidationReport> {
-  return kind === "lauego"
-    ? validateIndexingRun(ValidateIndexingRunBodySchema.parse(body), { signal })
-    : validateReconstructionRun(
-        ValidateReconstructionRunBodySchema.parse(body),
-        {
-          signal,
-        }
+  const options = { signal }
+  switch (kind) {
+    case "lauego":
+      return validateIndexingRun(
+        ValidateIndexingRunBodySchema.parse(body),
+        options
       )
+    case "laue_matching":
+      return validateLaueMatchingRun(
+        ValidateLaueMatchingRunBodySchema.parse(body),
+        options
+      )
+    case "wire":
+      return validateReconstructionRun(
+        ValidateReconstructionRunBodySchema.parse(body),
+        options
+      )
+  }
 }
 
 export function createProgramRun(
@@ -37,10 +51,18 @@ export function createProgramRun(
   idempotencyKey: string
 ): Promise<CreatedRun> {
   const options = { headers: { "Idempotency-Key": idempotencyKey } }
-  return kind === "lauego"
-    ? createIndexingRun(CreateIndexingRunBodySchema.parse(body), options)
-    : createReconstructionRun(
+  switch (kind) {
+    case "lauego":
+      return createIndexingRun(CreateIndexingRunBodySchema.parse(body), options)
+    case "laue_matching":
+      return createLaueMatchingRun(
+        CreateLaueMatchingRunBodySchema.parse(body),
+        options
+      )
+    case "wire":
+      return createReconstructionRun(
         CreateReconstructionRunBodySchema.parse(body),
         options
       )
+  }
 }

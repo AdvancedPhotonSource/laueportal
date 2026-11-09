@@ -15,6 +15,7 @@ export type SourceKind = "scan" | "reconstruction" | "indexing"
 /** The source a program's clone is made from: an indexing run (LaueGo), a reconstruction (wire). */
 export const CLONE_SOURCE: Record<ProgramKind, SourceKind> = {
   lauego: "indexing",
+  laue_matching: "indexing",
   wire: "reconstruction",
 }
 
@@ -57,12 +58,24 @@ export function sourceLabel(kind: SourceKind, id: number): string {
   return `${PREFIX[kind]}${String(id)}`
 }
 
-/** The list request for what was typed. */
-export function sourceQuery(kind: SourceKind, text: string): ListScansParams {
+/**
+ * The list request for what was typed; with `method`, only the indexing runs of that method (a form clones
+ * its own program's runs).
+ */
+export function sourceQuery(
+  kind: SourceKind,
+  text: string,
+  method?: string
+): ListScansParams {
   const fields = FIELDS[kind]
   const params: ListScansParams = { sort: fields.sort, limit: SOURCE_LIMIT }
   const typed = text.trim()
-  if (typed === "") return params
+  const only = method
+    ? { method: { filterType: "text", type: "equals", filter: method } }
+    : {}
+  if (typed === "") {
+    return method ? { ...params, filter: JSON.stringify(only) } : params
+  }
   const id = new RegExp(`^(?:${PREFIX[kind]})?\\s*(\\d+)$`, "i").exec(typed)
   const filter = id
     ? {
@@ -73,16 +86,17 @@ export function sourceQuery(kind: SourceKind, text: string): ListScansParams {
         },
       }
     : { [fields.text]: { filterType: "text", type: "contains", filter: typed } }
-  return { ...params, filter: JSON.stringify(filter) }
+  return { ...params, filter: JSON.stringify({ ...only, ...filter }) }
 }
 
 /** The matches for what was typed. */
 export async function searchSources(
   kind: SourceKind,
   text: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  method?: string
 ): Promise<SourceOption[]> {
-  const params = sourceQuery(kind, text)
+  const params = sourceQuery(kind, text, method)
   if (kind === "scan") {
     const page = await listScans(params, { signal })
     return page.rows.map((row) => ({

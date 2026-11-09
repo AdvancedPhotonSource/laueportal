@@ -7,12 +7,11 @@
 import type { RunStatus } from './runStatus';
 
 /**
- * One row of the indexations grid (``GET /api/v1/indexing-runs``: LaueGo runs) and
- * of the scan detail's peak indexing card.
+ * One row of the indexations grid (``GET /api/v1/indexing-runs``) and of the scan detail's peak indexing card.
  */
 export interface IndexingRunSummary {
   author: string | null;
-  /** The peak search box. */
+  /** The peak search box; null for a LaueMatching run. */
   box_size: number | null;
   /** When the run was submitted. */
   created_at: string;
@@ -20,14 +19,16 @@ export interface IndexingRunSummary {
   crystal_file: string | null;
   /** The indexing run's ID (shown as ``I<id>``). */
   id: number;
-  /** The indexing method: ``lauego`` (the list holds LaueGo runs only). */
+  /** The indexing method: ``lauego`` or ``laue_matching``. */
   method: string;
+  /** The method as the lists show it: LaueGo or LaueMatching. */
+  method_label: string;
   /** The depths it indexes per point (the card's Depth Points); null when it indexes no depths. */
   n_depths: number | null;
   n_failed: number;
   n_inputs: number;
   n_not_run: number;
-  /** The scan points it indexes; null without LaueGo parameters. */
+  /** The scan points it indexes; null without stored parameters. */
   n_points: number | null;
   /** Inputs processed, with or without an error (``n_succeeded`` + ``n_failed``). */
   n_processed: number;

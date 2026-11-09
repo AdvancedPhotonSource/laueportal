@@ -61,6 +61,8 @@ export const SECTION_IDENTITIES: ReadonlyMap<string, SectionIdentity> = new Map(
     ["Wire Reconstruction Parameters", { ...VIOLET, icon: LayersIcon }],
     ["Reconstruction", { ...VIOLET, icon: LayersIcon }],
     ["Peak Search Parameters", { ...VIOLET, icon: CrosshairIcon }],
+    ["Forward Cache", { ...TEAL, icon: LayersIcon }],
+    ["Spot Finding", { ...VIOLET, icon: CrosshairIcon }],
     ["Indexing Parameters", { ...FUCHSIA, icon: NetworkIcon }],
     ["Indexing", { ...FUCHSIA, icon: NetworkIcon }],
     ["Notes", { ...NEUTRAL, icon: NotebookPenIcon }],

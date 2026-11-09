@@ -29,6 +29,7 @@ import {
   type RodriguesReference,
   type SurfaceChoice,
 } from "./viewer-slices"
+import { useGoodnessLabel } from "./goodness-label"
 import { useIndexingViewerStore } from "./viewer-store"
 
 /** The colour modes' labels, until the summary names them. */
@@ -100,13 +101,17 @@ export function ColorMapControls({
   )
   const setMap = useIndexingViewerStore((state) => state.setMap)
   const color = view.color
+  const goodnessLabel = useGoodnessLabel()
 
   const modeOptions: Option<MapColor>[] = Object.values(MapColor).map(
     (value) => {
       const choice = colorModes?.find((mode) => mode.value === value)
       return {
         value,
-        label: choice?.label ?? COLOR_LABELS[value],
+        label:
+          value === MapColor.goodness
+            ? goodnessLabel
+            : (choice?.label ?? COLOR_LABELS[value]),
         reason:
           choice && !choice.available ? (choice.reason ?? "unavailable") : null,
       }

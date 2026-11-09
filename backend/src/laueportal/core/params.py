@@ -64,6 +64,8 @@ Widget = Literal[
     "scan",  # the source scan (a picker)
     "reconstruction",  # the source reconstruction (a picker)
     "target",  # the execution target (the form's "Run on")
+    "forward-cache",  # a LaueMatching forward cache: its name, chosen from those that fit or typed for a new one
+    "forward-cache-new",  # whether that cache is new: set by the forward-cache widget, drawn by nothing
 ]
 
 

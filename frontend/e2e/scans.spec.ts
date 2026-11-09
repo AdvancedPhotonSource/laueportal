@@ -261,7 +261,7 @@ test("New Recon and New Index take the one selected scan", async ({ page }) => {
     scan: "1247",
   })
   await expect(page).toHaveURL(/\/indexing\/new$/)
-  await expect(page).toHaveTitle("New LaueGo Indexation · 3DMN Portal")
+  await expect(page).toHaveTitle("New Indexation · 3DMN Portal")
 
   await page.goBack()
   await expect(scanIds(page).first()).toHaveText("1249")

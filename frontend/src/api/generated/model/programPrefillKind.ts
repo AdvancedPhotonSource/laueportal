@@ -10,5 +10,6 @@ export type ProgramPrefillKind = typeof ProgramPrefillKind[keyof typeof ProgramP
 
 export const ProgramPrefillKind = {
   lauego: 'lauego',
+  laue_matching: 'laue_matching',
   wire: 'wire',
 } as const;

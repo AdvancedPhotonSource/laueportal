@@ -110,7 +110,11 @@ function IndexingCard({ scanId }: { scanId: number }) {
         onSelectionChange={(rows) => {
           const [run] = rows
           setSelected(
-            run && { id: run.id, reconstruction_id: run.reconstruction_id }
+            run && {
+              id: run.id,
+              reconstruction_id: run.reconstruction_id,
+              method: run.method,
+            }
           )
         }}
         live
