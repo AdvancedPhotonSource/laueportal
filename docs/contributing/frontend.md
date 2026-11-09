@@ -337,10 +337,11 @@ with the script; its focus ring made the opaque one).
   names always refit it, so the page needs no new `key` for them. Unmounting releases the WebGL context. Its logic
   is in pure functions (`src/viz/cloud/{pick,points,webgl}.ts`, `src/viz/frame-throttle.ts`);
 - the unit-cell view (`UnitCellView`, from `@/viz`) draws a cell's rows a, b, c in beamline coordinates with Canvas2D,
-  in perspective (front edges by depth, hidden ones dashed, the front faces tinted), with the beam's direction and the
-  X, Y, Z triad; its colours are the `--cell-a`, `--cell-b`, `--cell-c` and `--cell-beam` tokens. Its camera is its
-  own and stays when the cell changes, or the caller's (`camera`, `onCameraChange`). The bases, the rotation from a
-  reference cell (in the nearest of the crystal's `equivalent_settings`, from the point's details: `nearestSetting`),
+  in perspective (front edges by depth, hidden ones dashed, the front faces tinted), with the beam's direction from
+  the shared a, b, c origin and the X, Y, Z triad; its colours are the `--cell-a`, `--cell-b`, `--cell-c` and
+  `--cell-beam` tokens. Its camera is its own and stays when the cell changes, or the caller's (`camera`,
+  `onCameraChange`). The bases, the rotation from a reference cell (in the nearest of the crystal's
+  `equivalent_settings`, from the point's details: `nearestSetting`),
   the camera and the cell's faces and edges are pure functions (`src/viz/cell/geometry.ts`). The Color Map tab's
   `UnitCellCard` reads the clicked point's details (`src/features/indexing/unit-cell.ts`) and keeps the camera, so it
   stays across points; its collapsed state and beam switch are the map slice's `cellCollapsed` and `cellBeam`;

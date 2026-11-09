@@ -96,7 +96,7 @@ export function UnitCellCard({
           onPressedChange={(pressed) => {
             setMap({ cellBeam: pressed })
           }}
-          title="The beam's direction through the cell"
+          title="The beam's direction from the a, b, c origin"
         >
           Beam
         </Toggle>

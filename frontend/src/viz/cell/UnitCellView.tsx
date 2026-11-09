@@ -15,7 +15,7 @@ import {
 export interface UnitCellViewProps {
   /** The cell's rows a, b, c in beamline coordinates (any unit: the view scales it). */
   direct: Mat3
-  /** Draw the beam's direction through the cell's centre. */
+  /** Draw the beam's direction from the a, b, c origin. */
   showBeam: boolean
   /** The canvas's accessible name. */
   label: string

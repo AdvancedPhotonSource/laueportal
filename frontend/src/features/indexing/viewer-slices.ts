@@ -111,7 +111,7 @@ export interface MapSettings {
   nonIndexed: NonIndexedColor
   /** The crystal-orientation card is collapsed to its strip. */
   cellCollapsed: boolean
-  /** The card draws the beam's direction through the cell. */
+  /** The card draws the beam's direction from the a, b, c origin. */
   cellBeam: boolean
 }
 

@@ -68,11 +68,11 @@ Then set the parameters, choose **Run on**, and **Submit**, as for a reconstruct
   crystal's nominal cell, so the box is that cell, oriented as indexed; the card shows a **Nominal** row beside a, b,
   c and α, β, γ only when the results hold a refined lattice that differs from it. Drag to turn the view;
   double-click to reset it. The view stays when you click another point, so you can compare orientations. **Beam**
-  draws the beam's direction through the cell. **Rotation** is the rotation from the crystal's reference cell (c along
-  Z, b in the YZ plane) about a lab axis; for a cubic or hexagonal crystal it is the smallest of its equivalent
-  rotations, as in the Pole Figure's misorientation, and a, b, c are labelled to match. **Beam ∥** and **Up ∥** are
-  the crystal directions along the beam and up. A step with several patterns offers each one. Collapse the card to a
-  strip with the arrow; the portal keeps your choice.
+  draws the beam's direction (+Z) from the shared origin of a, b, c. **Rotation** is the rotation from the crystal's
+  reference cell (c along Z, b in the YZ plane) about a lab axis; for a cubic or hexagonal crystal it is the smallest
+  of its equivalent rotations, as in the Pole Figure's misorientation, and a, b, c are labelled to match. **Beam ∥**
+  and **Up ∥** are the crystal directions along the beam and up. A step with several patterns offers each one.
+  Collapse the card to a strip with the arrow; the portal keeps your choice.
 - **Pole Figure:** set the HKL and click **Update**. Click a pole to centre the colours on it; draw a lasso or box
   to see the misorientation statistics, highlighted on the map.
 - **Detector View:** a step's detector image with its overlays (detected, indexed, simulated peaks, hkl labels).

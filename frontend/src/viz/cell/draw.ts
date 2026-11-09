@@ -1,6 +1,6 @@
 // The unit-cell view's Canvas2D drawing: the cell in perspective (front edges solid and stronger
 // the nearer they are, hidden ones dashed, the faces toward the viewer faintly tinted), its a, b, c
-// arrows, the beam's direction through its centre, and the X, Y, Z triad.
+// arrows, the beam's direction from their origin, and the X, Y, Z triad.
 
 import {
   add,
@@ -81,7 +81,6 @@ export function drawUnitCell(ctx: CanvasRenderingContext2D, d: CellDrawing) {
     theme: d.theme,
   }
   const eye = scale(view.basis.toward, view.eye)
-  if (d.showBeam) beam(view, radius)
 
   for (const face of cellFaces(d.direct, eye)) {
     if (!face.front) continue
@@ -130,16 +129,19 @@ export function drawUnitCell(ctx: CanvasRenderingContext2D, d: CellDrawing) {
     tipLabel(view, o, tip, AXIS_NAMES[i] ?? "", color, 12)
   })
 
+  if (d.showBeam) beam(view, o, radius)
   triad(view, 30, d.height - 28)
 }
 
-/** The beam's direction (+Z) through the centre: dotted, an arrow downstream. */
-function beam(view: View, radius: number) {
+/** The beam's direction (+Z) from the a, b, c origin: dotted, an arrow downstream. */
+function beam(view: View, origin: Vec3, radius: number) {
   const r = radius * 1.45
   const color = view.theme.beam
-  line(view, [0, 0, -r], [0, 0, r * 0.86], color, { width: 1.5, dash: [2, 4] })
-  arrow(view, [0, 0, r * 0.8], [0, 0, r], color, { width: 1.5 })
-  tipLabel(view, [0, 0, 0], [0, 0, r], "beam", color, 10)
+  const along = (distance: number) => add(origin, [0, 0, distance])
+  const tip = along(r)
+  line(view, origin, along(r * 0.86), color, { width: 1.5, dash: [2, 4] })
+  arrow(view, along(r * 0.8), tip, color, { width: 1.5 })
+  tipLabel(view, origin, tip, "beam", color, 10)
 }
 
 interface Stroke {
