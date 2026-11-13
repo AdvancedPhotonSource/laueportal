@@ -100,7 +100,7 @@ test("the status page shows the connection, the worker, the queue and the quick 
     "Scans",
     "Import Scans",
     "New Wire Reconstruction",
-    "New LaueGo Indexation",
+    "New Indexation",
     "Run Monitor",
   ])
   const hrefs = await actions.evaluateAll((links) =>
@@ -113,9 +113,9 @@ test("the status page shows the connection, the worker, the queue and the quick 
     "/indexing/new",
     "/runs",
   ])
-  await actions.filter({ hasText: "New LaueGo Indexation" }).click()
+  await actions.filter({ hasText: "New Indexation" }).click()
   await expect(page).toHaveURL(/\/indexing\/new$/)
-  await expect(page).toHaveTitle("New LaueGo Indexation · 3DMN Portal")
+  await expect(page).toHaveTitle("New Indexation · 3DMN Portal")
 })
 
 test("the active runs show their links, heartbeat, target and the stale and stop-requested badges", async ({

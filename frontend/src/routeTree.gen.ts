@@ -9,6 +9,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SplatRouteImport } from './routes/$'
+import { Route as CalibrationRouteImport } from './routes/calibration'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as RunsRouteImport } from './routes/runs'
 import { Route as IndexingIndexRouteImport } from './routes/indexing/index'
@@ -30,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
 const SplatRoute = SplatRouteImport.update({
   id: '/$',
   path: '/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalibrationRoute = CalibrationRouteImport.update({
+  id: '/calibration',
+  path: '/calibration',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LiveRoute = LiveRouteImport.update({
@@ -97,6 +103,7 @@ const ScansImportRoute = ScansImportRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/calibration': typeof CalibrationRoute
   '/live': typeof LiveRoute
   '/runs': typeof RunsRoute
   '/indexing/$indexingId': typeof IndexingIndexingIdRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/calibration': typeof CalibrationRoute
   '/live': typeof LiveRoute
   '/runs': typeof RunsRoute
   '/indexing/$indexingId': typeof IndexingIndexingIdRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/calibration': typeof CalibrationRoute
   '/live': typeof LiveRoute
   '/runs': typeof RunsRoute
   '/indexing/$indexingId': typeof IndexingIndexingIdRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/calibration'
     | '/live'
     | '/runs'
     | '/indexing/$indexingId'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/calibration'
     | '/live'
     | '/runs'
     | '/indexing/$indexingId'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$'
+    | '/calibration'
     | '/live'
     | '/runs'
     | '/indexing/$indexingId'
@@ -197,6 +209,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
+  CalibrationRoute: typeof CalibrationRoute
   LiveRoute: typeof LiveRoute
   RunsRoute: typeof RunsRoute
   IndexingIndexingIdRoute: typeof IndexingIndexingIdRoute
@@ -225,6 +238,13 @@ declare module '@tanstack/react-router' {
       path: '/$'
       fullPath: '/$'
       preLoaderRoute: typeof SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calibration': {
+      id: '/calibration'
+      path: '/calibration'
+      fullPath: '/calibration'
+      preLoaderRoute: typeof CalibrationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/live': {
@@ -317,6 +337,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  CalibrationRoute: CalibrationRoute,
   LiveRoute: LiveRoute,
   RunsRoute: RunsRoute,
   IndexingIndexingIdRoute: IndexingIndexingIdRoute,

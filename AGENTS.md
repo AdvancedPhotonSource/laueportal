@@ -188,7 +188,7 @@ halves), `check-frontend` and `check-contract`; reproduce a failed job with its 
 ## Code layout
 
 - `backend/src/laueportal/` has one package per domain (`scans`, `indexing`, `reconstruction`, `jobs`, `files`,
-  `system`), the shared `core`, `science` (the only package that calls lauelab, apart from the programs' `compute.py`
+  `system`, `calibration`), the shared `core`, `science` (the only package that calls lauelab, apart from the programs' `compute.py`
   and `live_compute.py` in `indexing/lauego/`, `indexing/laue_matching/` and `reconstruction/wire/`), `remote` (remote execution and the launcher
   that runs on the DM host), `seed` (the synthetic demo data) and `util` (vendored helpers, not linted).
 - `backend/migrations/` contains the Alembic revisions; `backend/tests/` contains the tests and their fixtures.

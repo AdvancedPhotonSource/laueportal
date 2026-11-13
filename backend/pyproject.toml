@@ -203,6 +203,7 @@ source_modules = [
     "laueportal.jobs",
     "laueportal.files",
     "laueportal.system",
+    "laueportal.calibration",
 ]
 # A domain's own api is skipped (it overlaps its package); the ones not written yet are ignored until they exist.
 forbidden_modules = [
@@ -212,6 +213,7 @@ forbidden_modules = [
     "laueportal.jobs.api",
     "laueportal.files.api",
     "laueportal.system.api",
+    "laueportal.calibration.api",
 ]
 
 [[tool.importlinter.contracts]]

@@ -218,6 +218,1495 @@
         "title": "Body_indexScanLog",
         "type": "object"
       },
+      "CalibrationDetector": {
+        "description": "A detector of the geometry file.",
+        "properties": {
+          "detector_id": {
+            "title": "Detector Id",
+            "type": "string"
+          },
+          "nx": {
+            "title": "Nx",
+            "type": "integer"
+          },
+          "ny": {
+            "title": "Ny",
+            "type": "integer"
+          },
+          "rotation_vector": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Rotation Vector",
+            "type": "array"
+          },
+          "size_x_um": {
+            "title": "Size X Um",
+            "type": "number"
+          },
+          "size_y_um": {
+            "title": "Size Y Um",
+            "type": "number"
+          },
+          "slot": {
+            "description": "Its physical slot in the geometry file (LaueGo's detector number).",
+            "title": "Slot",
+            "type": "integer"
+          },
+          "translation_um": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Translation Um",
+            "type": "array"
+          }
+        },
+        "required": [
+          "slot",
+          "detector_id",
+          "nx",
+          "ny",
+          "size_x_um",
+          "size_y_um",
+          "rotation_vector",
+          "translation_um"
+        ],
+        "title": "CalibrationDetector",
+        "type": "object"
+      },
+      "CalibrationDetectorValues": {
+        "description": "A detector's rotation vector and translation, as in the geometry file (translation in µm here).",
+        "properties": {
+          "rotation_vector": {
+            "description": "Axis times angle (rad).",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Rotation Vector",
+            "type": "array"
+          },
+          "translation_um": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Translation Um",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rotation_vector",
+          "translation_um"
+        ],
+        "title": "CalibrationDetectorValues",
+        "type": "object"
+      },
+      "CalibrationHarmonic": {
+        "properties": {
+          "energy_kev": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Kev"
+          },
+          "h": {
+            "title": "H",
+            "type": "integer"
+          },
+          "k": {
+            "title": "K",
+            "type": "integer"
+          },
+          "l": {
+            "title": "L",
+            "type": "integer"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "order",
+          "h",
+          "k",
+          "l",
+          "energy_kev"
+        ],
+        "title": "CalibrationHarmonic",
+        "type": "object"
+      },
+      "CalibrationIndexRequest": {
+        "properties": {
+          "crystal": {
+            "description": "The calibration crystal's file.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Crystal",
+            "type": "string"
+          },
+          "frame": {
+            "description": "The calibration frame (an HDF5 file inside the file roots).",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Frame",
+            "type": "string"
+          },
+          "geometry": {
+            "description": "The starting geometry file.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Geometry",
+            "type": "string"
+          },
+          "peaks": {
+            "description": "The peaks to index, in order (found, then added).",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationPosition"
+            },
+            "maxItems": 1000,
+            "title": "Peaks",
+            "type": "array"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/CalibrationIndexSettings"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalibrationDetectorValues"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The starting detector instead of the geometry file's (Match Again, from a refined detector)."
+          }
+        },
+        "required": [
+          "frame",
+          "geometry",
+          "crystal",
+          "peaks",
+          "settings"
+        ],
+        "title": "CalibrationIndexRequest",
+        "type": "object"
+      },
+      "CalibrationIndexSettings": {
+        "description": "The indexing's settings, with the LaueGo form's names, meanings and defaults.",
+        "properties": {
+          "index_angle_tolerance": {
+            "description": "Degrees.",
+            "exclusiveMinimum": 0.0,
+            "maximum": 10.0,
+            "title": "Index Angle Tolerance",
+            "type": "number"
+          },
+          "index_cone": {
+            "description": "Degrees.",
+            "exclusiveMinimum": 0.0,
+            "maximum": 180.0,
+            "title": "Index Cone",
+            "type": "number"
+          },
+          "index_hkl": {
+            "description": "The preferred hkl at the centre of the cone.",
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Index Hkl",
+            "type": "array"
+          },
+          "index_kev_max_calc": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 200.0,
+            "title": "Index Kev Max Calc",
+            "type": "number"
+          },
+          "index_kev_max_test": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 200.0,
+            "title": "Index Kev Max Test",
+            "type": "number"
+          },
+          "max_peaks": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 2.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most peaks indexed, brightest first; null: 250.",
+            "title": "Max Peaks"
+          }
+        },
+        "required": [
+          "index_kev_max_calc",
+          "index_kev_max_test",
+          "index_angle_tolerance",
+          "index_cone",
+          "index_hkl"
+        ],
+        "title": "CalibrationIndexSettings",
+        "type": "object"
+      },
+      "CalibrationIndexing": {
+        "description": "The indexing of the peaks with the starting detector.",
+        "properties": {
+          "detector": {
+            "$ref": "#/components/schemas/CalibrationDetector",
+            "description": "The starting detector."
+          },
+          "fit_sample_rotation": {
+            "title": "Fit Sample Rotation",
+            "type": "boolean"
+          },
+          "found": {
+            "description": "Whether a pattern was found; the other values are empty otherwise.",
+            "title": "Found",
+            "type": "boolean"
+          },
+          "goodness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goodness"
+          },
+          "n_indexed": {
+            "title": "N Indexed",
+            "type": "integer"
+          },
+          "n_patterns": {
+            "title": "N Patterns",
+            "type": "integer"
+          },
+          "n_peaks": {
+            "title": "N Peaks",
+            "type": "integer"
+          },
+          "rms_error_deg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rms Error Deg"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CalibrationRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalibrationSurface"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "found",
+          "n_patterns",
+          "n_peaks",
+          "n_indexed",
+          "rms_error_deg",
+          "goodness",
+          "rows",
+          "surface",
+          "detector",
+          "fit_sample_rotation"
+        ],
+        "title": "CalibrationIndexing",
+        "type": "object"
+      },
+      "CalibrationInputs": {
+        "properties": {
+          "crystal": {
+            "description": "The calibration crystal's file.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Crystal",
+            "type": "string"
+          },
+          "frame": {
+            "description": "The calibration frame (an HDF5 file inside the file roots).",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Frame",
+            "type": "string"
+          },
+          "geometry": {
+            "description": "The starting geometry file.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Geometry",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frame",
+          "geometry",
+          "crystal"
+        ],
+        "title": "CalibrationInputs",
+        "type": "object"
+      },
+      "CalibrationInputsInfo": {
+        "description": "What the inputs are: the frame's size and detector, the geometry's detector for it, and the crystal.",
+        "properties": {
+          "crystal_name": {
+            "title": "Crystal Name",
+            "type": "string"
+          },
+          "detector": {
+            "$ref": "#/components/schemas/CalibrationDetector"
+          },
+          "detector_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The frame's detector ID; null when the file records none (detector 0 is then used).",
+            "title": "Detector Id"
+          },
+          "fit_sample_rotation": {
+            "description": "Whether the sample rotation is fitted with the detector (detector 0, as LaueGo).",
+            "title": "Fit Sample Rotation",
+            "type": "boolean"
+          },
+          "group": {
+            "description": "Its pixel grouping ``(x, y)``.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Group",
+            "type": "array"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "space_group": {
+            "title": "Space Group",
+            "type": "integer"
+          },
+          "start": {
+            "description": "The frame's full-detector origin ``(x, y)``.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Start",
+            "type": "array"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "width",
+          "height",
+          "detector_id",
+          "start",
+          "group",
+          "detector",
+          "fit_sample_rotation",
+          "crystal_name",
+          "space_group"
+        ],
+        "title": "CalibrationInputsInfo",
+        "type": "object"
+      },
+      "CalibrationMeasurement": {
+        "description": "A user's value for one peak (by its index in ``peaks``).",
+        "properties": {
+          "energy_kev": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 200.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The measured energy; null for none.",
+            "title": "Energy Kev"
+          },
+          "order": {
+            "anyOf": [
+              {
+                "maximum": 8.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The harmonic: the reflection is this multiple of its first-order hkl; null keeps the indexing's.",
+            "title": "Order"
+          },
+          "peak": {
+            "exclusiveMaximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Peak",
+            "type": "integer"
+          },
+          "source": {
+            "default": "",
+            "description": "Where the energy was measured, such as a scan number.",
+            "maxLength": 200,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "peak"
+        ],
+        "title": "CalibrationMeasurement",
+        "type": "object"
+      },
+      "CalibrationPeak": {
+        "properties": {
+          "intensity": {
+            "title": "Intensity",
+            "type": "number"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "intensity"
+        ],
+        "title": "CalibrationPeak",
+        "type": "object"
+      },
+      "CalibrationPeakFit": {
+        "description": "The peak fitted near a clicked pixel; ``peak`` null when there is none.",
+        "properties": {
+          "peak": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalibrationPeak"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "peak"
+        ],
+        "title": "CalibrationPeakFit",
+        "type": "object"
+      },
+      "CalibrationPeakFitRequest": {
+        "properties": {
+          "frame": {
+            "description": "The calibration frame (an HDF5 file inside the file roots).",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Frame",
+            "type": "string"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "frame",
+          "x",
+          "y"
+        ],
+        "title": "CalibrationPeakFitRequest",
+        "type": "object"
+      },
+      "CalibrationPeakSearchRequest": {
+        "properties": {
+          "frame": {
+            "description": "The calibration frame (an HDF5 file inside the file roots).",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Frame",
+            "type": "string"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/CalibrationPeakSettings"
+          }
+        },
+        "required": [
+          "frame",
+          "settings"
+        ],
+        "title": "CalibrationPeakSearchRequest",
+        "type": "object"
+      },
+      "CalibrationPeakSettings": {
+        "description": "The peak search's settings, with the LaueGo form's names, meanings and defaults (``[indexing.defaults]``).",
+        "properties": {
+          "box_size": {
+            "description": "Half-width of the fit box (pixels).",
+            "exclusiveMinimum": 0.0,
+            "maximum": 200.0,
+            "title": "Box Size",
+            "type": "integer"
+          },
+          "max_number": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most peaks to find; null or not positive: no limit (then at most ``MAX_PEAKS`` are answered).",
+            "title": "Max Number"
+          },
+          "max_rfactor": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Max Rfactor",
+            "type": "number"
+          },
+          "min_separation": {
+            "description": "Minimum distance between peaks (pixels).",
+            "maximum": 2000.0,
+            "minimum": 0.0,
+            "title": "Min Separation",
+            "type": "integer"
+          },
+          "min_size": {
+            "description": "Minimum spot size (pixels).",
+            "exclusiveMinimum": 0.0,
+            "maximum": 1000.0,
+            "title": "Min Size",
+            "type": "number"
+          },
+          "peak_shape": {
+            "enum": [
+              "Lorentzian",
+              "Gaussian"
+            ],
+            "title": "Peak Shape",
+            "type": "string"
+          },
+          "smooth": {
+            "default": false,
+            "title": "Smooth",
+            "type": "boolean"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute threshold (counts); null for automatic.",
+            "title": "Threshold"
+          },
+          "threshold_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Multiple of the image's standard deviation for the automatic threshold; null or not positive: lauelab's.",
+            "title": "Threshold Ratio"
+          }
+        },
+        "required": [
+          "box_size",
+          "max_rfactor",
+          "min_size",
+          "min_separation",
+          "peak_shape"
+        ],
+        "title": "CalibrationPeakSettings",
+        "type": "object"
+      },
+      "CalibrationPeaks": {
+        "description": "Peak search's peaks, brightest first.",
+        "properties": {
+          "peaks": {
+            "items": {
+              "$ref": "#/components/schemas/CalibrationPeak"
+            },
+            "title": "Peaks",
+            "type": "array"
+          },
+          "threshold": {
+            "description": "The threshold used (counts).",
+            "title": "Threshold",
+            "type": "number"
+          }
+        },
+        "required": [
+          "peaks",
+          "threshold"
+        ],
+        "title": "CalibrationPeaks",
+        "type": "object"
+      },
+      "CalibrationPosition": {
+        "properties": {
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "CalibrationPosition",
+        "type": "object"
+      },
+      "CalibrationRefineRequest": {
+        "properties": {
+          "azimuth_deg": {
+            "default": 90.0,
+            "description": "The detector-0 azimuth the fit holds (deg).",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Azimuth Deg",
+            "type": "number"
+          },
+          "crystal": {
+            "description": "The calibration crystal's file.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Crystal",
+            "type": "string"
+          },
+          "frame": {
+            "description": "The calibration frame (an HDF5 file inside the file roots).",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Frame",
+            "type": "string"
+          },
+          "geometry": {
+            "description": "The starting geometry file.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Geometry",
+            "type": "string"
+          },
+          "measurements": {
+            "default": [],
+            "description": "Measured energies and harmonic orders, by peak.",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationMeasurement"
+            },
+            "maxItems": 1000,
+            "title": "Measurements",
+            "type": "array"
+          },
+          "peaks": {
+            "description": "The peaks to index, in order (found, then added).",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationPosition"
+            },
+            "maxItems": 1000,
+            "title": "Peaks",
+            "type": "array"
+          },
+          "sample_reciprocal": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "maxItems": 3,
+                "minItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a detector other than 0: the reciprocal lattice rows (1/nm, including 2π) of a detector-0 calibration of\nthe same sample, whose sample rotation is kept; null: this frame's indexing's.",
+            "title": "Sample Reciprocal"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/CalibrationIndexSettings"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalibrationDetectorValues"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The starting detector instead of the geometry file's (Match Again, from a refined detector)."
+          }
+        },
+        "required": [
+          "frame",
+          "geometry",
+          "crystal",
+          "peaks",
+          "settings"
+        ],
+        "title": "CalibrationRefineRequest",
+        "type": "object"
+      },
+      "CalibrationRefinedRow": {
+        "properties": {
+          "angle_error_deg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Angle Error Deg"
+          },
+          "calculated_energy_kev": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "From the refined sample rotation.",
+            "title": "Calculated Energy Kev"
+          },
+          "energy_error_ev": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Measured minus calculated (eV).",
+            "title": "Energy Error Ev"
+          },
+          "energy_source": {
+            "title": "Energy Source",
+            "type": "string"
+          },
+          "h": {
+            "title": "H",
+            "type": "integer"
+          },
+          "k": {
+            "title": "K",
+            "type": "integer"
+          },
+          "l": {
+            "title": "L",
+            "type": "integer"
+          },
+          "measured_energy_kev": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measured Energy Kev"
+          },
+          "peak": {
+            "title": "Peak",
+            "type": "integer"
+          },
+          "pixel_error": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The distance between predicted and measured position (full-detector pixels).",
+            "title": "Pixel Error"
+          },
+          "predicted_x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted X"
+          },
+          "predicted_y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the reflection hits the refined detector (frame pixels); null off it.",
+            "title": "Predicted Y"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "peak",
+          "h",
+          "k",
+          "l",
+          "x",
+          "y",
+          "predicted_x",
+          "predicted_y",
+          "pixel_error",
+          "angle_error_deg",
+          "measured_energy_kev",
+          "energy_source",
+          "calculated_energy_kev",
+          "energy_error_ev"
+        ],
+        "title": "CalibrationRefinedRow",
+        "type": "object"
+      },
+      "CalibrationResult": {
+        "description": "The fit of the detector (``lauelab.calibration.calibrate_detector``).",
+        "properties": {
+          "error_end": {
+            "title": "Error End",
+            "type": "number"
+          },
+          "error_start": {
+            "title": "Error Start",
+            "type": "number"
+          },
+          "fit_sample_rotation": {
+            "title": "Fit Sample Rotation",
+            "type": "boolean"
+          },
+          "initial": {
+            "$ref": "#/components/schemas/CalibrationDetectorValues"
+          },
+          "inputs_version": {
+            "description": "The version of the frame, geometry and crystal files the fit read (their identities): Save sends it back and is\nrefused when a file has changed since.",
+            "title": "Inputs Version",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "n_energies": {
+            "title": "N Energies",
+            "type": "integer"
+          },
+          "n_evaluations": {
+            "title": "N Evaluations",
+            "type": "integer"
+          },
+          "n_rows": {
+            "title": "N Rows",
+            "type": "integer"
+          },
+          "note": {
+            "description": "The geometry file note Save writes by default.",
+            "title": "Note",
+            "type": "string"
+          },
+          "refined": {
+            "$ref": "#/components/schemas/CalibrationDetectorValues"
+          },
+          "refined_reciprocal": {
+            "description": "The refined orientation's reciprocal rows (1/nm, including 2π), for the other detectors' fits.",
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Refined Reciprocal",
+            "type": "array"
+          },
+          "rms_energy_error_ev": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rms Energy Error Ev"
+          },
+          "rms_pixel_error": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rms Pixel Error"
+          },
+          "rotation_vector_sigma": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Rotation Vector Sigma",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CalibrationRefinedRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "sample_rotation_change_deg": {
+            "title": "Sample Rotation Change Deg",
+            "type": "number"
+          },
+          "sample_rotation_from": {
+            "description": "``detector0``: a detector-0 calibration's sample rotation was kept; ``indexing``: this frame's.",
+            "enum": [
+              "fitted",
+              "detector0",
+              "indexing"
+            ],
+            "title": "Sample Rotation From",
+            "type": "string"
+          },
+          "sample_rotation_sigma": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Sample Rotation Sigma",
+            "type": "array"
+          },
+          "sample_rotation_vector": {
+            "description": "The (refined) sample rotation, axis times angle (rad), LaueGo's rho.",
+            "items": {
+              "type": "number"
+            },
+            "title": "Sample Rotation Vector",
+            "type": "array"
+          },
+          "status": {
+            "description": "``ok``: refined values; ``not_indexed``: no pattern was found; else lauelab's reason (``message``).",
+            "enum": [
+              "ok",
+              "insufficient_data",
+              "energy_mismatch",
+              "not_converged",
+              "not_indexed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalibrationSurface"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The surface check of the refined orientation."
+          },
+          "translation_sigma_um": {
+            "description": "Standard errors from the fit's residuals under LaueGo's weights; not a calibrated uncertainty.",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Translation Sigma Um",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status",
+          "message",
+          "initial",
+          "refined",
+          "rotation_vector_sigma",
+          "translation_sigma_um",
+          "fit_sample_rotation",
+          "sample_rotation_from",
+          "sample_rotation_vector",
+          "sample_rotation_change_deg",
+          "sample_rotation_sigma",
+          "refined_reciprocal",
+          "error_start",
+          "error_end",
+          "n_evaluations",
+          "rms_pixel_error",
+          "rms_energy_error_ev",
+          "n_rows",
+          "n_energies",
+          "rows",
+          "surface",
+          "note",
+          "inputs_version"
+        ],
+        "title": "CalibrationResult",
+        "type": "object"
+      },
+      "CalibrationRow": {
+        "description": "One indexed peak.",
+        "properties": {
+          "calculated_energy_kev": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its energy from the indexed orientation (LaueGo's ``calculated_keV``).",
+            "title": "Calculated Energy Kev"
+          },
+          "h": {
+            "title": "H",
+            "type": "integer"
+          },
+          "harmonics": {
+            "description": "Its harmonic orders 1 to 8 with their energies, to choose the one a measured energy belongs to.",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationHarmonic"
+            },
+            "title": "Harmonics",
+            "type": "array"
+          },
+          "k": {
+            "title": "K",
+            "type": "integer"
+          },
+          "l": {
+            "description": "The reflection: the indexing's hkl, or the request's harmonic of it.",
+            "title": "L",
+            "type": "integer"
+          },
+          "order": {
+            "description": "Its harmonic order (the greatest common divisor of h, k and l).",
+            "title": "Order",
+            "type": "integer"
+          },
+          "peak": {
+            "description": "Its index in the request's ``peaks``.",
+            "title": "Peak",
+            "type": "integer"
+          },
+          "predicted_x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted X"
+          },
+          "predicted_y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the reflection hits the starting detector (frame pixels); null off it.",
+            "title": "Predicted Y"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "description": "The peak (frame pixels).",
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "peak",
+          "h",
+          "k",
+          "l",
+          "order",
+          "x",
+          "y",
+          "predicted_x",
+          "predicted_y",
+          "calculated_energy_kev",
+          "harmonics"
+        ],
+        "title": "CalibrationRow",
+        "type": "object"
+      },
+      "CalibrationSaveRequest": {
+        "properties": {
+          "azimuth_deg": {
+            "default": 90.0,
+            "description": "The detector-0 azimuth the fit holds (deg).",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Azimuth Deg",
+            "type": "number"
+          },
+          "crystal": {
+            "description": "The calibration crystal's file.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Crystal",
+            "type": "string"
+          },
+          "folder": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The folder to write in (inside the file roots); null: the geometry folder (``[calibration] geometry_dir``).",
+            "title": "Folder"
+          },
+          "frame": {
+            "description": "The calibration frame (an HDF5 file inside the file roots).",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Frame",
+            "type": "string"
+          },
+          "geometry": {
+            "description": "The starting geometry file.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Geometry",
+            "type": "string"
+          },
+          "inputs_version": {
+            "description": "The ``inputs_version`` of the fit shown: Save is a 409 when the files have changed since.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Inputs Version",
+            "type": "string"
+          },
+          "measurements": {
+            "default": [],
+            "description": "Measured energies and harmonic orders, by peak.",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationMeasurement"
+            },
+            "maxItems": 1000,
+            "title": "Measurements",
+            "type": "array"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.xml$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The new file's name (letters, digits, ``.``, ``_``, ``-``, ending ``.xml``); null: ``geoN_<local time>.xml``.\nAn existing file is never replaced.",
+            "title": "Name"
+          },
+          "note": {
+            "description": "The calibrated detector's ``<note>``: printable ASCII without <, > or &.",
+            "maxLength": 99,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          },
+          "peaks": {
+            "description": "The peaks to index, in order (found, then added).",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationPosition"
+            },
+            "maxItems": 1000,
+            "title": "Peaks",
+            "type": "array"
+          },
+          "sample_reciprocal": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "maxItems": 3,
+                "minItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a detector other than 0: the reciprocal lattice rows (1/nm, including 2π) of a detector-0 calibration of\nthe same sample, whose sample rotation is kept; null: this frame's indexing's.",
+            "title": "Sample Reciprocal"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/CalibrationIndexSettings"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalibrationDetectorValues"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The starting detector instead of the geometry file's (Match Again, from a refined detector)."
+          }
+        },
+        "required": [
+          "frame",
+          "geometry",
+          "crystal",
+          "peaks",
+          "settings",
+          "note",
+          "inputs_version"
+        ],
+        "title": "CalibrationSaveRequest",
+        "type": "object"
+      },
+      "CalibrationSaved": {
+        "description": "The saved geometry file.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/CalibrationResult",
+            "description": "The fit written (computed again from the request)."
+          }
+        },
+        "required": [
+          "name",
+          "path",
+          "result"
+        ],
+        "title": "CalibrationSaved",
+        "type": "object"
+      },
+      "CalibrationSetup": {
+        "description": "What the Calibration page starts from: the geometry folder and the form defaults.",
+        "properties": {
+          "azimuth_deg": {
+            "description": "The detector-0 azimuth about the incident beam (deg) that the fit holds: LaueGo's 34-ID-E preference.",
+            "title": "Azimuth Deg",
+            "type": "number"
+          },
+          "default_geometry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The newest geometry file of the folder; null when there is none.",
+            "title": "Default Geometry"
+          },
+          "geometry_folder": {
+            "$ref": "#/components/schemas/GeometryFolder"
+          },
+          "index_settings": {
+            "$ref": "#/components/schemas/CalibrationIndexSettings"
+          },
+          "peak_settings": {
+            "$ref": "#/components/schemas/CalibrationPeakSettings"
+          },
+          "surface_warning_deg": {
+            "description": "The angle (deg) between the surface reflection and the expected surface normal above which the page warns.",
+            "title": "Surface Warning Deg",
+            "type": "number"
+          }
+        },
+        "required": [
+          "geometry_folder",
+          "default_geometry",
+          "peak_settings",
+          "index_settings",
+          "azimuth_deg",
+          "surface_warning_deg"
+        ],
+        "title": "CalibrationSetup",
+        "type": "object"
+      },
+      "CalibrationSurface": {
+        "description": "Where the crystal's surface reflection points (lauelab's ``surface_check``: the {001} member nearest the\n34-ID-E standard's surface normal, 45 degrees between the reversed incident beam and +y).",
+        "properties": {
+          "angle_to_exit_deg": {
+            "description": "The angle to the beam the expected surface reflects.",
+            "title": "Angle To Exit Deg",
+            "type": "number"
+          },
+          "angle_to_expected_deg": {
+            "title": "Angle To Expected Deg",
+            "type": "number"
+          },
+          "angle_to_incident_deg": {
+            "description": "The angle to the reversed incident beam.",
+            "title": "Angle To Incident Deg",
+            "type": "number"
+          },
+          "between": {
+            "title": "Between",
+            "type": "boolean"
+          },
+          "h": {
+            "title": "H",
+            "type": "integer"
+          },
+          "k": {
+            "title": "K",
+            "type": "integer"
+          },
+          "l": {
+            "title": "L",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "h",
+          "k",
+          "l",
+          "angle_to_expected_deg",
+          "angle_to_incident_deg",
+          "angle_to_exit_deg",
+          "between"
+        ],
+        "title": "CalibrationSurface",
+        "type": "object"
+      },
       "CancelResult": {
         "description": "What a stop did (``jobs.controls.cancel_run``; ``POST /api/v1/jobs/{job_id}/cancel``, which answers an\nunknown job with a 404 instead of ``not_found``).",
         "properties": {
@@ -1396,6 +2885,68 @@
           "problem"
         ],
         "title": "ForwardCacheList",
+        "type": "object"
+      },
+      "GeometryFolder": {
+        "description": "The shared geometry folder (``[calibration] geometry_dir``).",
+        "properties": {
+          "files": {
+            "description": "Its ``geoN_*.xml`` files, newest (by name) first.",
+            "items": {
+              "$ref": "#/components/schemas/GeometryFolderFile"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "state": {
+            "description": "``ok``: the page saves here. Otherwise Save is unavailable, and the state says why.",
+            "enum": [
+              "not_set",
+              "ok",
+              "outside_roots",
+              "not_found",
+              "not_writable",
+              "not_responding"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "path",
+          "files"
+        ],
+        "title": "GeometryFolder",
+        "type": "object"
+      },
+      "GeometryFolderFile": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "path"
+        ],
+        "title": "GeometryFolderFile",
         "type": "object"
       },
       "GeometrySource": {
@@ -8648,6 +10199,448 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/calibration/frame": {
+      "get": {
+        "description": "A frame's image as lauelab reads it, revalidated by its `ETag` (the file's identity); headers\n`X-Frame-Shape: H,W` and `X-Frame-Dtype`. Read in a turn of the detector images (six at once, 34 waiting). Each path must be a file inside the file roots: 400 outside them, 422 (on the field) for one that is missing,\nunreadable or refused by lauelab, 503 `urn:laueportal:problem:not-responding` when its file system does not answer.",
+        "operationId": "getCalibrationFrame",
+        "parameters": [
+          {
+            "description": "The frame (an HDF5 file in the roots).",
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "description": "The frame (an HDF5 file in the roots).",
+              "maxLength": 4096,
+              "minLength": 1,
+              "title": "Path",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The frame: row-major, little-endian `uint16` (or `float32`), as `X-Frame-Shape` and `X-Frame-Dtype` say."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation failed"
+          }
+        },
+        "summary": "Get a calibration frame's image",
+        "tags": [
+          "calibration"
+        ]
+      }
+    },
+    "/api/v1/calibration/geometry-files": {
+      "post": {
+        "description": "Fit again as `refine` does and write the starting geometry file, with the refined detector's `<R>`, `<P>`,\n`<timeMeasured>` and `<note>` and the write times, into `folder` (inside the roots; default the geometry folder) as\n`name` (default `geoN_<local time>.xml`); the file is read back before it takes its name. 409 when that file\nexists or when the frame, geometry or crystal changed since the fit (`inputs_version`); 422 when the fit has no\nrefined values, the note is not printable ASCII without <, > or &, or the folder is not set, missing or not\nwritable. Each path must be inside the file roots: 400 outside them, 422 (on the field) for a file that is\nmissing, unreadable or refused by lauelab, 503 `urn:laueportal:problem:not-responding` when its file system does\nnot answer. Two calibration computations run at once; the others wait for a turn, and while four wait the answer\nis a 503 with `Retry-After`.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
+        "operationId": "saveCalibration",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalibrationSaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Cross-site request refused: the request lacks `X-Laue-Portal: 1`, or comes from a page on another origin."
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request body too large: more than 1 MiB, refused by its `Content-Length` before it is read, or (chunked) once that much has arrived."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation failed"
+          }
+        },
+        "summary": "Save the refined detector in a geometry file",
+        "tags": [
+          "calibration"
+        ]
+      }
+    },
+    "/api/v1/calibration/index": {
+      "post": {
+        "description": "The peaks indexed with the starting detector (the geometry file's detector of the frame, or `start`): the best\npattern's reflections with their energies and harmonics, and where its {001} reflection points. It changes\nnothing. Each path must be a file inside the file roots: 400 outside them, 422 (on the field) for one that is missing,\nunreadable or refused by lauelab, 503 `urn:laueportal:problem:not-responding` when its file system does not answer. Two calibration computations run at once; the others wait for a turn, and while four wait the answer is a 503\nwith `Retry-After`.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
+        "operationId": "indexCalibrationPeaks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalibrationIndexRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationIndexing"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Cross-site request refused: the request lacks `X-Laue-Portal: 1`, or comes from a page on another origin."
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request body too large: more than 1 MiB, refused by its `Content-Length` before it is read, or (chunked) once that much has arrived."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation failed"
+          }
+        },
+        "summary": "Index a calibration frame's peaks",
+        "tags": [
+          "calibration"
+        ]
+      }
+    },
+    "/api/v1/calibration/inputs": {
+      "post": {
+        "description": "The frame's size and detector ID, the geometry's detector for it (by ID; detector 0 for a frame without one)\nand the crystal. Each path must be a file inside the file roots: 400 outside them, 422 (on the field) for one that is missing,\nunreadable or refused by lauelab, 503 `urn:laueportal:problem:not-responding` when its file system does not answer. Two calibration computations run at once; the others wait for a turn, and while four wait the answer is a 503\nwith `Retry-After`.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
+        "operationId": "inspectCalibrationInputs",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalibrationInputs"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationInputsInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Cross-site request refused: the request lacks `X-Laue-Portal: 1`, or comes from a page on another origin."
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request body too large: more than 1 MiB, refused by its `Content-Length` before it is read, or (chunked) once that much has arrived."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation failed"
+          }
+        },
+        "summary": "Check the calibration's inputs",
+        "tags": [
+          "calibration"
+        ]
+      }
+    },
+    "/api/v1/calibration/peak": {
+      "post": {
+        "description": "A two-dimensional Gaussian fitted around the brightest pixel within 10 pixels of `(x, y)` (lauelab's\n`fit_peak`, LaueGo's \"Add Gaussian to pkList\"); `peak` null when no peak fits. It changes nothing. Each path must be a file inside the file roots: 400 outside them, 422 (on the field) for one that is missing,\nunreadable or refused by lauelab, 503 `urn:laueportal:problem:not-responding` when its file system does not answer. Two calibration computations run at once; the others wait for a turn, and while four wait the answer is a 503\nwith `Retry-After`.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
+        "operationId": "fitCalibrationPeak",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalibrationPeakFitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationPeakFit"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Cross-site request refused: the request lacks `X-Laue-Portal: 1`, or comes from a page on another origin."
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request body too large: more than 1 MiB, refused by its `Content-Length` before it is read, or (chunked) once that much has arrived."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation failed"
+          }
+        },
+        "summary": "Fit a peak where the user clicked",
+        "tags": [
+          "calibration"
+        ]
+      }
+    },
+    "/api/v1/calibration/peaks": {
+      "post": {
+        "description": "lauelab's peak search on the frame with the LaueGo form's settings, brightest first (at most 1,000). It\nchanges nothing. Each path must be a file inside the file roots: 400 outside them, 422 (on the field) for one that is missing,\nunreadable or refused by lauelab, 503 `urn:laueportal:problem:not-responding` when its file system does not answer. Two calibration computations run at once; the others wait for a turn, and while four wait the answer is a 503\nwith `Retry-After`.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
+        "operationId": "findCalibrationPeaks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalibrationPeakSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationPeaks"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Cross-site request refused: the request lacks `X-Laue-Portal: 1`, or comes from a page on another origin."
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request body too large: more than 1 MiB, refused by its `Content-Length` before it is read, or (chunked) once that much has arrived."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation failed"
+          }
+        },
+        "summary": "Find a calibration frame's peaks",
+        "tags": [
+          "calibration"
+        ]
+      }
+    },
+    "/api/v1/calibration/refine": {
+      "post": {
+        "description": "The peaks indexed as `index` does, the measured energies and harmonics added, and the detector's rotation and\ntranslation fitted with lauelab's port of LaueGo's calibration (detector 0: with the sample rotation, its azimuth\nheld at `azimuth_deg`). A fit that cannot run or does not converge is a 200 whose `status` says why. It changes\nnothing. Each path must be a file inside the file roots: 400 outside them, 422 (on the field) for one that is missing,\nunreadable or refused by lauelab, 503 `urn:laueportal:problem:not-responding` when its file system does not answer. Two calibration computations run at once; the others wait for a turn, and while four wait the answer is a 503\nwith `Retry-After`.\n\nNeeds the header `X-Laue-Portal: 1`, as every request that changes data (the portal's pages send it; scripts must too). Without it, or from a page on another origin (a `Sec-Fetch-Site` other than `same-origin` or `none`), the answer is a 403 problem and nothing changes.",
+        "operationId": "refineCalibration",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalibrationRefineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Cross-site request refused: the request lacks `X-Laue-Portal: 1`, or comes from a page on another origin."
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request body too large: more than 1 MiB, refused by its `Content-Length` before it is read, or (chunked) once that much has arrived."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation failed"
+          }
+        },
+        "summary": "Fit the frame's detector",
+        "tags": [
+          "calibration"
+        ]
+      }
+    },
+    "/api/v1/calibration/setup": {
+      "get": {
+        "description": "The shared geometry folder (`[calibration] geometry_dir`: its state and `geoN_*.xml` files, newest first),\nthe newest file as the default starting geometry, and the LaueGo form's peak search and indexing defaults. The\nfolder is listed through the probe, in the folder reads' turn.",
+        "operationId": "getCalibrationSetup",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationSetup"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get the Calibration page's setup",
+        "tags": [
+          "calibration"
+        ]
+      }
+    },
     "/api/v1/files/browse": {
       "get": {
         "description": "One level of a folder inside the allowed roots: folders first, then files, each in natural name order;\nhidden (dot) entries and symlinks leading outside the roots are left out; at most `files.listing_cap` entries,\nwith `truncated` set when there were more. Every subfolder is considered, but only ten times\n`files.listing_cap` of a folder's files are sorted (the first the file system gives): with more, the listing is\ntruncated, and its files are the first, in natural order, of those. Give `root` (its folder), `path`, or both\n(`path` inside `root`).\n400 for an unknown root or a path outside the roots, 404 (with the reason) for a folder missing on this host,\n422 for a file or for neither `root` nor `path`, 503 `urn:laueportal:problem:not-responding` when the folder's\nfile system does not answer. A folder read: four are made at once (with Find Matching Files, Find Indices and\nthe run forms' validation and creation), the others wait for a turn, a request whose client has gone stops\nwaiting, and while 16 already wait the answer is a 503 with `Retry-After`.",

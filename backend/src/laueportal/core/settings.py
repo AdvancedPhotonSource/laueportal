@@ -492,6 +492,13 @@ class LaueMatchingSettings(_Section):
     defaults: LaueMatchingDefaults = Field(default_factory=LaueMatchingDefaults)
 
 
+class CalibrationSettings(_Section):
+    geometry_dir: OptionalPath = None
+    """The shared folder of geometry files (``geoN_YYYY-MM-DD_HH-MM-SS.xml``) that the Calibration page saves into and
+    takes its starting geometry from (the newest by name). It must lie inside a file root. Not set: the page
+    calibrates but cannot save."""
+
+
 class RemoteSection(_Section):
     """Remote execution through DM. Off unless enabled.
 
@@ -612,6 +619,7 @@ class Settings(BaseSettings):
     indexing: IndexingSettings = Field(default_factory=IndexingSettings)
     reconstruction: ReconstructionSettings = Field(default_factory=ReconstructionSettings)
     laue_matching: LaueMatchingSettings = Field(default_factory=LaueMatchingSettings)
+    calibration: CalibrationSettings = Field(default_factory=CalibrationSettings)
     remote: RemoteSection = Field(default_factory=RemoteSection)
     live: LiveSettings = Field(default_factory=LiveSettings)
 

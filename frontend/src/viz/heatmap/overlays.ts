@@ -4,7 +4,8 @@
 // larger than the marker size.
 import type { DetectorOverlays } from "@/api"
 
-export type OverlayKind = "detected" | "indexed" | "simulated"
+export type OverlayKind =
+  "detected" | "indexed" | "simulated" | "added" | "fitted"
 
 export interface OverlayLayer {
   kind: OverlayKind
@@ -13,6 +14,8 @@ export interface OverlayLayer {
   y: Float64Array
   /** One "(h k l)" per mark, or null without labels. */
   labels: readonly string[] | null
+  /** One CSS colour per mark instead of the kind's (the calibration's fitted positions by their energy error). */
+  colors?: readonly string[]
 }
 
 /**
@@ -26,13 +29,51 @@ export interface OverlayBox {
   label?: string
 }
 
+/**
+ * Each kind's mark: its colour, shape and growth over the marker size, and the darker shade of its
+ * colour that its labels are written in on their light chip (at least 4.5:1 contrast).
+ */
 export const OVERLAY_STYLES: Record<
   OverlayKind,
-  { color: string; shape: "square" | "cross" | "triangle"; grow: number }
+  {
+    color: string
+    label: string
+    shape: "square" | "cross" | "triangle" | "circle"
+    grow: number
+  }
 > = {
-  detected: { color: "rgb(0, 180, 210)", shape: "square", grow: 0 },
-  indexed: { color: "rgb(220, 50, 47)", shape: "cross", grow: 4 },
-  simulated: { color: "rgb(128, 0, 128)", shape: "triangle", grow: 4 },
+  detected: {
+    color: "rgb(0, 180, 210)",
+    label: "rgb(0, 100, 120)",
+    shape: "square",
+    grow: 0,
+  },
+  indexed: {
+    color: "rgb(220, 50, 47)",
+    label: "rgb(170, 30, 30)",
+    shape: "cross",
+    grow: 4,
+  },
+  simulated: {
+    color: "rgb(128, 0, 128)",
+    label: "rgb(110, 0, 110)",
+    shape: "triangle",
+    grow: 4,
+  },
+  // The Calibration page's: peaks added by hand (orange squares) and the positions the fitted
+  // detector predicts (circles, coloured by their energy error when they have one).
+  added: {
+    color: "rgb(230, 120, 0)",
+    label: "rgb(150, 70, 0)",
+    shape: "square",
+    grow: 2,
+  },
+  fitted: {
+    color: "rgb(40, 160, 70)",
+    label: "rgb(20, 100, 40)",
+    shape: "circle",
+    grow: 6,
+  },
 }
 
 export interface OverlayOptions {

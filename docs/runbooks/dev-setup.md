@@ -35,7 +35,7 @@ downloads only from conda-forge, PyPI, the npm registry and GitHub (lauelab and 
 2. micromamba (2.9.0-0), the binary from its GitHub release (checksum checked), in `tools/`, then the conda env in
    `env/` from `environment.lock` (Python 3.12, compilers, GSL, HDF5, supervisor).
 3. The locked Python packages (`requirements/dev.lock`, installed with `--no-deps`, then checked).
-4. lauelab from GitHub at `6d37e95`, built inside the env (its compilers and conda-forge's GSL), then an import
+4. lauelab from GitHub at `b846009`, built inside the env (its compilers and conda-forge's GSL), then an import
    check of its merge APIs and its incremental `PreparedScan` (live runs).
 5. The backend, editable.
 6. pnpm 12.10.1, the standalone binary from its GitHub release (checksum checked), in `tools/`.

@@ -8,9 +8,9 @@ paths are from the repository root.
 
 ## Layout
 
-- domain packages `scans`, `indexing`, `reconstruction`, `jobs`, `files` and `system`, each with the modules it needs of
-  `models.py` / `schemas.py` / `service.py` / `api.py` (all have `schemas.py` and `api.py`; `files` and `system` have no
-  tables and no `service.py`);
+- domain packages `scans`, `indexing`, `reconstruction`, `jobs`, `files`, `system` and `calibration`, each with the
+  modules it needs of `models.py` / `schemas.py` / `service.py` / `api.py` (all have `schemas.py` and `api.py`; `files`,
+  `system` and `calibration` have no tables, and `files` and `system` no `service.py`);
 - shared code in `core`;
 - lauelab access in `science`; remote execution in `remote` and the runners in `jobs`;
 - programs as plain modules: `indexing/lauego/{params,compute}.py`, `reconstruction/wire/{params,compute}.py`, and
@@ -212,6 +212,10 @@ names `lauelab.reconstruct` does not export); and `lauelab.indexing.indexer.PEAK
   forms' validation and creation (`POST /{indexing,reconstruction}-runs/validate`, `/{indexing,reconstruction}-runs`),
   which list the input folder, and the Live page's (`POST /live-runs/validate`, `/live-runs`: the folder, the
   calibration files, and Start's DAQ bind check); a new route that lists or reads a requested folder takes it too.
+  The Calibration page's computations (`calibration/api.py`: its inputs' check, peak search, a clicked peak, the
+  indexing, the fit and the save; each reads the frame and runs lauelab) take a turn of their own the same way
+  (`app.state.calibrations`, `calibration.service.CALIBRATIONS_AT_ONCE`, 2; `CALIBRATIONS_WAITING`, 4); its frame image
+  takes the detector images' turn, and its setup, which lists the geometry folder, the folder reads'.
   A creation takes its turn before it claims its `Idempotency-Key`, so its 503 can be sent again with the same key. The
   turn bounds the frames read and copied at once, not the bodies held: the turn ends when the route returns its
   `Response`, and the body is then gzipped (Starlette's own limiter of 40 threads) and sent. Measured on R2 with a 512

@@ -39,6 +39,8 @@ from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from laueportal import __version__
+from laueportal.calibration import api as calibration_api
+from laueportal.calibration.service import CALIBRATIONS_AT_ONCE
 from laueportal.core import etag
 from laueportal.core.api import FOLDER_READS_AT_ONCE, REQUEST_GUARDS, BodyLimitMiddleware, document_request_guards
 from laueportal.core.db import make_engine, make_sessionmaker
@@ -99,6 +101,7 @@ def _routers() -> list[APIRouter]:
         indexing_api.router,
         jobs_api.router,
         files_api.router,
+        calibration_api.router,
     ]
 
 
@@ -320,6 +323,7 @@ def create_app(settings: Settings) -> FastAPI:
     app.state.frame_reads = CapacityLimiter(FRAMES_AT_ONCE)  # the turns for a point's depth frames
     # the folder reads' turns: the file browser, the forms' file helpers, a run's validation and creation (core.api)
     app.state.folder_reads = CapacityLimiter(FOLDER_READS_AT_ONCE)
+    app.state.calibrations = CapacityLimiter(CALIBRATIONS_AT_ONCE)  # the Calibration page's computations
     # the Live page's (jobs.live_session): the DAQ list's one shared answer (no DM call until one is asked for), and
     # Start's one lock across the one-session check, the creations and the queueing (the api is one process)
     app.state.daq_list = DaqList(settings.live)

@@ -181,6 +181,7 @@ test("the navbar and its Menu reach every page", async ({ page }) => {
       "Import Scans",
       "New Wire Reconstruction",
       "New Indexation",
+      "Calibration",
     ])
     await page.getByRole("menuitem", { name: item }).click()
     await expect(page).toHaveURL(new RegExp(`${path}$`))
@@ -192,6 +193,14 @@ test("the navbar and its Menu reach every page", async ({ page }) => {
     await expect(sectionLink).toHaveAttribute("data-section", "active")
     await expect(nav.locator('[aria-current="page"]')).toHaveCount(0)
   }
+
+  // Calibration is a page of its own, below no section.
+  await nav.getByRole("button", { name: "Menu" }).click()
+  await page.getByRole("menuitem", { name: "Calibration" }).click()
+  await expect(page).toHaveURL(/\/calibration$/)
+  await expect(page).toHaveTitle("Calibration · 3DMN Portal")
+  await expect(heading).toHaveText("Calibration")
+  await expect(nav.locator('[aria-current="true"]')).toHaveCount(0)
 
   await page.getByRole("link", { name: "3DMN Portal" }).click()
   await expect(page).toHaveURL(/\/$/)
@@ -215,6 +224,7 @@ test("below 1024 px the Live link is the Menu's first item", async ({
     "Import Scans",
     "New Wire Reconstruction",
     "New Indexation",
+    "Calibration",
   ])
   await page.getByRole("menuitem", { name: "Live" }).click()
   await expect(page).toHaveURL(/\/live$/)

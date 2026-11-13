@@ -247,6 +247,7 @@ export {
   decodeDetectorFrame,
   decodeMapProduct,
   decodePoleFigureProduct,
+  useCalibrationFrame,
   useDetectorFrame,
   useMapProduct,
   usePoleFigureProduct,
@@ -361,4 +362,43 @@ export {
   CancelState,
   FileState,
   RemotePhase,
+} from "./generated/model"
+
+// the Calibration page: its setup, frame, peaks, indexing (read as queries, ./calibration.ts), the
+// fit and the saved geometry file
+export {
+  fitCalibrationPeak,
+  getGetCalibrationSetupQueryKey,
+  useGetCalibrationSetup,
+  useRefineCalibration,
+  useSaveCalibration,
+} from "./generated/endpoints"
+export {
+  useCalibrationIndexing,
+  useCalibrationInputs,
+  useCalibrationPeaks,
+} from "./calibration"
+export type {
+  CalibrationDetector,
+  CalibrationDetectorValues,
+  CalibrationHarmonic,
+  CalibrationIndexing,
+  CalibrationIndexRequest,
+  CalibrationIndexSettings,
+  CalibrationInputs,
+  CalibrationInputsInfo,
+  CalibrationMeasurement,
+  CalibrationPeak,
+  CalibrationPeakSettings,
+  CalibrationPeaks,
+  CalibrationPosition,
+  CalibrationRefinedRow,
+  CalibrationRefineRequest,
+  CalibrationResult,
+  CalibrationRow,
+  CalibrationSaved,
+  CalibrationSaveRequest,
+  CalibrationSetup,
+  CalibrationSurface,
+  GeometryFolder,
 } from "./generated/model"

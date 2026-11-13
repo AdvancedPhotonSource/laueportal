@@ -27,7 +27,7 @@ Deploy the same reviewed source revision to the enabled execution components. Ea
 | `requirements/compute.lock` | The compute nodes: the standalone runner and the MPI runner (no database or Globus) |
 
 A host that runs both the portal and the launcher installs `base.lock` and `launcher.lock` (they share versions).
-Install lauelab from GitHub at the commit `scripts/setup.sh` pins (`6d37e95`) with `--no-deps`, as a regular
+Install lauelab from GitHub at the commit `scripts/setup.sh` pins (`b846009`) with `--no-deps`, as a regular
 (non-editable) install, wherever the compute side or the portal runs. The launcher and portal can share a package recipe
 while retaining independent installed copies. The analysis and Compute endpoint environments remain separate.
 
@@ -69,7 +69,7 @@ micromamba create -y -p "$root/envs/laue-portal" --file "$root/src/environment.l
   ```bash
   uv pip install --python "$py" --require-hashes --no-deps -r "$root/src/requirements/compute.lock"
   micromamba run -p "$root/envs/laue-portal" uv pip install --python "$py" --no-deps \
-      "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@6d37e95403aca7b1a0996c17668f83db7584f8bb"
+      "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@b846009a9628d9dfea2fd531eb5e6607d9b8094b"
   uv pip check --python "$py"
   "$py" -c "from lauelab.indexing import merge_results_files, merge_xml_files"   # the MPI merge APIs
   ```
@@ -85,7 +85,7 @@ micromamba create -y -p "$root/envs/laue-portal" --file "$root/src/environment.l
   ```bash
   uv pip install --python "$py" --require-hashes --no-deps -r "$root/src/requirements/base.lock"
   micromamba run -p "$root/envs/laue-portal" uv pip install --python "$py" --no-deps \
-      "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@6d37e95403aca7b1a0996c17668f83db7584f8bb"
+      "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@b846009a9628d9dfea2fd531eb5e6607d9b8094b"
   uv pip install --python "$py" --no-deps -e "$root/src/backend"
   uv pip check --python "$py"
   ```

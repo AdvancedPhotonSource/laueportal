@@ -7,6 +7,27 @@ import { NumberField } from "./NumberField"
 afterEach(cleanup)
 
 describe("NumberField", () => {
+  it("with onClear, applies an emptied field as cleared, on leaving it too", async () => {
+    const onCommit = vi.fn()
+    const onClear = vi.fn()
+    const container = await render(
+      <NumberField
+        aria-label="Measured energy"
+        value={6.43}
+        onCommit={onCommit}
+        onClear={onClear}
+      />
+    )
+    const input = container.querySelector("input") as HTMLInputElement
+    await enterText(input, "")
+    expect(input.getAttribute("aria-invalid")).toBeNull()
+    act(() => {
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }))
+    })
+    expect(onClear).toHaveBeenCalledOnce()
+    expect(onCommit).not.toHaveBeenCalled()
+  })
+
   it("applies a typed number on Enter or on leaving it, never per keystroke, and restores an invalid one", async () => {
     const onCommit = vi.fn()
     const container = await render(

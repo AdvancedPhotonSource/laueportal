@@ -22,14 +22,20 @@ const show = (value: number | null) => (value === null ? "" : String(value))
 export function NumberField({
   value,
   onCommit,
+  onClear,
   isValid = Number.isFinite,
   className,
   ...props
 }: {
   value: number | null
   onCommit: (value: number) => void
+  /** Called when the field is emptied and applied; without it an emptied field restores its value. */
+  onClear?: () => void
   isValid?: (value: number) => boolean
-} & Omit<ComponentProps<typeof Input>, "value" | "onChange" | "type">) {
+} & Omit<
+  ComponentProps<typeof Input>,
+  "value" | "onChange" | "type" | "onBlur" | "onKeyDown"
+>) {
   const [draft, setDraft] = useState(show(value))
   // Another value arrived (a reset, a link): the field shows it.
   const [shown, setShown] = useState(value)
@@ -39,10 +45,14 @@ export function NumberField({
   }
   const parsed = parse(draft)
   const valid =
-    parsed === null ? value === null : parsed !== undefined && isValid(parsed)
+    parsed === null
+      ? value === null || onClear !== undefined
+      : parsed !== undefined && isValid(parsed)
 
   const commit = () => {
-    if (parsed !== null && parsed !== undefined && isValid(parsed)) {
+    if (parsed === null && value !== null && onClear) {
+      onClear()
+    } else if (parsed !== null && parsed !== undefined && isValid(parsed)) {
       if (parsed !== value) onCommit(parsed)
     } else {
       setDraft(show(value))

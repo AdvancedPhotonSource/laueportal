@@ -57,6 +57,10 @@ probe_threads = 8                       # the API's threads for those checks: th
 samples = "{{WORKSPACE}}/runs/inputs"   # the demo's synthetic inputs (`laueportal seed demo` makes them)
 runs = "{{WORKSPACE}}/runs"
 
+[calibration]                           # the Calibration page (docs/user/calibration.md)
+geometry_dir = "{{WORKSPACE}}/runs/inputs/geometries"   # the shared geometry folder: saved files; the newest starts
+                                        # a calibration ("" = the page cannot save). Inside a file root.
+
 [beamline]
 name = "34ID-E"
 scan_log_namespace = "http://sector34.xray.aps.anl.gov/34ide/scanLog"

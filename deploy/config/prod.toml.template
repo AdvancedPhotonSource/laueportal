@@ -68,6 +68,10 @@ probe_threads = 8                       # the API's threads for those checks: th
 data = "EDIT: a data root's absolute path"
 runs = "{{RUNS_ROOT}}"                  # the runs root, so new runs' outputs are always readable (nested roots are fine)
 
+[calibration]                           # the Calibration page (docs/runbooks/deploy.md)
+geometry_dir = ""                       # the shared folder of geoN_*.xml files, inside a file root and writable by
+                                        # the API; "" = the page calibrates but cannot save
+
 [beamline]
 name = "34ID-E"
 scan_log_namespace = "http://sector34.xray.aps.anl.gov/34ide/scanLog"

@@ -50,7 +50,7 @@ micromamba create -y -p "$root/envs/laue-portal" --file "$root/src/environment.l
 py="$root/envs/laue-portal/bin/python"
 uv pip install --python "$py" --require-hashes --no-deps -r "$root/src/requirements/base.lock"
 micromamba run -p "$root/envs/laue-portal" uv pip install --python "$py" --no-deps \
-    "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@6d37e95403aca7b1a0996c17668f83db7584f8bb"
+    "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@b846009a9628d9dfea2fd531eb5e6607d9b8094b"
 uv pip install --python "$py" --no-deps -e "$root/src/backend"
 uv pip check --python "$py"
 ```
@@ -392,6 +392,20 @@ API and the worker after a change.
   folder by hand when no run is using it. A finished run keeps the cache's record in its `run.json`.
 - **Install.** `laue-index` compiles its C indexer when the locked requirements are installed, so the portal's host
   needs a C compiler with OpenMP, as `make setup` provides.
+
+## 5c. The geometry folder
+
+The Calibration page saves geometry files into one shared folder, and starts a calibration from its newest file. Choose a
+folder inside a file root (`[files.roots]`) that the API's user can write, put the current geometry file in it with a
+name of the form `geoN_YYYY-MM-DD_HH-MM-SS.xml`, and set it in `prod.toml`:
+
+```toml
+[calibration]
+geometry_dir = "<geometry folder>"
+```
+
+Restart the API. Until it is set, the page calibrates but cannot save, and its Save card shows why. A file is never
+replaced: a second save in the same second is refused.
 
 ## 6. Remote execution on or off
 

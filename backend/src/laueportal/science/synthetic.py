@@ -300,3 +300,119 @@ def _moved(base, turn: np.ndarray, rng: np.random.Generator, *, position: tuple[
     )
     metadata = {**base.metadata, "sample_position": position}
     return dataclasses.replace(base, peaks=peaks, patterns=patterns, metadata=metadata, depth=depth)
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# The Calibration page's synthetic frame
+
+CALIBRATION_SAMPLE_AXIS = (-2.2256407716336, -0.884037203122317, -0.38914203759791)
+"""The Si crystal's rotation (axis times angle, rad): LaueGo's "perfect Si" (``Calibration.ipf``,
+``findSampleAxis``), the (001) surface 45 degrees between the reversed incident beam and +y."""
+CALIBRATION_KEV = (6.0, 20.0)
+"""The energies (keV) of the simulated reflections."""
+CALIBRATION_SPOT_SIGMA = 1.3
+"""The spots' Gaussian width (pixels)."""
+CALIBRATION_PEAK_COUNTS = 6000.0
+"""The brightest spot's height above the background (counts)."""
+CALIBRATION_START_OFFSET = ((0.0008, -0.0006, 0.0005), (150.0, -120.0, 250.0))
+"""The demo's starting geometry: detector 0's rotation vector (rad) and translation (µm) moved by these from the
+geometry the frame was simulated with, about 0.06 degree and 0.3 mm."""
+
+
+@dataclasses.dataclass(frozen=True)
+class CalibrationTruth:
+    """The simulated reflections: Miller indices, frame pixels ``(x, y)`` and energies (keV), brightest first."""
+
+    hkl: np.ndarray
+    xy: np.ndarray
+    energy_kev: np.ndarray
+
+
+def calibration_frame(geometry_file: Path, crystal_file: Path, *, slot: int = 0) -> tuple[np.ndarray, CalibrationTruth]:
+    """A ``uint16`` frame of the Si crystal (``CALIBRATION_SAMPLE_AXIS``) on detector ``slot`` of ``geometry_file``
+    (its full size, 2048 x 2048 for detector 0): lauelab's simulated reflections from 6 to 20 keV as Gaussian spots,
+    by their relative intensity, on a background of ``BACKGROUND`` counts with Poisson noise from ``SEED``."""
+    from lauelab.analysis import lattice_params_to_reciprocal, simulate_reflections
+    from lauelab.calibration import rotation_matrix
+    from lauelab.indexing import load_crystal, load_geometry
+
+    crystal = load_crystal(crystal_file)
+    detector = load_geometry(geometry_file).detector(slot)
+    cell = crystal.cell
+    reference = lattice_params_to_reciprocal(
+        cell.a, cell.b, cell.c, cell.alpha, cell.beta, cell.gamma, space_group=crystal.space_group
+    )
+    reciprocal = reference @ rotation_matrix(np.asarray(CALIBRATION_SAMPLE_AXIS)).T
+    simulated = simulate_reflections(crystal, reciprocal, detector, energy_range_kev=CALIBRATION_KEV)
+    order = np.argsort(-simulated.relative_intensity, kind="stable")
+    xy = simulated.detector_xy[order]
+    heights = simulated.relative_intensity[order] / simulated.relative_intensity.max() * CALIBRATION_PEAK_COUNTS
+    nx, ny = int(detector.nx), int(detector.ny)
+    yy, xx = np.mgrid[0:ny, 0:nx]
+    image = np.full((ny, nx), BACKGROUND)
+    for (x, y), height in zip(xy, heights, strict=True):
+        x0, x1 = max(int(x) - 8, 0), min(int(x) + 9, nx)
+        y0, y1 = max(int(y) - 8, 0), min(int(y) + 9, ny)
+        dx, dy = xx[y0:y1, x0:x1] - x, yy[y0:y1, x0:x1] - y
+        image[y0:y1, x0:x1] += max(height, 300.0) * np.exp(-(dx**2 + dy**2) / (2 * CALIBRATION_SPOT_SIGMA**2))
+    noisy = np.random.default_rng(SEED).poisson(image)
+    truth = CalibrationTruth(simulated.hkl[order], xy, simulated.energy_kev[order])
+    return np.clip(noisy, 0, 65535).astype(np.uint16), truth
+
+
+def write_calibration_frame(
+    template: Path, destination: Path, geometry_file: Path, crystal_file: Path
+) -> CalibrationTruth:
+    """``template`` (a synthetic Ni frame of the same detector, for its metadata) copied to ``destination`` with
+    ``calibration_frame``'s image; the reflections it shows."""
+    import shutil
+
+    image, truth = calibration_frame(geometry_file, crystal_file)
+    shutil.copyfile(template, destination)
+    with h5py.File(destination, "r+") as file:
+        dataset = file["entry1/data/data"]
+        assert isinstance(dataset, h5py.Dataset)
+        dataset[...] = image
+        file.attrs["demo_note"] = "Synthetic Si calibration frame (LaueGo's perfect-Si orientation); not measured"
+        for name, value in (("entry1/sample/name", b"synthetic Si"), ("entry1/title", b"synthetic Si calibration")):
+            if name in file:
+                del file[name]
+            file.create_dataset(name, data=np.array([value]))
+    return truth
+
+
+def write_starting_geometry(source: Path, destination: Path) -> Path:
+    """``source`` with detector 0 moved by ``CALIBRATION_START_OFFSET`` (lauelab's ``write_geometry``), the demo's
+    starting geometry: the Calibration page recovers ``source``'s detector from it."""
+    from datetime import datetime, timezone
+
+    from lauelab.calibration import rotation_matrix, write_geometry
+    from lauelab.indexing import load_geometry
+
+    detector = load_geometry(source).detector(0)
+    rotation, translation = (np.asarray(v) for v in CALIBRATION_START_OFFSET)
+    vector = detector.rotation_vector + rotation
+    moved = dataclasses.replace(
+        detector,
+        rotation_vector=vector,
+        rotation=rotation_matrix(vector),
+        translation=detector.translation + translation,
+    )
+    return write_geometry(
+        source,
+        destination,
+        [moved],
+        note="demo starting geometry: detector 0 moved",
+        written=datetime(2025, 1, 1, tzinfo=timezone.utc),
+    )
+
+
+def calibration_energies_text(truth: CalibrationTruth, count: int = 6) -> str:
+    """The energies of the ``count`` brightest reflections, for typing on the Calibration page (as measured)."""
+    lines = [
+        "# Synthetic Si calibration frame: true reflection energies (keV) of the brightest spots",
+        "# h k l  x  y  keV",
+    ]
+    for hkl, (x, y), energy in zip(truth.hkl[:count], truth.xy[:count], truth.energy_kev[:count], strict=True):
+        lines.append(f"{hkl[0]} {hkl[1]} {hkl[2]}  {x:.1f} {y:.1f}  {energy:.4f}")
+    return "\n".join(lines) + "\n"

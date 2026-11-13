@@ -73,6 +73,42 @@ LaueGo run's Goodness. RMS error is empty, because LaueMatching records only pre
 connected groups of pixels, without a fitted shape, and a predicted spot with no peak within 5 pixels is left out of the
 peak tables. The run folder's `laue_matching.h5` keeps every orientation and spot as the indexer wrote them.
 
+## Calibrate a detector
+
+**Menu → Calibration** fits a detector's rotation and translation (the R and P of the geometry file) to one frame of a
+calibration crystal, as LaueGo's calibration in Igor does, and saves a new geometry file. The other analysis programs
+read that file. The portal keeps no record of a calibration: what you enter stays in this browser until you choose
+another frame.
+
+1. **Inputs.** Choose the **Frame** of the calibration crystal and its **Crystal** file (`Si.xml` for the Si standard).
+   **Starting geometry** is the newest file of the shared geometry folder; change it if needed. The card shows the
+   frame's detector (by the ID the frame records) and whether the sample rotation is fitted: it is for detector 0, and
+   held fixed for a side detector.
+2. **Peaks.** Peak search runs with the New Indexation form's defaults (**Peak search** to change them). Choose **Add
+   peak** and click near a spot to fit and add it, or **Remove peak** and click a peak to drop it.
+3. **Index.** The peaks are indexed with the starting geometry. **Surface reflection** shows the {001} reflection
+   nearest the standard's expected surface normal (45° between the incident beam and the beam to detector 0): it
+   should lie between the incident and exit beams, within 3° of the normal. **Check orientation** means it does not:
+   check the crystal file and the starting geometry before you refine.
+4. **Energies.** In **Reflections**, type the measured energy (keV) of at least one reflection for detector 0, and where
+   it was measured (a scan). The energy belongs to one harmonic: if it is far from **Calculated**, the field is marked;
+   choose the harmonic it belongs to in the **hkl** list (008 instead of 004).
+5. **Refine.** The card shows the refined R and P, their change and standard error, the RMS pixel and energy errors,
+   and the surface check of the refined orientation; **ΔE** and **Δ** in **Reflections** are each reflection's errors.
+   The circles on the frame are the refined detector's predicted positions, red or blue by their energy error.
+   **Match Again** indexes the peaks with the refined detector, which can index more of them; then refine again.
+   A side detector uses the sample rotation of the last detector-0 calibration in this browser, or else of its own
+   indexing.
+6. **Save.** Edit the **Note** if needed (at most 99 characters, without `<`, `>` or `&`) and **Save**: the portal fits
+   again from the same inputs and writes the starting geometry file, with the refined detector, into **Folder** (the
+   shared geometry folder unless you choose another inside the file roots) as **File name** (`geoN_<date>_<time>.xml`
+   when left empty). An existing file is never replaced, and Save is refused if the frame, geometry or crystal file
+   changed since the fit. Only that detector's R, P, measurement time and note change, with the file's write
+   time and a note naming the frame; the other detectors, the wire and the sample are copied unchanged.
+
+The standard errors come from the fit's scatter with LaueGo's weights; they are not a measured uncertainty. The fit has
+been checked against Igor's own test data and its error function, but not yet against a calibration made in Igor.
+
 ## Inspect results
 
 **Indexing results:** open an I… link (Indexations, a scan's page, or the job page).

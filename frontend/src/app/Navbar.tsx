@@ -33,6 +33,7 @@ const MENU_LINKS = [
   { to: "/scans/import", label: "Import Scans" },
   { to: "/reconstructions/new", label: "New Wire Reconstruction" },
   { to: "/indexing/new", label: "New Indexation" },
+  { to: "/calibration", label: "Calibration" },
 ] as const
 
 const navLinkClass = cn(

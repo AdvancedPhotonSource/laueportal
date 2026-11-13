@@ -18,6 +18,8 @@ import { decodeFrame, type Frame } from "@/viz/heatmap/frame"
 
 import { apiRevalidate, type ErrorType } from "./fetcher"
 import {
+  getGetCalibrationFrameQueryKey,
+  getGetCalibrationFrameUrl,
   getGetIndexingDetectorImageQueryKey,
   getGetIndexingDetectorImageUrl,
   getGetIndexingMapQueryKey,
@@ -406,6 +408,27 @@ export function useDetectorFrame(
     decodeDetectorFrame,
     {
       enabled: options.enabled ?? true,
+      accept: OCTET_STREAM,
+      frame: true,
+      rule: options.rule,
+    }
+  )
+}
+
+/**
+ * A calibration frame (`GET /calibration/frame?path=`), decoded: the Calibration page's image. Revalidated
+ * by its ETag (the file's identity) and dropped a minute after no view shows it, as the detector frames.
+ */
+export function useCalibrationFrame(
+  path: string,
+  options: { enabled?: boolean; rule?: RetryRule } = {}
+): UseQueryResult<Frame, ErrorType<unknown>> {
+  return useProduct(
+    [...getGetCalibrationFrameQueryKey({ path }), "frame"],
+    getGetCalibrationFrameUrl({ path }),
+    decodeDetectorFrame,
+    {
+      enabled: (options.enabled ?? true) && path !== "",
       accept: OCTET_STREAM,
       frame: true,
       rule: options.rule,

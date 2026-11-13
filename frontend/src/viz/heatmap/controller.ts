@@ -60,7 +60,9 @@ const PLAIN_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 }
 /** Heavy layers: the canvas stays at most 1.5 device pixels per CSS pixel. */
 const MAX_DPR = 1.5
 const CLICK_SLOP_PX = 4
-const LABEL_HALO = "rgba(255, 255, 255, 0.85)"
+/** The backing of an overlay label (a light chip under the mark's colour) and its padding (CSS px). */
+const LABEL_CHIP = "rgba(255, 255, 255, 0.88)"
+const LABEL_PAD = 2
 const BOX_RIM = "rgba(0, 0, 0, 0.55)"
 
 interface Drag {
@@ -491,6 +493,7 @@ function drawOverlays(
     const s = Math.max(1, o.markerSize + style.grow)
     const h = s / 2
     const visible: number[] = []
+    const colors = layer.colors
     ctx.strokeStyle = style.color
     ctx.beginPath()
     for (let i = 0; i < layer.x.length; i++) {
@@ -504,7 +507,16 @@ function drawOverlays(
         continue
       }
       visible.push(i, px, py)
-      if (style.shape === "square") {
+      if (colors) {
+        // A mark of its own colour: stroke what is drawn so far, then this mark alone.
+        ctx.stroke()
+        ctx.beginPath()
+        ctx.strokeStyle = colors[i] ?? style.color
+      }
+      if (style.shape === "circle") {
+        ctx.moveTo(px + h, py)
+        ctx.arc(px, py, h, 0, 2 * Math.PI)
+      } else if (style.shape === "square") {
         ctx.rect(px - h, py - h, s, s)
       } else if (style.shape === "cross") {
         ctx.moveTo(px - h, py - h)
@@ -521,21 +533,33 @@ function drawOverlays(
     ctx.stroke()
     const labels = layer.labels
     if (!labels || visible.length === 0) continue
-    // "Top right" of each mark. The label colours are dark (red, purple), so a light halo keeps
-    // them legible on any image and in either theme.
+    // "Top right" of each mark, on a light chip, in a dark shade of the mark's colour: a solid
+    // backing keeps small text legible on a noisy image in either theme, where an outline drawn
+    // around each glyph filled its counters. Whole pixels keep the text sharp.
     ctx.save()
-    ctx.font = `${String(Math.max(6, o.labelSize))}px ${theme.family}`
+    const size = Math.max(6, o.labelSize)
+    ctx.font = `600 ${String(size)}px ${theme.family}`
     ctx.textAlign = "left"
-    ctx.textBaseline = "bottom"
-    ctx.lineWidth = 2.5
-    ctx.strokeStyle = LABEL_HALO
-    ctx.fillStyle = style.color
+    ctx.textBaseline = "top"
     for (let k = 0; k < visible.length; k += 3) {
       const label = labels[visible[k] as number] ?? ""
-      const x = (visible[k + 1] as number) + h + 1
-      const y = (visible[k + 2] as number) - h - 1
-      ctx.strokeText(label, x, y)
-      ctx.fillText(label, x, y)
+      const x = Math.round((visible[k + 1] as number) + h + LABEL_PAD + 1)
+      const y = Math.round(
+        (visible[k + 2] as number) - h - size - LABEL_PAD - 1
+      )
+      const width = Math.ceil(ctx.measureText(label).width)
+      ctx.fillStyle = LABEL_CHIP
+      ctx.beginPath()
+      ctx.roundRect(
+        x - LABEL_PAD,
+        y - LABEL_PAD,
+        width + 2 * LABEL_PAD,
+        size + 2 * LABEL_PAD,
+        3
+      )
+      ctx.fill()
+      ctx.fillStyle = style.label
+      ctx.fillText(label, x, y + 1)
     }
     ctx.restore()
   }

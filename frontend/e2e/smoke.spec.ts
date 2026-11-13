@@ -43,6 +43,7 @@ test("the shell loads with its navbar", async ({ page }) => {
     "Import Scans",
     "New Wire Reconstruction",
     "New Indexation",
+    "Calibration",
   ])
   await page.getByRole("menuitem", { name: "Import Scans" }).click()
   await expect(page).toHaveURL(/\/scans\/import$/)

@@ -30,8 +30,10 @@ request, one recorded as running on CRUX. Every input is synthetic: copies of th
   (``seed.build.build_demo``), whose poller would ask DM about R4 on every pass, and such a database must never be
   served with remote execution enabled. The job page's Remote Run card and the run monitor's Status cell show it.
 
-The staged inputs also hold the scan logs (``<inputs>/scan-logs``) and the calibration files
-(``<inputs>/calibration``), so the e2e stack's samples root and scan-log folder are its runs root's ``inputs``.
+The staged inputs also hold the scan logs (``<inputs>/scan-logs``), the calibration files
+(``<inputs>/calibration``), and the Calibration page's synthetic Si frame with its energies
+(``<inputs>/calibration-demo``) and geometry folder (``<inputs>/geometries``: a starting geometry with detector 0
+moved), so the e2e stack's samples root, scan-log folder and geometry folder are in its runs root's ``inputs``.
 ``laueportal seed demo`` (``seed.build``) builds the demo database with these functions.
 
 Nothing here reads the settings: the caller passes the engine, the layout and (to enqueue) the queue and the
@@ -79,12 +81,22 @@ FIXTURES = "fixtures/lauelab"
 """The synthetic Ni frames, the geometry and the crystal (relative to the data directory)."""
 GEOMETRY = "geoN_2022-03-29_14-15-05.xml"
 CRYSTAL = "Ni.xml"
+SI_CRYSTAL = "Si.xml"
+"""The Calibration page's crystal (the synthetic Si frame's)."""
 SCAN_LOGS = "scan_logs"
 SCAN_LOG_FILES = ("test_log.xml", "test_log_2.xml")
 WIRE_INPUT_DIR = "synthetic-reconstruction"
 WIRE_INPUT_NAME = "wire_1.h5"
 INDEXING_INPUT_DIR = "synthetic-indexing"
 CALIBRATION_DIR = "calibration"
+CALIBRATION_DEMO_DIR = "calibration-demo"
+"""The Calibration page's synthetic Si frame (``si_calibration.h5``) and its reflections' energies."""
+CALIBRATION_FRAME = "si_calibration.h5"
+CALIBRATION_ENERGIES = "si_energies.txt"
+GEOMETRY_DIR = "geometries"
+"""The development geometry folder (``[calibration] geometry_dir``): the demo's starting geometry, detector 0 of
+``GEOMETRY`` moved (``science.synthetic.write_starting_geometry``)."""
+STARTING_GEOMETRY = "geoN_2025-01-01_00-00-00.xml"
 SCAN_LOG_DIR = "scan-logs"
 REGISTERED_DIR = "registered"
 FRAMES: tuple[tuple[str, tuple[float, float, float]], ...] = (
@@ -143,6 +155,7 @@ DATA_FILES: tuple[str, ...] = (
     *(f"{FIXTURES}/{name}" for name, _position in FRAMES),
     f"{FIXTURES}/{GEOMETRY}",
     f"{FIXTURES}/{CRYSTAL}",
+    f"{FIXTURES}/{SI_CRYSTAL}",
     *(f"{SCAN_LOGS}/{name}" for name in SCAN_LOG_FILES),
 )
 """Every committed file the demo reads (relative to the data directory)."""
@@ -180,6 +193,16 @@ class DemoLayout:
     @property
     def crystal_file(self) -> Path:
         return self.inputs / CALIBRATION_DIR / CRYSTAL
+
+    @property
+    def calibration_frame(self) -> Path:
+        """The Calibration page's synthetic Si frame."""
+        return self.inputs / CALIBRATION_DEMO_DIR / CALIBRATION_FRAME
+
+    @property
+    def geometry_dir(self) -> Path:
+        """The development geometry folder (``[calibration] geometry_dir``)."""
+        return self.inputs / GEOMETRY_DIR
 
     @property
     def registered(self) -> Path:
@@ -231,8 +254,10 @@ def stage_inputs(layout: DemoLayout) -> None:
     fixtures = layout.data / FIXTURES
     _copy_once(fixtures / GEOMETRY, layout.geometry_file)
     _copy_once(fixtures / CRYSTAL, layout.crystal_file)
+    _copy_once(fixtures / SI_CRYSTAL, layout.inputs / CALIBRATION_DIR / SI_CRYSTAL)
     for name in SCAN_LOG_FILES:
         _copy_once(layout.data / SCAN_LOGS / name, layout.inputs / SCAN_LOG_DIR / name)
+    stage_calibration_demo(layout)
 
     layout.wire_inputs.mkdir(parents=True, exist_ok=True)
     wire_input = layout.wire_inputs / WIRE_INPUT_NAME
@@ -261,6 +286,24 @@ def stage_inputs(layout: DemoLayout) -> None:
                 sample[key].attrs["unit"] = "micron"
             file.attrs["demo_note"] = FRAME_NOTE
         partial.replace(destination)
+
+
+def stage_calibration_demo(layout: DemoLayout) -> None:
+    """The Calibration page's inputs (once): the synthetic Si frame of detector 0 of ``GEOMETRY``
+    (``science.synthetic.write_calibration_frame``, from the first Ni frame's metadata), the true energies of its
+    brightest reflections, and the geometry folder with the moved starting geometry."""
+    frame = layout.calibration_frame
+    frame.parent.mkdir(parents=True, exist_ok=True)
+    geometry = layout.data / FIXTURES / GEOMETRY
+    crystal = layout.data / FIXTURES / SI_CRYSTAL
+    if not frame.exists() or not (frame.parent / CALIBRATION_ENERGIES).exists():
+        partial = frame.with_name(frame.name + ".partial")
+        truth = synthetic.write_calibration_frame(layout.data / FIXTURES / FRAMES[0][0], partial, geometry, crystal)
+        (frame.parent / CALIBRATION_ENERGIES).write_text(synthetic.calibration_energies_text(truth))
+        partial.replace(frame)
+    layout.geometry_dir.mkdir(parents=True, exist_ok=True)
+    if not (layout.geometry_dir / STARTING_GEOMETRY).exists():
+        synthetic.write_starting_geometry(geometry, layout.geometry_dir / STARTING_GEOMETRY)
 
 
 def add_demo_scan(engine: Engine, layout: DemoLayout, *, now: datetime | None = None) -> bool:

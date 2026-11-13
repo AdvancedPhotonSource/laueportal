@@ -480,7 +480,7 @@ test.describe("reconstructions", () => {
       scan: "990005",
     })
     await expect(page).toHaveURL(endsWith("/indexing/new"))
-    await expect(page).toHaveTitle("New LaueGo Indexation · 3DMN Portal")
+    await expect(page).toHaveTitle("New Indexation · 3DMN Portal")
 
     // An unlinked run has no scan to pass on.
     await page.goBack()
@@ -506,7 +506,7 @@ test.describe("indexations", () => {
       "Points",
       "Author",
       "Notes",
-      "Box",
+      "Method",
       "Date",
       "Status",
     ])
@@ -661,7 +661,7 @@ test.describe("indexations", () => {
       indexing: "72",
     })
     await expect(page).toHaveURL(endsWith("/indexing/new"))
-    await expect(page).toHaveTitle("New LaueGo Indexation · 3DMN Portal")
+    await expect(page).toHaveTitle("New Indexation · 3DMN Portal")
 
     // An unlinked run has no source to reconstruct: New Recon waits; New Index clones it.
     await page.goBack()

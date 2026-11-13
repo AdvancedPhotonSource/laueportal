@@ -197,18 +197,18 @@ test("the navbar's live indicator shows the worker running: the quiet dot", asyn
   const indicator = page
     .getByRole("group", { name: "Live system status" })
     .getByRole("link")
-  await expect(indicator).toHaveAccessibleName("Worker: running")
+  await expect(indicator).toHaveAccessibleName("Local Worker: running")
   await expect(indicator).toHaveAttribute("data-tone", "ok")
   await expect(indicator.locator('[data-slot="status-dot"]')).toBeVisible()
-  // The dot alone: no visible words (its name is screen-reader-only text); words show only when something is
-  // wrong.
+  // The dot with "Local" alone: no state words (its name is screen-reader-only text); words show only when
+  // something is wrong (as e2e/shell.spec.ts's dot states).
   expect(
     await indicator.evaluate((link) => {
       const copy = link.cloneNode(true) as HTMLElement
       for (const hidden of copy.querySelectorAll(".sr-only")) hidden.remove()
       return copy.textContent.trim()
     })
-  ).toBe("")
+  ).toBe("Local")
 })
 
 test("the scans page lists the seeded scans; a date filter keeps the local day", async ({
