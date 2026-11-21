@@ -19,6 +19,8 @@ import { fieldHint } from "./program-spec"
 
 const NEW = "__new__"
 const FLAG = "create_forward_cache"
+/** The target whose runs read only installed caches (in its own data folder): no New… there. */
+const GPU = "pioneer"
 const DEBOUNCE_MS = 400
 const INPUTS = [
   "geometry_file",
@@ -76,7 +78,12 @@ export function ForwardCacheField({
   const creating = flagValue === true
   const current = text(nameValue)
   const watched = useWatch({ control, name: [...INPUTS] })
-  const latest = JSON.stringify(queryOf(watched) ?? null)
+  const backend: unknown = useWatch({ control, name: "backend" })
+  const gpu = backend === GPU
+  const inputs = queryOf(watched)
+  const latest = JSON.stringify(
+    inputs ? { ...inputs, ...(gpu ? { backend: GPU } : {}) } : null
+  )
   const [settled, setSettled] = useState(latest)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -86,7 +93,8 @@ export function ForwardCacheField({
       clearTimeout(timer)
     }
   }, [latest])
-  const query = JSON.parse(settled) as ReturnType<typeof queryOf> | null
+  const query = JSON.parse(settled) as
+    (NonNullable<ReturnType<typeof queryOf>> & { backend?: typeof GPU }) | null
   const list = useListForwardCaches(query ?? EMPTY_QUERY, {
     query: { enabled: query !== null, staleTime: 5_000 },
   })
@@ -99,11 +107,32 @@ export function ForwardCacheField({
     if (list.data.caches.length === 1) {
       onFlag(false)
       onName(list.data.caches[0])
-    } else if (list.data.caches.length === 0 && list.data.suggested_name) {
+    } else if (
+      list.data.caches.length === 0 &&
+      list.data.suggested_name &&
+      !gpu
+    ) {
       onFlag(true)
       onName(list.data.suggested_name)
     }
-  }, [list.data, onFlag, onName])
+  }, [list.data, onFlag, onName, gpu])
+  // On APS GPU only the installed caches are choices: a name its listing lacks (chosen for another target) is
+  // replaced by the one installed cache that fits, or cleared.
+  useEffect(() => {
+    if (!gpu || creating || !current || list.data === undefined) return
+    if (list.data.problem || list.data.caches.includes(current)) return
+    const only = list.data.caches.length === 1 ? list.data.caches[0] : ""
+    onName(only)
+    chosen.current = only !== ""
+  }, [gpu, creating, current, list.data, onName])
+  // An APS GPU run builds no cache: leaving New… for that target picks an installed one, or none.
+  useEffect(() => {
+    if (gpu && flagValue === true) {
+      onFlag(false)
+      onName("")
+      chosen.current = false
+    }
+  }, [gpu, flagValue, onFlag, onName])
 
   const options = [
     ...new Set([...caches, ...(!creating && current ? [current] : [])]),
@@ -142,7 +171,7 @@ export function ForwardCacheField({
               {option}
             </SelectItem>
           ))}
-          <SelectItem value={NEW}>New…</SelectItem>
+          {!gpu && <SelectItem value={NEW}>New…</SelectItem>}
         </SelectContent>
       </Select>
       {creating && (

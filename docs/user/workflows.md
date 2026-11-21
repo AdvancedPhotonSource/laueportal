@@ -67,6 +67,10 @@ of 100 million orientations, so it can find several grains in one frame.
 - The geometry has no depth term: frames more than about 100 µm from depth 0 have spots displaced by about half a
   pixel or more, and the portal warns about them.
 - Raw frames use your **Background File**, or the median of the run's first frame. Reconstructed frames use none.
+- **Run on: APS GPU** (when it is set up) indexes on the APS cluster's GPU queue. It reads only a forward cache that
+  was installed there: build a new cache with an APS run first. Its files must be inside the experiment folder. A run
+  has the GPU queue's time limit: it stops starting frames shortly before it, keeps the frames it did, and leaves the
+  rest not run, so choose runs that fit.
 
 In the results, **Quality** replaces Goodness for these runs. It is `NMatches × √Intensity`, so do not compare it with a
 LaueGo run's Goodness. RMS error is empty, because LaueMatching records only predicted spot positions. Peaks are
@@ -216,7 +220,7 @@ Index), as any other's.
 
 ## Manage the queue
 
-The Local dot shows the portal worker's state. When ALCF is enabled, its dot opens a connectivity panel; hovering
+The Local dot shows the portal worker's state, and the APS GPU queue's when that target is set up: hover for each. When ALCF is enabled, its dot opens a connectivity panel; hovering
 shows a compact summary and last-check time. The panel lists DM, Globus,
 APS/Eagle storage and the Crux endpoint, with the last-check time and Refresh. Amber can mean Login needed or
 stale/partial checks; red means a service is unavailable or the endpoint reports offline. Checks are shared and

@@ -53,24 +53,24 @@ setup-backend: ## the backend part of setup: the conda env, the Python lock, lau
 setup-frontend: ## the frontend part of setup: pnpm and node_modules
 	@scripts/setup.sh frontend
 
-lock: ## re-lock Python packages (dev, base, launcher, compute; releases older than LOCK_DATE)
+lock: ## re-lock Python packages (dev, base, launcher, compute, compute-gpu; releases older than LOCK_DATE)
 	@$(ENV)
 	pins=requirements/conda-pins.txt
 	$(PY) -c 'import importlib.metadata as m, sys; print("\n".join(f"{n}=={m.version(n)}" for n in sys.argv[1:]))' \
 	  $(CONDA_PY) | sed '1i # conda-forge versions in the env (environment.yml); constraints only, never installed by pip' > $$pins
 	# The conda packages are not installed from PyPI, so the PyPI age cutoff doesn't apply to them.
 	tomorrow="$$(date -u -d tomorrow +%Y-%m-%d)"
-	# dev first (it includes launcher.in): base and launcher are constrained to the same versions. So is compute
-	# (the compute nodes' set, never installed here), except for the packages compute.in pins itself: those keep
-	# its pins.
-	for name in dev base launcher compute; do
+	# dev first (it includes launcher.in): base and launcher are constrained to the same versions. So are compute
+	# and compute-gpu (the compute nodes' sets, never installed here), except for the packages each pins itself:
+	# those keep its pins.
+	for name in dev base launcher compute compute-gpu; do
 	  constraints=""
 	  case $$name in
 	    base|launcher) constraints="-c requirements/dev.constraints" ;;
-	    compute)
-	      own="$$(sed -nE 's/^([A-Za-z0-9_.-]+)==.*/\1/p' requirements/compute.in | tr 'A-Z_.' 'a-z--' | paste -sd'|')"
-	      grep -vE "^($$own)==" requirements/dev.constraints > requirements/compute.constraints
-	      constraints="-c requirements/compute.constraints" ;;
+	    compute|compute-gpu)
+	      own="$$(sed -nE 's/^([A-Za-z0-9_.-]+)==.*/\1/p' requirements/$$name.in | tr 'A-Z_.' 'a-z--' | paste -sd'|')"
+	      grep -vE "^($$own)==" requirements/dev.constraints > requirements/$$name.constraints
+	      constraints="-c requirements/$$name.constraints" ;;
 	  esac
 	  args=(--generate-hashes --python "$(PY)" --exclude-newer $(LOCK_DATE) \
 	    $(foreach p,$(CONDA_PY),--exclude-newer-package $(p)=$$tomorrow) \
@@ -86,7 +86,7 @@ lock: ## re-lock Python packages (dev, base, launcher, compute; releases older t
 	    grep -E '^[A-Za-z0-9_.-]+(\[[^]]*\])?==' requirements/dev.lock | sed 's/ .*//' > requirements/dev.constraints
 	  fi
 	done
-	rm -f requirements/dev.constraints requirements/compute.constraints
+	rm -f requirements/dev.constraints requirements/compute.constraints requirements/compute-gpu.constraints
 	echo "locked with exclude-newer $(LOCK_DATE)"
 
 lock-env: ## re-solve environment.yml into environment.lock (explicit conda lock), then run `make setup`

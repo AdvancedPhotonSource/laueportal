@@ -108,6 +108,7 @@ export * from './keyConflict';
 export * from './laueGoParameters';
 export * from './laueMatchingParameters';
 export * from './legendColor';
+export * from './listForwardCachesBackend';
 export * from './listForwardCachesParams';
 export * from './listIndexingPatternsParams';
 export * from './listIndexingPeaksParams';

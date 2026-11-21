@@ -998,14 +998,15 @@ export const listForwardCachesQueryEhiExclusiveMin = 0;
 
 export const listForwardCachesQueryMaxNrLaueSpotsExclusiveMin = 0;
 
-
+export const listForwardCachesQueryBackendDefault = `local`;
 
 export const ListForwardCachesQueryParams = zod.object({
   "geometry_file": zod.string().describe('The geometry file, inside the roots.'),
   "crystal_file": zod.string().describe('The crystal file, inside the roots.'),
   "elo": zod.number().gt(listForwardCachesQueryEloExclusiveMin).describe('Min Energy (keV).'),
   "ehi": zod.number().gt(listForwardCachesQueryEhiExclusiveMin).describe('Max Energy (keV).'),
-  "max_nr_laue_spots": zod.int().gt(listForwardCachesQueryMaxNrLaueSpotsExclusiveMin).describe('Max Spots per Orientation.')
+  "max_nr_laue_spots": zod.int().gt(listForwardCachesQueryMaxNrLaueSpotsExclusiveMin).describe('Max Spots per Orientation.'),
+  "backend": zod.enum(['local', 'pioneer']).default(listForwardCachesQueryBackendDefault).describe('The run\'s target: its data folder is listed.')
 })
 
 export const ListForwardCachesResponse = zod.object({

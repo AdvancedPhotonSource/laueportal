@@ -10,6 +10,8 @@ export const CHECK_LABELS: Record<RemoteCheck["name"], string> = {
   aps: "APS storage",
   eagle: "Eagle storage",
   crux: "Crux endpoint",
+  gpu_queue: "GPU queue",
+  gpu_files: "GPU runtime",
 }
 
 export const CHECK_STATES: Record<RemoteCheck["state"], string> = {

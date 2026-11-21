@@ -36,7 +36,6 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-import h5py
 import numpy as np
 import scipy.ndimage as ndimg
 from laue_index import build_info
@@ -67,6 +66,7 @@ from lauelab.indexing import (
     load_crystal,
     load_geometry,
     load_mask,
+    merge_results_files,
     read_frame,
     validate_results_file,
 )
@@ -84,9 +84,24 @@ from laueportal.indexing.laue_matching.cache import (
     read_record,
     reuse_problem,
 )
+from laueportal.indexing.laue_matching.output import (
+    NATIVE_FILENAME,
+    SOLUTION_COLUMNS,
+    SPOT_COLUMNS,
+    Segments,
+    SingleOutput,
+)
+from laueportal.indexing.laue_matching.stream import (
+    DaemonFailed,
+    StopRequested,
+    StreamMatcher,
+    gpu_evidence,
+    stream_binary,
+)
 from laueportal.jobs.contract import RunHooks, RunOutcome, RunRequest, register_compute_function
 from laueportal.jobs.rundir import (
     CATEGORY_CANCELLED,
+    CATEGORY_NOT_RUN,
     RESULTS_FILENAME,
     FailureRecord,
     ManifestEntry,
@@ -98,7 +113,6 @@ from laueportal.jobs.rundir import (
 LAUE_MATCHING_KIND = "laue_matching_indexing"
 PROGRAM = "laue_matching"
 PARAMS_FILENAME = "params.txt"
-NATIVE_FILENAME = "laue_matching.h5"
 BACKGROUND_FILENAME = "background.bin"
 DETECTOR_INDEX = 0
 BACKGROUND_PASSES = 1
@@ -111,8 +125,6 @@ DEPTH_WARNING_UM = 100.0
 """Depth beyond which the geometry's missing depth term moves a spot by about half a pixel."""
 STOP_POLL_SECONDS = 0.5
 TERMINATE_SECONDS = 5.0
-SOLUTION_COLUMNS = 34
-SPOT_COLUMNS = 11
 _SOLUTION = SOLUTION_FORMATS["runimage"]
 _SPOT_HKL = (2, 3, 4)
 _SPOT_X, _SPOT_Y = 5, 6
@@ -402,6 +414,75 @@ def _run_binary(binary: Path, files: _Files, threads: int, hooks: RunHooks) -> P
     return image
 
 
+class _CpuMatcher:
+    """``LaueMatchingCPU``: one process per frame, matching the image written to the scratch folder."""
+
+    def __init__(self, binary: Path, files: _Files, threads: int, hooks: RunHooks) -> None:
+        self.binary, self.files, self.threads, self.hooks = binary, files, threads, hooks
+        self.name = "LaueMatchingCPU"
+        self._columns: tuple[str, str] | None = None
+
+    def start(self) -> None:
+        pass
+
+    def match(self, image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        image.astype(np.float64).tofile(self.files.scratch / "frame.bin")
+        indexed = _run_binary(self.binary, self.files, self.threads, self.hooks)
+        solutions_path, spots_path = Path(f"{indexed}.solutions.txt"), Path(f"{indexed}.spots.txt")
+        if self._columns is None and solutions_path.is_file() and spots_path.is_file():
+            self._columns = (
+                solutions_path.read_text().split("\n", 1)[0],
+                spots_path.read_text().split("\n", 1)[0],
+            )
+        return _table(solutions_path, SOLUTION_COLUMNS), _table(spots_path, SPOT_COLUMNS)
+
+    def columns(self) -> tuple[str, str] | None:
+        return self._columns
+
+    def pid(self) -> int | None:
+        return None
+
+    def clean(self) -> None:
+        for name in ("frame.bin", "frame.bin.solutions.txt", "frame.bin.spots.txt"):
+            (self.files.scratch / name).unlink(missing_ok=True)
+
+    def close(self) -> None:
+        pass
+
+
+class _StreamAdapter:
+    """``stream.StreamMatcher`` with the compute's exceptions: a stop is ``_StopRequested``."""
+
+    def __init__(self, matcher: StreamMatcher) -> None:
+        self.matcher = matcher
+        self.name = matcher.name
+        self.binary = matcher.binary
+
+    def start(self) -> None:
+        try:
+            self.matcher.start()
+        except StopRequested:
+            raise _StopRequested from None
+
+    def match(self, image: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        try:
+            return self.matcher.match(image)
+        except StopRequested:
+            raise _StopRequested from None
+
+    def columns(self) -> tuple[str, str] | None:
+        return self.matcher.columns()
+
+    def pid(self) -> int | None:
+        return self.matcher.pid()
+
+    def clean(self) -> None:
+        pass
+
+    def close(self) -> None:
+        self.matcher.close()
+
+
 def _table(path: Path, columns: int) -> np.ndarray:
     """A table the indexer wrote: its rows after the header line (none when it found nothing)."""
     with warnings.catch_warnings():
@@ -518,13 +599,11 @@ class _Background:
 def _process_frame(
     entry: ManifestEntry,
     parameters: Mapping[str, Any],
-    files: _Files,
-    binary: Path,
+    matcher: _CpuMatcher | _StreamAdapter,
     geometry: Any,
     background: _Background,
     exclusion: np.ndarray | None,
     processor: PostProcessor,
-    hooks: RunHooks,
 ) -> _FrameOutput:
     started = time.perf_counter()
     frame = _frame_input(entry)
@@ -539,10 +618,7 @@ def _process_frame(
     solutions, spots = np.empty((0, SOLUTION_COLUMNS)), np.empty((0, SPOT_COLUMNS))
     processed = None
     if prepared.blurred is not None:
-        prepared.blurred.astype(np.float64).tofile(files.scratch / "frame.bin")
-        indexed = _run_binary(binary, files, int(parameters["num_threads"]), hooks)
-        solutions = _table(Path(f"{indexed}.solutions.txt"), SOLUTION_COLUMNS)
-        spots = _table(Path(f"{indexed}.spots.txt"), SPOT_COLUMNS)
+        solutions, spots = matcher.match(prepared.blurred)
         processed = processor(solutions, spots, prepared.labels)
     patterns: tuple[Pattern, ...] = ()
     unmatched = 0
@@ -576,55 +652,6 @@ def _process_frame(
         source=frame if isinstance(frame, ScanFrame) else None,
     )
     return _FrameOutput(result, sorted_solutions, kept, spots, unique_labels, unmatched)
-
-
-class _NativeTables:
-    """``laue_matching.h5``: every frame's tables as the indexer wrote them, grouped by frame through offsets.
-
-    ``solutions`` holds every orientation best first (``kept``: passed the filter; ``unique_labels``: the spots no
-    better orientation of the frame claimed first), ``spots`` every predicted spot; the rows of frame ``i`` are
-    ``offsets[i]`` to ``offsets[i + 1]``. Each table's ``columns`` attribute names its columns."""
-
-    def __init__(self, path: Path) -> None:
-        self.file = h5py.File(path, "w")
-        self.file.attrs["format"] = "laue-matching-native-tables"
-        self.file.attrs["version"] = 1
-        self.tables: dict[str, h5py.Dataset] = {}
-        for name, shape, dtype in (
-            ("solutions", (0, SOLUTION_COLUMNS), np.float64),
-            ("spots", (0, SPOT_COLUMNS), np.float64),
-            ("kept", (0,), np.bool_),
-            ("unique_labels", (0,), np.int32),
-            ("solution_offsets", (1,), np.int64),
-            ("spot_offsets", (1,), np.int64),
-            ("frame_ids", (0,), h5py.string_dtype()),
-        ):
-            self.tables[name] = self.file.create_dataset(
-                name, shape, maxshape=(None, *shape[1:]), dtype=dtype, chunks=(1024, *shape[1:])
-            )
-
-    def _extend(self, name: str, rows: Any) -> None:
-        table = self.tables[name]
-        start = table.shape[0]
-        table.resize(start + len(rows), axis=0)
-        if len(rows):
-            table[start:] = rows
-
-    def append(self, frame_id: str, output: _FrameOutput) -> None:
-        self._extend("solutions", output.solutions)
-        self._extend("spots", output.spots)
-        self._extend("kept", output.kept)
-        self._extend("unique_labels", output.unique_labels)
-        self._extend("solution_offsets", [self.tables["solutions"].shape[0]])
-        self._extend("spot_offsets", [self.tables["spots"].shape[0]])
-        self._extend("frame_ids", [frame_id])
-
-    def set_columns(self, solutions: str, spots: str) -> None:
-        self.tables["solutions"].attrs["columns"] = solutions.lstrip("%").split()
-        self.tables["spots"].attrs["columns"] = spots.lstrip("%").split()
-
-    def close(self) -> None:
-        self.file.close()
 
 
 def _binary_sha256(binary: Path) -> str:
@@ -684,15 +711,19 @@ def _writer(path: Path, parameters: Mapping[str, Any], geometry: Any, crystal: A
 
 
 def _provenance(
-    parameters: Mapping[str, Any], files: _Files, binary: Path, background: _Background, unmatched: int
+    parameters: Mapping[str, Any],
+    files: _Files,
+    matcher: _CpuMatcher | _StreamAdapter,
+    background: _Background,
+    unmatched: int,
 ) -> dict[str, Any]:
     info = build_info()
-    return {
-        **library_provenance(f"laue_index {info.get('version')} LaueMatchingCPU"),
+    provenance = {
+        **library_provenance(f"laue_index {info.get('version')} {matcher.name}"),
         "laue_index_version": info.get("version"),
         "laue_index_c_src_sha256": info.get("c_src_sha256"),
-        "binary": str(binary),
-        "binary_sha256": _binary_sha256(binary),
+        "binary": str(matcher.binary),
+        "binary_sha256": _binary_sha256(matcher.binary),
         "orientation_database": {"path": str(files.database), "size": files.database.stat().st_size},
         "forward_cache": {
             "name": files.cache.name,
@@ -704,12 +735,47 @@ def _provenance(
         "threads": int(parameters["num_threads"]),
         "unmatched_spots": unmatched,
     }
+    if isinstance(matcher, _StreamAdapter):
+        provenance["laue_index_build"] = info
+    return provenance
+
+
+_clock = time.monotonic
+"""The clock ``RunRequest.deadline`` is read on (the runner sets it from the same clock)."""
+STREAM = "stream"
+"""``execution.laue_matching_indexer`` of a target that matches with the GPU stream daemon."""
+
+
+def _stream_matcher(
+    binary: Path, files: _Files, parameters: Mapping[str, Any], scratch: Path, should_stop: Any
+) -> _StreamAdapter:
+    return _StreamAdapter(
+        StreamMatcher(
+            binary,
+            params=files.params,
+            database=files.database,
+            hkls=files.hkls,
+            threads=int(parameters["num_threads"]),
+            folder=scratch / "daemon",
+            solution_columns=SOLUTION_COLUMNS,
+            spot_columns=SPOT_COLUMNS,
+            should_stop=should_stop,
+        )
+    )
 
 
 def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry], hooks: RunHooks) -> RunOutcome:
+    """Index the run's frames in manifest order. On the portal's worker (no ``request.execution``): the CPU binary
+    per frame, into the run's two files. On a remote target, as its execution policy says: the GPU stream daemon
+    (``laue_matching_indexer: stream``), committed segments every ``segment_seconds``, and no frame started after
+    ``request.deadline`` (the allocation's soft time limit), the frames left then being not run."""
     if not (HAS_DIPLIB and HAS_SKIMAGE):
         raise RuntimeError("LaueMatching needs diplib and scikit-image: without them it computes different numbers")
     parameters = request.parameters
+    execution = request.execution or {}
+    stream = execution.get("laue_matching_indexer") == STREAM
+    segment_seconds = execution.get("segment_seconds")
+    deadline = request.deadline
     os.makedirs(request.run_directory, exist_ok=True)
     results_final = os.path.join(request.run_directory, RESULTS_FILENAME)
     if os.path.exists(results_final):
@@ -718,7 +784,9 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
     results_partial = partial_path(results_final)
     native_partial = partial_path(native_final)
     key = key_from_parameters(parameters)
-    binary = laue_indexer.require_binary("CPU")
+    if stream and parameters["create_forward_cache"]:
+        raise RuntimeError("A GPU run reads an installed forward cache; it never builds one")
+    binary = stream_binary(laue_indexer.require_binary) if stream else laue_indexer.require_binary("CPU")
     geometry = load_geometry(str(parameters["geometry_file"]))
     crystal = load_crystal(str(parameters["crystal_file"]))
     exclusion = _exclusion_mask(parameters)
@@ -731,84 +799,143 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
         csl_sigmas=(3,),
         csl_tol_deg=3.0,
     )
+
+    def past_deadline() -> bool:
+        return deadline is not None and _clock() >= deadline
+
     scratch = Path(tempfile.mkdtemp(prefix=f"laue_matching_{request.job_id}_"))
     run_warnings: list[str] = []
-    frame_ids: list[str] = []
     succeeded = failed = n_indexed = unmatched = 0
-    stopped = deep = columns_set = False
+    stopped = time_limited = deep = False
+    daemon_error: str | None = None
     remaining = iter(entries)
     background = _Background(parameters, request.run_directory)
+    matcher: _CpuMatcher | _StreamAdapter | None = None
+    sink: Segments | SingleOutput | None = None
+    gpu: dict[str, Any] | None = None
+    daemon_seconds: float | None = None
+
+    def not_run(entry: ManifestEntry, *, during: bool = False) -> FailureRecord:
+        if stopped:
+            message = "run stopped while this input was indexed" if during else "run stopped before this input started"
+            return FailureRecord.not_run(entry, category=CATEGORY_CANCELLED, message=message)
+        if time_limited:
+            message = "the allocation's time limit came " + ("while this input was indexed" if during else "first")
+            return FailureRecord.not_run(entry, category=CATEGORY_NOT_RUN, message=message)
+        return FailureRecord.not_run(entry, category=CATEGORY_NOT_RUN, message=f"not run: {daemon_error}")
+
+    def report() -> None:
+        if isinstance(sink, Segments):
+            committed = sum(segment["n_failed"] for segment in sink.committed)
+            hooks.report_progress(succeeded=len(sink.frame_ids), failed=committed)
+        else:
+            hooks.report_progress(succeeded=succeeded, failed=failed)
+
     try:
         files = _resolve_files(parameters, request.run_directory, scratch)
         _prepare_cache(parameters, files, key, hooks)
-        with open(files.params, "x", encoding="utf-8") as stream:
-            stream.write(params_text(parameters, files))
-        native = _NativeTables(native_partial)
+        with open(files.params, "x", encoding="utf-8") as stream_file:
+            stream_file.write(params_text(parameters, files))
+        threads = int(parameters["num_threads"])
+        matcher = (
+            _stream_matcher(binary, files, parameters, scratch, lambda: hooks.should_stop() or past_deadline())
+            if stream
+            else _CpuMatcher(binary, files, threads, hooks)
+        )
+
+        def writer(path: Path) -> Any:
+            return _writer(path, parameters, geometry, crystal)
+
+        sink = (
+            Segments(Path(request.run_directory), writer, hooks, seconds=float(segment_seconds))
+            if segment_seconds is not None
+            else SingleOutput(Path(results_partial), Path(native_partial), writer, hooks)
+        )
         try:
-            with _writer(results_partial, parameters, geometry, crystal) as writer:
+            try:
+                started = time.monotonic()
+                matcher.start()
+                if stream:
+                    daemon_seconds = time.monotonic() - started
+                    gpu = gpu_evidence(matcher.pid())
+                    if execution.get("require_gpu", True) and not (gpu and gpu["daemon_on_gpu"]):
+                        raise RuntimeError(
+                            "The GPU stream daemon runs on no GPU that nvidia-smi lists; the run does not go on"
+                        )
+            except _StopRequested:
+                stopped = hooks.should_stop()
+                time_limited = not stopped
+            interrupted: FailureRecord | None = None
+            for entry in [] if stopped or time_limited else remaining:
+                if hooks.should_stop() or past_deadline():
+                    stopped = hooks.should_stop()
+                    time_limited = not stopped
+                    interrupted = not_run(entry)
+                    break
+                started_frame = time.perf_counter()
+                try:
+                    output = _process_frame(entry, parameters, matcher, geometry, background, exclusion, processor)
+                except _StopRequested:
+                    stopped = hooks.should_stop()
+                    time_limited = not stopped
+                    interrupted = not_run(entry, during=True)
+                    break
+                except DaemonFailed as error:
+                    daemon_error = str(error)
+                    failed += 1
+                    sink.fail(FailureRecord.from_error(entry, error))
+                    break
+                except (InputError, _IndexerFailed, OSError, ValueError, KeyError) as error:
+                    failed += 1
+                    sink.fail(
+                        FailureRecord.from_error(entry, error, context={"seconds": time.perf_counter() - started_frame})
+                    )
+                else:
+                    sink.append(entry.input_id, output.result, output)
+                    columns = matcher.columns()
+                    if columns is not None:
+                        sink.set_columns(columns)
+                    succeeded += 1
+                    unmatched += output.unmatched_spots
+                    if output.result.n_patterns > 0:
+                        n_indexed += 1
+                    depth = output.result.depth
+                    deep = deep or (depth is not None and abs(depth) > DEPTH_WARNING_UM)
+                finally:
+                    matcher.clean()
+                if sink.due():
+                    sink.commit()
+                    report()
+                elif isinstance(sink, SingleOutput):
+                    report()
+            # The frames before come first in the failure report: the open segment is committed before.
+            sink.commit()
+            if interrupted is not None:
+                hooks.record_failure(interrupted)
+            if stopped or time_limited or daemon_error:
                 for entry in remaining:
-                    if hooks.should_stop():
-                        stopped = True
-                        hooks.record_failure(
-                            FailureRecord.not_run(
-                                entry, category=CATEGORY_CANCELLED, message="run stopped before this input started"
-                            )
-                        )
-                        break
-                    started = time.perf_counter()
-                    try:
-                        output = _process_frame(
-                            entry, parameters, files, binary, geometry, background, exclusion, processor, hooks
-                        )
-                    except _StopRequested:
-                        stopped = True
-                        hooks.record_failure(
-                            FailureRecord.not_run(
-                                entry, category=CATEGORY_CANCELLED, message="run stopped while this input was indexed"
-                            )
-                        )
-                        break
-                    except (InputError, _IndexerFailed, OSError, ValueError, KeyError) as error:
-                        failed += 1
-                        hooks.record_failure(
-                            FailureRecord.from_error(entry, error, context={"seconds": time.perf_counter() - started})
-                        )
-                    else:
-                        writer.append(output.result, frame_id=entry.input_id)
-                        native.append(entry.input_id, output)
-                        if not columns_set and (files.scratch / "frame.bin.solutions.txt").is_file():
-                            native.set_columns(
-                                (files.scratch / "frame.bin.solutions.txt").read_text().split("\n", 1)[0],
-                                (files.scratch / "frame.bin.spots.txt").read_text().split("\n", 1)[0],
-                            )
-                            columns_set = True
-                        frame_ids.append(entry.input_id)
-                        succeeded += 1
-                        unmatched += output.unmatched_spots
-                        if output.result.n_patterns > 0:
-                            n_indexed += 1
-                        depth = output.result.depth
-                        deep = deep or (depth is not None and abs(depth) > DEPTH_WARNING_UM)
-                    hooks.report_progress(succeeded=succeeded, failed=failed)
-                    for name in ("frame.bin", "frame.bin.solutions.txt", "frame.bin.spots.txt"):
-                        (files.scratch / name).unlink(missing_ok=True)
-                if stopped:
-                    for entry in remaining:
-                        hooks.record_failure(
-                            FailureRecord.not_run(
-                                entry, category=CATEGORY_CANCELLED, message="run stopped before this input started"
-                            )
-                        )
-            if writer.failed:
-                raise RuntimeError(f"results file write failed after {writer.count} frames: {writer.error}")
+                    hooks.record_failure(not_run(entry))
         finally:
-            native.close()
+            matcher.close()
+            sink.close()
+        if isinstance(sink, Segments):
+            report()
         if deep:
             run_warnings.append(
                 f"Frames deeper than {DEPTH_WARNING_UM:g} um were matched with the geometry at depth 0: their spots "
                 "are displaced by about half a pixel or more"
             )
-        provenance = _provenance(parameters, files, binary, background, unmatched)
+        if time_limited:
+            run_warnings.append(
+                f"Stopped at the allocation's time limit after {succeeded + failed} of {request.n_inputs} frames; "
+                "the rest were not run"
+            )
+        if daemon_error:
+            run_warnings.append(f"The GPU stream daemon ended after {succeeded + failed} frames: {daemon_error}")
+        provenance = _provenance(parameters, files, matcher, background, unmatched)
+        if stream:
+            provenance["gpu"] = gpu
+            provenance["daemon_start_seconds"] = daemon_seconds
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
     outcome = RunOutcome(
@@ -819,16 +946,24 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
         provenance=provenance,
         n_indexed=n_indexed,
     )
+    segments = sink if isinstance(sink, Segments) else None
     if succeeded == 0:
         discard_partial(results_final)
         discard_partial(native_final)
+        if segments is not None:
+            segments.remove()
         outcome.summary = "no frame was processed"
         return outcome
+    frame_ids = sink.frame_ids
     try:
+        if segments is not None:
+            segments.merge(Path(results_partial), Path(native_partial), merge_results_files)
         summary = validate_results_file(results_partial, frame_ids=frame_ids)
-    except (InvalidResultsFile, OSError) as error:
+    except (InvalidResultsFile, OSError, ValueError) as error:
         outcome.validation_error = f"{RESULTS_FILENAME}: {error}"
-        outcome.summary = f"results file kept as {os.path.basename(results_partial)} for diagnosis"
+        outcome.summary = f"results file kept as {os.path.basename(results_partial)} for diagnosis" + (
+            ", with its segments" if segments is not None else ""
+        )
         return outcome
     publish_file(results_partial, results_final)
     publish_file(native_partial, native_final)
@@ -841,6 +976,9 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
         "n_assignments": summary.n_assignments,
     }
     outcome.provenance["cache_key"] = asdict(key)
+    if segments is not None:
+        outcome.provenance["segments"] = segments.segments()
+        segments.remove()
     outcome.summary = f"{summary.n_frames} frames, {summary.n_patterns} orientations in {RESULTS_FILENAME}" + (
         f"; {n_indexed} frames indexed" if n_indexed else "; no frame indexed"
     )

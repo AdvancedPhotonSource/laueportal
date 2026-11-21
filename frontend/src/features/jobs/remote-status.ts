@@ -82,12 +82,22 @@ export function remotePhaseNotes(view: RemotePhaseView): string {
 /** A run monitor row with its page's `as_of`, when its observation was read (`RunMonitorPage`). */
 export type RunMonitorRow = JobSummary & { as_of: string }
 
+/** The targets whose runs report a remote phase (the backend's `remote.observation.OBSERVED_TARGETS`). */
+export const OBSERVED_TARGETS: ReadonlySet<string> = new Set([
+  "crux",
+  "pioneer",
+])
+
 /**
- * The run monitor's Status cell: a queued or running crux run's phase in place of its status, when the row has an
- * observation (the job page's, `JobSummary.observation`); null otherwise, and the cell shows the run's status.
+ * The run monitor's Status cell: a queued or running crux or APS GPU run's phase in place of its status, when the row
+ * has an observation (the job page's, `JobSummary.observation`); null otherwise, and the cell shows the run's status.
  */
 export function remoteStatus(row: RunMonitorRow): RemotePhaseView | null {
-  if (row.target !== "crux" || !isActiveStatus(row.status) || !row.observation)
+  if (
+    !OBSERVED_TARGETS.has(row.target) ||
+    !isActiveStatus(row.status) ||
+    !row.observation
+  )
     return null
   return remotePhaseView(row.observation, row.as_of)
 }

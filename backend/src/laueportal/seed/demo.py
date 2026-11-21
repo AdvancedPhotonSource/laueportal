@@ -68,7 +68,6 @@ from laueportal.jobs.rundir import RECONSTRUCTION_DIRECTORY
 from laueportal.reconstruction import service as reconstruction_service
 from laueportal.reconstruction.models import ReconstructionRun, WireReconstructionParameters
 from laueportal.reconstruction.wire.params import WireParamsV1
-from laueportal.remote import observation
 from laueportal.remote.submission import queue_identity
 from laueportal.scans.models import Catalog, Metadata, Scan
 from laueportal.science import recon as science_recon
@@ -460,7 +459,7 @@ def add_remote_run(engine: Engine, layout: DemoLayout, *, settings: Settings | N
     reconstruction ID. With ``settings``, run creation also checks its folder against the file roots. No DM job
     stands behind it: never on a database whose settings enable remote execution (``build_demo`` refuses that)."""
 
-    request = wire_request(layout).model_copy(update={"backend": observation.OBSERVED_TARGET, "notes": REMOTE_NOTES})
+    request = wire_request(layout).model_copy(update={"backend": "crux", "notes": REMOTE_NOTES})
     run = reconstruction_service.create_reconstruction(request, engine=engine, settings=settings)
     with Session(engine) as session, session.begin():
         job = session.get(Job, run.job_id)

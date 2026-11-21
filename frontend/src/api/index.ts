@@ -18,6 +18,7 @@ export {
   useGetSystemStatus,
   getRemoteReadiness,
   useGetRemoteReadiness,
+  useGetGpuReadiness,
 } from "./generated/endpoints"
 export type {
   ActiveRun,
@@ -34,7 +35,10 @@ export type {
   RemoteCheck,
 } from "./generated/model"
 
-export { getRemoteReadinessWithin } from "./remote-readiness"
+export {
+  getGpuReadinessWithin,
+  getRemoteReadinessWithin,
+} from "./remote-readiness"
 
 // scans
 export {

@@ -36,7 +36,7 @@ from laueportal.jobs.creation import submit  # noqa: E402
 from laueportal.jobs.models import Job  # noqa: E402
 from laueportal.jobs.rundir import ManifestEntry  # noqa: E402
 from laueportal.science.laue_matching import centring_letter, read_instrument  # noqa: E402
-from tests.validation_support import Place, found, make_place  # noqa: E402
+from tests.validation_support import Place, found, make_place, offering  # noqa: E402
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "lauelab"
 GEOMETRY = FIXTURES / "geoN_2022-03-29_14-15-05.xml"
@@ -189,10 +189,11 @@ def write_cache(data_root: Path, values: dict[str, Any], name: str = NAME, **rec
     (data_root / cache.DATABASE_NAME).write_bytes(b"\0" * (cache.ORIENTATION_BYTES * values["n_orientations"]))
     folder = data_root / name
     folder.mkdir(exist_ok=True)
-    (folder / cache.FORWARD_NAME).write_bytes(b"\0" * 16)
+    size = cache.forward_bytes(values["n_orientations"], values["max_nr_laue_spots"])
+    (folder / cache.FORWARD_NAME).write_bytes(b"\0" * size)
     (folder / cache.HKL_NAME).write_text("0 0 2\n")
     config = cache.key_from_parameters(values).expected() | record_changes
-    record = {"kind": cache.FORWARD_KIND, "artifact": {"size": 16}, "config": config}
+    record = {"kind": cache.FORWARD_KIND, "artifact": {"size": size}, "config": config}
     (folder / cache.RECORD_NAME).write_text(json.dumps(record))
     return folder
 
@@ -321,7 +322,17 @@ def test_a_tiny_change_in_the_geometry_is_another_cache(tmp_path):
 def test_a_forward_file_of_another_size_is_refused_so_the_indexer_cannot_rebuild_over_it(tmp_path, run):
     folder = write_cache(tmp_path / "data", parameters(tmp_path / "data"))
     (folder / cache.FORWARD_NAME).write_bytes(b"\0" * 8)
-    with pytest.raises(RuntimeError, match="its record says 16"):
+    with pytest.raises(RuntimeError, match="its record says 244"):
+        run([write_frame(tmp_path / "frame.h5")])
+    assert calls(tmp_path) == 0
+
+
+def test_a_forward_file_its_record_agrees_with_but_the_indexer_would_rebuild_is_refused(tmp_path, run):
+    folder = write_cache(tmp_path / "data", parameters(tmp_path / "data"))
+    (folder / cache.FORWARD_NAME).write_bytes(b"\0" * 16)
+    record = json.loads((folder / cache.RECORD_NAME).read_text())
+    (folder / cache.RECORD_NAME).write_text(json.dumps({**record, "artifact": {"size": 16}}))
+    with pytest.raises(RuntimeError, match="the indexer needs 244 for this run"):
         run([write_frame(tmp_path / "frame.h5")])
     assert calls(tmp_path) == 0
 
@@ -513,9 +524,18 @@ def cache_issues(validated: Any) -> set[tuple[Any, str, str]]:
     return {issue for issue in found(validated) if issue[2] != "unlinked"}
 
 
-def test_the_form_has_no_target_and_refuses_the_portals_values(place):
+def test_the_form_offers_the_gpu_target_only_when_enabled_and_refuses_the_portals_values(place):
     model = LaueMatchingParamsV1
-    assert "backend" not in model.fields_from("form") and "backend" in model.fields_from("derived")
+    assert "backend" in model.fields_from("form")
+    schema = programs.parameters_schema("laue_matching", place.settings)
+    assert schema["properties"]["backend"]["x-options"] == [{"value": "local", "label": "APS"}]
+    assert programs.execution_targets(offering(place, "pioneer"), "laue_matching") == [
+        {"value": "local", "label": "APS"},
+        {"value": "pioneer", "label": "APS GPU"},
+    ]
+    assert programs.execution_targets(offering(place, "pioneer", "aps"), "lauego") == [{"value": "aps", "label": "APS"}]
+    refused = checked(place, place.settings, backend="pioneer")
+    assert (("backend",), "error", "backend_not_offered") in found(refused)
     for name in ("p_array", "data_root", "num_threads"):
         with pytest.raises(ValueError, match="set by the portal"):
             programs.build_params("laue_matching", place.form("laue_matching", **{name: 1}), place.settings)
@@ -657,6 +677,6 @@ def test_the_list_the_detail_and_a_clone_show_a_laue_matching_run(place, tmp_pat
     assert clone["clone_of"]["id"] == run_id
     assert clone["values"]["forward_cache"] == "cache"
     assert clone["values"]["create_forward_cache"] is False
-    assert "backend" not in clone["values"]
+    assert clone["values"]["backend"] == "local"  # the run's target, still offered
     # the LaueGo form does not clone it
     assert client.get("/api/v1/programs/lauego/prefill", params={"indexing": run_id}).status_code == 404

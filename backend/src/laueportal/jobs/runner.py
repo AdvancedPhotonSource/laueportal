@@ -15,6 +15,7 @@ import os
 import platform
 import signal
 import threading
+import time
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -111,7 +112,13 @@ class FileHooks:
         return report
 
 
-def load_request(directory, plan):
+MAPPED_KEYS = ("geometry_file", "crystal_file", "mask_file", "input_path", "background_file", "data_root")
+"""The request's paths the plan's ``path_map`` translates (the last two are LaueMatching's)."""
+
+
+def load_request(directory, plan, *, started=None):
+    """The run's request and manifest entries, its paths mapped. ``started``: the ``time.monotonic()`` the
+    execution policy's ``soft_deadline_seconds`` is counted from (now when not given)."""
     directory = Path(directory)
     path = directory / "request.json"
     if hashlib.sha256(path.read_bytes()).hexdigest() != plan["request_sha256"]:
@@ -122,7 +129,7 @@ def load_request(directory, plan):
     )
     mappings = plan["path_map"]
     document = json.loads(json.dumps(document))
-    for key in ("geometry_file", "crystal_file", "mask_file", "input_path"):
+    for key in MAPPED_KEYS:
         if document["request"].get(key):
             document["request"][key] = map_path(document["request"][key], mappings)
     if os.path.isabs(document["output"].get("xml", "")):
@@ -135,6 +142,10 @@ def load_request(directory, plan):
     )
     if policy.get("memory_limit_mb") is not None:
         document["request"]["memory_limit_mb"] = policy["memory_limit_mb"]
+    soft_deadline = policy.get("soft_deadline_seconds")
+    deadline = None
+    if soft_deadline is not None:
+        deadline = (time.monotonic() if started is None else started) + float(soft_deadline)
     entries = [
         replace(entry, source=map_path(entry.source, mappings)) for entry in read_manifest(directory / "inputs.jsonl")
     ]
@@ -153,15 +164,18 @@ def load_request(directory, plan):
         workers=policy["workers"],
         max_in_flight=policy.get("max_in_flight"),
         reconstruction_workers=policy["reconstruction_workers"],
+        execution=policy,
+        deadline=deadline,
     ), entries
 
 
 def run(directory, *, compute=None, request=None, entries=None):
     """Run once. A durable exclusive lock prevents accidental duplicate execution."""
     directory = Path(directory)
+    started = time.monotonic()
     plan = json.loads((directory / "bdp.json").read_text())
     if request is None:
-        request, entries = load_request(directory, plan)
+        request, entries = load_request(directory, plan, started=started)
     output = Path(request.run_directory)
     output.mkdir(parents=True, exist_ok=True)
     with open(output / ".runner.lock", "x", encoding="utf-8") as lock:

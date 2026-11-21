@@ -21,6 +21,15 @@ def get_remote_readiness(request: Request, response: Response) -> RemoteReadines
     return request.app.state.remote_status.get()
 
 
+@router.get("/system/gpu-status", name="getGpuReadiness", summary="APS GPU readiness", response_model=RemoteReadiness)
+def get_gpu_readiness(request: Request, response: Response) -> RemoteReadiness:
+    """The APS GPU target's queue and files (``remote.health.GPU_CHECKS``), as ``/system/remote-status`` serves the
+    ALCF checks: the shared result at once, refreshed at most once every five minutes; read-only, never a PBS job.
+    `enabled` is false while the target is disabled."""
+    response.headers["Cache-Control"] = "no-store"
+    return request.app.state.gpu_status.get()
+
+
 @router.get("/health", name="getHealth", summary="Health", response_model=Health)
 def get_health(settings: SettingsDep, engine: EngineDep, response: Response) -> Health:
     """The database and the worker (as its row records it: running, late or not running). Never fails: an

@@ -7530,7 +7530,9 @@
               "compute",
               "aps",
               "eagle",
-              "crux"
+              "crux",
+              "gpu_queue",
+              "gpu_files"
             ],
             "title": "Name",
             "type": "string"
@@ -7557,7 +7559,7 @@
         "type": "object"
       },
       "RemoteObservation": {
-        "description": "A ``crux`` run's latest remote observation: the ``remoteObservation`` that the launcher's DM stage prints and the\nremote poller accepted from DM's record (``remote.observation``).",
+        "description": "A ``crux`` or ``pioneer`` run's latest remote observation: the ``remoteObservation`` that the launcher's DM stage\nprints and the remote poller accepted from DM's record (``remote.observation``).",
         "properties": {
           "detail": {
             "anyOf": [
@@ -7648,7 +7650,7 @@
         "type": "string"
       },
       "RemoteReadiness": {
-        "description": "Cached, read-only ALCF checks. Online does not guarantee worker startup or PBS capacity.",
+        "description": "Cached, read-only checks of a remote route (ALCF, or the APS GPU queue). Online does not guarantee worker\nstartup or PBS capacity.",
         "properties": {
           "checked_at": {
             "anyOf": [
@@ -13683,6 +13685,22 @@
               "title": "Max Nr Laue Spots",
               "type": "integer"
             }
+          },
+          {
+            "description": "The run's target: its data folder is listed.",
+            "in": "query",
+            "name": "backend",
+            "required": false,
+            "schema": {
+              "default": "local",
+              "description": "The run's target: its data folder is listed.",
+              "enum": [
+                "local",
+                "pioneer"
+              ],
+              "title": "Backend",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -15367,6 +15385,28 @@
         "summary": "Append a note to a scan's catalog",
         "tags": [
           "scans"
+        ]
+      }
+    },
+    "/api/v1/system/gpu-status": {
+      "get": {
+        "description": "The APS GPU target's queue and files (``remote.health.GPU_CHECKS``), as ``/system/remote-status`` serves the\nALCF checks: the shared result at once, refreshed at most once every five minutes; read-only, never a PBS job.\n`enabled` is false while the target is disabled.",
+        "operationId": "getGpuReadiness",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoteReadiness"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "APS GPU readiness",
+        "tags": [
+          "system"
         ]
       }
     },

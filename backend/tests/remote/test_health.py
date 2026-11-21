@@ -125,3 +125,67 @@ def test_a_revoked_refresh_token_is_login_needed_even_when_auth_returns_http_400
         code = "invalid_grant"
 
     assert health.failure("compute", Revoked("private OAuth error")).state == "login_required"
+
+
+def _pioneer(tmp_path, **target):
+    from laueportal.remote.settings import parse_settings
+
+    return parse_settings(
+        {
+            "targets": {
+                "pioneer": {
+                    "enabled": True,
+                    "submit_host": "user@gpu.example.invalid",
+                    "pbs": {"queue": "gpu", "walltime": "01:00:00"},
+                    **target,
+                }
+            }
+        }
+    )
+
+
+def test_the_gpu_queue_is_read_over_the_submission_route_and_never_submits(tmp_path):
+    import json as json_module
+    import subprocess as subprocess_module
+
+    from laueportal.remote import health
+
+    calls = []
+
+    def answer(enabled: str):
+        def run(command, **kwargs):
+            calls.append(command)
+            record = {"Queue": {"gpu": {"enabled": enabled, "started": "True"}}}
+            return subprocess_module.CompletedProcess(command, 0, json_module.dumps(record), "")
+
+        return run
+
+    settings = _pioneer(tmp_path)
+    assert health.gpu_queue(settings, run=answer("True")).state == "ok"
+    assert calls[0][:4] == ["ssh", "-T", "-o", "BatchMode=yes"] and "user@gpu.example.invalid" in calls[0]
+    assert calls[0][-1] == "/opt/pbs/bin/qstat -Q -f -F json gpu"
+    assert "qsub" not in " ".join(calls[0])
+    assert health.gpu_queue(settings, run=answer("False")).state == "unavailable"
+
+    def hung(command, **kwargs):
+        raise subprocess_module.TimeoutExpired(command, 20)
+
+    assert health.gpu_queue(settings, run=hung).detail == "No answer from the scheduler"
+
+
+def test_the_gpu_files_are_the_runtime_the_code_and_the_database(tmp_path):
+    from laueportal.remote import health
+
+    python = tmp_path / "env" / "bin" / "python"
+    python.parent.mkdir(parents=True)
+    python.write_text("")
+    python.chmod(0o755)
+    (tmp_path / "src" / "laueportal").mkdir(parents=True)
+    data = tmp_path / "data"
+    data.mkdir()
+    settings = _pioneer(
+        tmp_path, analysis_python=str(python), code_directory=str(tmp_path / "src"), data_root=str(data)
+    )
+    assert health.gpu_files(settings).state == "unavailable"  # no orientation database yet
+    (data / "100MilOrients.bin").write_bytes(b"\0" * 72)
+    assert health.gpu_files(settings).state == "ok"

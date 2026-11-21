@@ -114,9 +114,9 @@ def _run_templates(value: Any) -> list[str]:
     return _templates(value) or [NO_TEMPLATE]
 
 
-def _target(job: Job | None, settings: Settings) -> str:
+def _target(job: Job | None, settings: Settings, kind: programs.ProgramKind | None = None) -> str:
     """The clone's target: its run's when this deployment still offers it, else the default (the first offered)."""
-    offered = [option["value"] for option in programs.execution_targets(settings)]
+    offered = [option["value"] for option in programs.execution_targets(settings, kind)]
     return job.backend if job is not None and job.backend in offered else offered[0]
 
 
@@ -126,7 +126,7 @@ def _blank(kind: programs.ProgramKind, settings: Settings) -> dict[str, Any]:
     values["filename_prefixes"] = []
     values |= programs.form_defaults(kind, settings)
     if "backend" in values:
-        values["backend"] = _target(None, settings)
+        values["backend"] = _target(None, settings, kind)
     return values
 
 
@@ -246,6 +246,7 @@ def prefill(
                 values["backend"] = _target(run.job, settings)
             else:
                 source = _clone_laue_matching(run, values)
+                values["backend"] = _target(run.job, settings, kind)
             clone_of = RunReference(kind=RunKind.INDEXING, id=indexing_id, label=f"I{indexing_id}")
         if reconstruction_id is not None:
             parent = session.get(ReconstructionRun, reconstruction_id)

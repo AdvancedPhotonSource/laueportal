@@ -153,6 +153,32 @@ def bdp_settings(layout: Layout) -> dict[str, Any]:
                 "pbs": {"account": None, "queue": "batch", "nodes": 1, "cpus": 4, "walltime": "00:10:00"},
                 "execution": {"workers": 1, "max_in_flight": 2, "reconstruction_workers": 1, "threads_per_worker": 1},
             },
+            "pioneer": {
+                "enabled": True,
+                "submit_host": None,
+                "analysis_python": "/gpu-compute/envs/analysis/bin/python",
+                "code_directory": "/gpu-compute/src",
+                "module_commands": [],
+                "data_root": str(layout.aps / "laue-matching"),
+                "pbs": {
+                    "account": None,
+                    "queue": "gpu",
+                    "nodes": 1,
+                    "cpus": 4,
+                    "mem": "64gb",
+                    "ngpus": 1,
+                    "walltime": "01:00:00",
+                },
+                "execution": {
+                    "workers": 1,
+                    "max_in_flight": 2,
+                    "reconstruction_workers": 1,
+                    "threads_per_worker": 4,
+                    "laue_matching_indexer": "stream",
+                    "segment_seconds": 300,
+                    "soft_deadline_seconds": 2700,
+                },
+            },
         },
     }
 

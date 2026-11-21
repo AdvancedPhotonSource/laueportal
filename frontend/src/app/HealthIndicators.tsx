@@ -1,24 +1,55 @@
 import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 
-import { useGetHealth } from "@/api"
+import {
+  getGpuReadinessWithin,
+  useGetGpuReadiness,
+  useGetHealth,
+  type RemoteReadiness,
+} from "@/api"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  CHECK_LABELS,
+  CHECK_STATES,
+  readinessView,
+  REMOTE_POLL_MS,
+} from "@/features/system/remote-readiness"
 import { cn } from "@/lib/utils"
 import {
   getHealthWithin,
   HEALTH_POLL_MS,
   retryHealth,
   shellHealth,
+  withGpu,
+  workerView,
   type DotView,
+  type GpuView,
   type IndicatorView,
   type PillView,
 } from "./health-indicators"
 
 /** The dot alone: filled in the quiet success colour while the worker runs, a muted ring while checking. */
+/** The APS GPU target's state, while it is enabled (an answer said so); null otherwise. */
+function gpuView(
+  data: RemoteReadiness | undefined,
+  failed: boolean
+): GpuView | null {
+  if (!data?.enabled) return null
+  const view = readinessView(data, failed)
+  const issue = data.checks.find((check) => check.state !== "ok")
+  return {
+    tone: view.tone,
+    label: view.label,
+    issue: issue
+      ? `${CHECK_LABELS[issue.name]}: ${CHECK_STATES[issue.state]}`
+      : undefined,
+  }
+}
+
 const DOT_TONE: Record<DotView["tone"], string> = {
   ok: "bg-success-quiet",
   unknown: "border-[1.5px] border-muted-foreground",
@@ -58,7 +89,30 @@ export function HealthIndicators() {
       refetchIntervalInBackground: false,
     },
   })
-  const shell = shellHealth(health)
+  const gpuQuery = useGetGpuReadiness({
+    query: {
+      queryFn: ({ signal }) => getGpuReadinessWithin(signal),
+      retry: false,
+      staleTime: REMOTE_POLL_MS,
+      refetchInterval: (q) =>
+        q.state.data?.enabled === false
+          ? false
+          : q.state.data?.checking
+            ? 2_000
+            : REMOTE_POLL_MS,
+      refetchIntervalInBackground: false,
+    },
+  })
+  const gpu = gpuView(gpuQuery.data, gpuQuery.isError)
+  const shell = withGpu(shellHealth(health), gpu)
+  // The split the one indicator merges: the worker's state and the APS GPU target's, each on its line.
+  const split =
+    shell.kind === "live" && health.data
+      ? [
+          workerView(health.data).state,
+          gpu && `APS GPU: ${gpu.label.toLowerCase()}`,
+        ].filter((line): line is string => !!line && line !== shell.view.state)
+      : []
 
   return (
     <div
@@ -86,6 +140,9 @@ export function HealthIndicators() {
             {shell.view.form === "pill" && shell.view.note && (
               <p>{shell.view.note}</p>
             )}
+            {split.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
             {health.dataUpdatedAt > 0 && (
               <p className="opacity-70">
                 Checked at {formatTime(health.dataUpdatedAt)}

@@ -6,7 +6,7 @@ tables."""
 from __future__ import annotations
 
 from functools import partial
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from anyio import CapacityLimiter, to_thread
 from fastapi import APIRouter, Body, Depends, Header, Path, Query, Request, Response
@@ -261,6 +261,9 @@ async def list_laue_matching_forward_caches(
     elo: Annotated[float, Query(gt=0, description="Min Energy (keV).")],
     ehi: Annotated[float, Query(gt=0, description="Max Energy (keV).")],
     max_nr_laue_spots: Annotated[int, Query(gt=0, description="Max Spots per Orientation.")],
+    backend: Annotated[
+        Literal["local", "pioneer"], Query(description="The run's target: its data folder is listed.")
+    ] = "local",
 ) -> ForwardCacheList | Response:
     """The named forward caches whose record exactly fits these values, and a free name for a new one. A data folder or
     file that cannot be read is `problem`, not an error. A folder read, with its 503 while 16 wait."""
@@ -274,6 +277,7 @@ async def list_laue_matching_forward_caches(
             elo=elo,
             ehi=ehi,
             max_nr_laue_spots=max_nr_laue_spots,
+            backend=backend,
         ),
     )
 

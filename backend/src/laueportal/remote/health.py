@@ -1,6 +1,9 @@
-"""Read-only launcher-side readiness checks. No task, workflow or function registration.
+"""Read-only launcher-side readiness checks. No task, workflow or function registration, and no PBS job.
 
-Run with the launcher's Python: ``python -m laueportal.remote.health --config <bdp.yaml>``.
+Run with the launcher's Python: ``python -m laueportal.remote.health --config <bdp.yaml> [--target pioneer]``. The
+default checks DM and the ALCF route (``CHECKS``); ``--target pioneer`` the APS GPU queue and its files
+(``GPU_CHECKS``): ``qstat -Q`` of its queue over the SSH route ``qsub`` takes, and the analysis Python, the code and
+the LaueMatching data folder on the shared storage the launcher host mounts.
 Only a small, fixed vocabulary leaves this process; SDK errors can contain authorization
 parameters, private paths and URLs and must never be printed or returned.
 """
@@ -9,6 +12,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shlex
+import subprocess
 from collections.abc import Callable
 from typing import Any, Literal, cast
 
@@ -16,9 +22,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from laueportal.remote.settings import RemoteSettings, StorageSettings, collection_path, load_settings
 
-CheckName = Literal["dm", "flows", "compute", "aps", "eagle", "crux"]
+CheckName = Literal["dm", "flows", "compute", "aps", "eagle", "crux", "gpu_queue", "gpu_files"]
 CheckState = Literal["ok", "login_required", "denied", "unavailable", "unknown", "disabled"]
 CHECKS: tuple[CheckName, ...] = ("dm", "flows", "compute", "aps", "eagle", "crux")
+GPU_CHECKS: tuple[CheckName, ...] = ("gpu_queue", "gpu_files")
+QSTAT = "/opt/pbs/bin/qstat"
+GPU_QUEUE_TIMEOUT = 20.0
 
 
 class RemoteCheck(BaseModel):
@@ -153,14 +162,72 @@ def collect(settings: RemoteSettings) -> list[RemoteCheck]:
     return [by_name[name] for name in CHECKS]
 
 
+def gpu_queue(settings: RemoteSettings, run: Callable[..., Any] = subprocess.run) -> RemoteCheck:
+    """Whether the ``pioneer`` target's queue is enabled and started (``qstat -Q -f -F json``, over SSH to its
+    ``submit_host`` as ``qsub`` goes)."""
+    target = settings.targets.pioneer
+    if target is None or target.pbs is None or target.pbs.queue is None:
+        return RemoteCheck(name="gpu_queue", state="unknown", detail="Queue is not configured")
+    queue = str(target.pbs.queue)
+    command = [QSTAT, "-Q", "-f", "-F", "json", queue]
+    if target.submit_host:
+        command = [
+            "ssh",
+            "-T",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=10",
+            target.submit_host,
+            shlex.join(command),
+        ]
+    try:
+        result = run(command, capture_output=True, text=True, timeout=GPU_QUEUE_TIMEOUT, check=True)
+        record = json.loads(result.stdout)["Queue"][queue]
+    except subprocess.TimeoutExpired:
+        return RemoteCheck(name="gpu_queue", state="unknown", detail="No answer from the scheduler")
+    except Exception:
+        return RemoteCheck(name="gpu_queue", state="unknown", detail="Check unavailable")
+    if str(record.get("enabled")) == "True" and str(record.get("started")) == "True":
+        return RemoteCheck(name="gpu_queue", state="ok", detail="Enabled")
+    return RemoteCheck(name="gpu_queue", state="unavailable", detail="Queue disabled or stopped")
+
+
+def gpu_files(settings: RemoteSettings) -> RemoteCheck:
+    """Whether the analysis Python, the code and the orientation database of the ``pioneer`` target are there."""
+    from pathlib import Path
+
+    target = settings.targets.pioneer
+    if target is None or not (target.analysis_python and target.code_directory and target.data_root):
+        return RemoteCheck(name="gpu_files", state="unknown", detail="Files are not configured")
+    try:
+        ready = (
+            os.access(target.analysis_python, os.X_OK)
+            and Path(target.code_directory, "laueportal").is_dir()
+            and Path(target.data_root, "100MilOrients.bin").is_file()
+        )
+    except OSError:
+        ready = False
+    if ready:
+        return RemoteCheck(name="gpu_files", state="ok", detail="Accessible")
+    return RemoteCheck(name="gpu_files", state="unavailable", detail="Runtime or data folder missing")
+
+
+def collect_gpu(settings: RemoteSettings) -> list[RemoteCheck]:
+    return [gpu_queue(settings), gpu_files(settings)]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True)
+    parser.add_argument("--target", choices=["crux", "pioneer"], default="crux")
     arguments = parser.parse_args()
+    names = GPU_CHECKS if arguments.target == "pioneer" else CHECKS
     try:
-        checks = collect(load_settings(arguments.config))
+        settings = load_settings(arguments.config)
+        checks = collect_gpu(settings) if arguments.target == "pioneer" else collect(settings)
     except Exception:
-        checks = [RemoteCheck(name=name, state="unknown", detail="Check unavailable") for name in CHECKS]
+        checks = [RemoteCheck(name=name, state="unknown", detail="Check unavailable") for name in names]
     print(json.dumps([check.model_dump() for check in checks]))
 
 

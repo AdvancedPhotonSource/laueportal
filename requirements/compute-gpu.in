@@ -1,0 +1,25 @@
+# Compute side of the `pioneer` target (the APS cluster's GPU queue): the standalone runner and LaueMatching with the
+# GPU stream daemon. No database, Redis, web server, Globus or MPI (a job is one process on one GPU).
+# `make lock` compiles compute-gpu.lock with dev's versions, like compute.lock; the dev env does not install it.
+#
+# Python 3.12 in a conda-forge env from environment-gpu.yml (environment.yml with conda-forge's CUDA compiler): numpy,
+# h5py and cffi come from conda-forge and are left out of the lock. lauelab is not in the lock either: install it
+# from GitHub with --no-deps at the commit pinned in scripts/setup.sh.
+#
+# laue-index ships only an sdist: build it with its CUDA binaries required (LAUEMATCHING_CUDA=require) and the env's
+# nvcc on PATH, so an install without LaueMatchingGPUStream fails instead of leaving the CPU binaries alone
+# (docs/runbooks/remote-execution.md, "The APS GPU target").
+
+PyYAML==6.0.3
+psutil==7.2.2
+
+# lauelab's own runtime dependencies (it is installed with --no-deps), as in compute.in.
+pandas>=2.0
+plotly>=6.0
+scipy>=1.13
+
+# LaueMatching, as in base.in: its optional packages are required (without them it computes different numbers).
+laue-index==0.8.0
+opencv-python-headless
+scikit-image
+diplib

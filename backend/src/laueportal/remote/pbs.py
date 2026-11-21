@@ -4,7 +4,8 @@
 ``laueportal.jobs.mpi_runner`` when ``pbs.nodes x indexing_ranks_per_node > 1``; the target's ``code_directory`` is then
 a checkout's ``backend/src``. :func:`run_pbs_job` is the Globus Compute function of the ``crux`` flow (it runs on the
 login node, so it imports nothing at module level). :func:`fallback` is the summary the task writes when PBS ended
-without the runner's. Standard library only (import-linter rule 3).
+without the runner's. Standard library and ``jobs.backends`` only (import-linter rule 3); :func:`run_pbs_job` uses
+neither, so the endpoint never imports this package.
 """
 
 from __future__ import annotations
@@ -12,6 +13,10 @@ from __future__ import annotations
 import re
 import shlex
 
+from laueportal.jobs.backends import GLOBUS, transport
+
+DEADLINE_MARGIN_SECONDS = 300
+"""What a soft deadline leaves of the walltime: the frame in progress, the merge of the segments and the summary."""
 RUNNER_MODULE = "laueportal.jobs.runner"
 """The standalone runner."""
 MPI_RUNNER_MODULE = "laueportal.jobs.mpi_runner"
@@ -20,8 +25,9 @@ MPI_RUNNER_MODULE = "laueportal.jobs.mpi_runner"
 
 def build_script(plan):
     target, pbs = plan["target"], plan["pbs"]
+    globus = transport(plan["backend"]) == GLOBUS
     nodes = int(pbs.get("nodes", 1))
-    if nodes < 1 or (plan["backend"] != "crux" and nodes != 1):
+    if nodes < 1 or (not globus and nodes != 1):
         raise ValueError("Multiple nodes are supported only by the Crux MPI runner")
     ranks_per_node = (
         int(plan["execution"].get("indexing_ranks_per_node", 1)) if plan["kind"] == "lauego_indexing" else 1
@@ -31,8 +37,19 @@ def build_script(plan):
     for key in ("queue", "walltime"):
         if not re.fullmatch(r"[A-Za-z0-9_:@.+-]+", str(pbs[key])):
             raise ValueError(f"Unsafe PBS {key}")
+    if pbs.get("mem") is not None and not re.fullmatch(r"[0-9]+[kmgt]?b", str(pbs["mem"]), re.IGNORECASE):
+        raise ValueError("Unsafe PBS mem (write it as PBS does, such as 64gb)")
+    gpus = int(pbs.get("ngpus") or 0)
+    if gpus < 0:
+        raise ValueError("PBS ngpus must not be negative")
+    deadline = plan["execution"].get("soft_deadline_seconds")
+    if deadline is not None and float(deadline) + DEADLINE_MARGIN_SECONDS > walltime_seconds(pbs["walltime"]):
+        raise ValueError(
+            f"execution.soft_deadline_seconds must leave {DEADLINE_MARGIN_SECONDS} s of the walltime for the merge "
+            "and the run summary"
+        )
     account = pbs.get("account")
-    if plan["backend"] == "crux" and not account:
+    if globus and not account:
         raise ValueError("An ALCF allocation is required")
     if account and not re.fullmatch(r"[A-Za-z0-9_:@.+-]+", str(account)):
         raise ValueError("Unsafe PBS account")
@@ -46,10 +63,11 @@ def build_script(plan):
         f"#PBS -l walltime={pbs['walltime']}",
         "#PBS -j oe",
     ]
-    if plan["backend"] == "crux":
+    if globus:
         lines += [f"#PBS -l select={nodes}:system=crux", "#PBS -l place=scatter", "#PBS -l filesystems=home:eagle"]
     else:
-        lines += [f"#PBS -l select=1:ncpus={int(pbs.get('cpus', 32))}:ngpus=0"]
+        memory = f":mem={pbs['mem']}" if pbs.get("mem") is not None else ""
+        lines += [f"#PBS -l select=1:ncpus={int(pbs.get('cpus', 32))}{memory}:ngpus={gpus}"]
     lines += [
         "set -euo pipefail",
         ': "${PBS_JOBID:?Compute allocation required}"',
@@ -58,7 +76,7 @@ def build_script(plan):
         f"cd {shlex.quote(plan['control_directory'])}",
     ]
     lines += list(target.get("module_commands", []))  # Administrator configuration, never form input.
-    if plan["backend"] == "crux":
+    if globus:
         # Crux's launcher must start bash, not relocate the Conda Python executable.
         launcher = [
             "mpiexec",
@@ -78,6 +96,17 @@ def build_script(plan):
         launcher = command
     lines.append("exec " + shlex.join(launcher))
     return "\n".join(lines) + "\n"
+
+
+def walltime_seconds(value) -> float:
+    """A PBS walltime (``HH:MM:SS``, ``MM:SS`` or seconds) in seconds; ``ValueError`` for anything else."""
+    parts = str(value).split(":")
+    if len(parts) > 3 or not all(re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", part) for part in parts):
+        raise ValueError("Unreadable PBS walltime")
+    seconds = 0.0
+    for part in parts:
+        seconds = seconds * 60 + float(part)
+    return seconds
 
 
 def run_pbs_job(*, job_directory, script, fallback_summary, cancel_file, **unused):

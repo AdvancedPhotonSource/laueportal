@@ -7,8 +7,8 @@
 import type { RemotePhase } from './remotePhase';
 
 /**
- * A ``crux`` run's latest remote observation: the ``remoteObservation`` that the launcher's DM stage prints and the
- * remote poller accepted from DM's record (``remote.observation``).
+ * A ``crux`` or ``pioneer`` run's latest remote observation: the ``remoteObservation`` that the launcher's DM stage
+ * prints and the remote poller accepted from DM's record (``remote.observation``).
  */
 export interface RemoteObservation {
   /**

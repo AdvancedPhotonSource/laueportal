@@ -1,8 +1,8 @@
 """The Python lock sets in ``requirements/``: ``make lock`` compiles them consistently.
 
-Only the committed files are read (no network, nothing installed): the four locks share one cutoff; ``base`` and
-``launcher`` have ``dev``'s versions and hashes, so a host can install both; so does ``compute``, except for its own
-pins; the launcher and compute pins are the deployed environments' exact pins; conda-forge's packages are in no lock.
+Only the committed files are read (no network, nothing installed): the five locks share one cutoff; ``base`` and
+``launcher`` have ``dev``'s versions and hashes, so a host can install both; so do ``compute`` and ``compute-gpu``,
+except for their own pins; the launcher and compute pins are the deployed environments' exact pins; conda-forge's packages are in no lock.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REQUIREMENTS = REPO_ROOT / "requirements"
-LOCKS = ("dev", "base", "launcher", "compute")
+LOCKS = ("dev", "base", "launcher", "compute", "compute-gpu")
 
 DEPLOYED_LAUNCHER_PINS = {
     "gladier": "0.11.0",
@@ -80,6 +80,14 @@ def test_compute_has_devs_versions_except_its_own_pins() -> None:
     dev = lock("dev")
     differ = {package for package, pinned in lock("compute").items() if dev.get(package) != pinned}
     assert differ <= set(pins("compute")), differ
+
+
+def test_the_gpu_compute_set_has_devs_versions_and_laue_matchings_packages_but_no_mpi() -> None:
+    dev, gpu = lock("dev"), lock("compute-gpu")
+    differ = {package for package, pinned in gpu.items() if dev.get(package) != pinned}
+    assert differ <= set(pins("compute-gpu")), differ
+    assert {"laue-index", "scikit-image", "diplib", "opencv-python-headless", "scipy"} <= set(gpu)
+    assert "mpi4py" not in gpu
 
 
 def test_the_launcher_and_compute_sets_keep_the_deployed_pins() -> None:

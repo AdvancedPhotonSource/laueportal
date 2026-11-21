@@ -349,7 +349,7 @@ def test_the_defaults_and_limits_are_the_forms_and_the_model_enforces_them(tmp_p
         if limits:
             with pytest.raises(ValidationError, match=name):
                 programs.build_params(kind, {**form, name: float("nan")}, settings)
-    assert properties["backend"]["enum"] == list(BACKENDS)
+    assert properties["backend"]["enum"] == [backend for backend in BACKENDS if backend != "pioneer"]
     if kind == "wire":  # the wire form: at most one %d per file-name template
         with pytest.raises(ValidationError, match="more than one %d"):
             programs.build_params(kind, {**form, "filename_prefixes": ["Si_%d_%d.h5"]}, settings)
@@ -539,6 +539,7 @@ def test_every_form_field_has_a_user_hint_and_at_most_a_terse_value_pattern_as_p
         (None, [("local", "APS")]),  # remote execution off
         ({"aps", "crux"}, [("aps", "APS"), ("crux", "ALCF")]),
         ({"crux"}, [("local", "APS"), ("crux", "ALCF")]),
+        ({"aps", "pioneer"}, [("aps", "APS")]),
     ],
 )
 def test_programs_offers_the_deployments_execution_targets(tmp_path, targets, offered):
@@ -558,10 +559,12 @@ def test_programs_offers_the_deployments_execution_targets(tmp_path, targets, of
 
     assert response.status_code == 200
     for program in response.json()["programs"]:
-        if program["kind"] == "laue_matching":  # computes on the portal's worker: no target to choose
-            assert program["json_schema"]["properties"]["backend"]["readOnly"]
-            continue
         backend = program["json_schema"]["properties"]["backend"]
+        if program["kind"] == "laue_matching":  # the portal's worker, and the GPU queue when it is enabled
+            gpu = [("pioneer", "APS GPU")] if targets is not None and "pioneer" in targets else []
+            assert [(option["value"], option["label"]) for option in backend["x-options"]] == [("local", "APS"), *gpu]
+            assert backend["default"] == "local"
+            continue
         assert [(option["value"], option["label"]) for option in backend["x-options"]] == offered
         assert backend["default"] == offered[0][0]
 

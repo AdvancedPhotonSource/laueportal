@@ -259,7 +259,7 @@ def observation_view(backend: str | None, status: int, value: Any, now: datetime
     running; None otherwise, and when it has no known phase or no observation time, and
     when SQLite's JSON functions cannot read it (``observation.unreadable``). Stale when the launcher said so or it is more than ``STALE_AFTER_SECONDS`` old at ``now``."""
 
-    if backend != observation.OBSERVED_TARGET or status not in ACTIVE_STATUSES or not isinstance(value, dict):
+    if backend not in observation.OBSERVED_TARGETS or status not in ACTIVE_STATUSES or not isinstance(value, dict):
         return None
     if observation.unreadable(value) is not None:
         return None

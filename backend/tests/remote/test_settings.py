@@ -339,10 +339,11 @@ def test_an_experiment_directory_other_than_the_runs_root_is_named_by_its_key_no
     assert "storage.aps.filesystem_root" in str(error.value) and str(tmp_path) not in str(error.value)
 
 
-def _targets(aps: bool, crux: bool) -> RemoteSettings:
+def _targets(aps: bool, crux: bool, pioneer: bool = False) -> RemoteSettings:
     values = bdp_settings(Layout(Path("/base")))
     values["targets"]["aps"]["enabled"] = aps
     values["targets"]["crux"]["enabled"] = crux
+    values["targets"]["pioneer"]["enabled"] = pioneer
     return parse_settings(values)
 
 
@@ -362,6 +363,20 @@ def test_available_backends_follow_the_enabled_targets(settings, expected):
     for _label, value in expected:
         require_backend(value, settings)
     offered = {value for _label, value in expected}
-    for value in {"local", "aps", "crux"} - offered:
+    for value in {"aps", "crux", "pioneer"} - offered:  # the remote targets a submission may name
         with pytest.raises(ValueError, match="is not enabled"):
             require_backend(value, settings)
+    assert [(option.label, option.value) for option in available_backends(settings, "laue_matching")] == [
+        ("APS", "local")
+    ]
+
+
+@pytest.mark.parametrize("aps", [False, True])
+def test_laue_matching_is_offered_the_gpu_target_and_never_aps_or_crux(aps):
+    settings = _targets(aps, True, pioneer=True)
+    assert [(option.label, option.value) for option in available_backends(settings, "laue_matching")] == [
+        ("APS", "local"),
+        ("APS GPU", "pioneer"),
+    ]
+    assert "pioneer" not in {option.value for option in available_backends(settings)}
+    require_backend("pioneer", settings)

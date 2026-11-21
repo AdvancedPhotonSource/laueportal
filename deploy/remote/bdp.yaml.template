@@ -82,3 +82,24 @@ targets:
     module_commands: []
     pbs: {account: null, queue: BATCH_QUEUE, nodes: 1, cpus: 32, walltime: '01:00:00'}
     execution: {workers: 32, max_in_flight: 256, reconstruction_workers: 4, threads_per_worker: 4}
+  # LaueMatching on the APS cluster's GPU queue (the form's "APS GPU"), submitted by the launcher as aps is (qsub
+  # over SSH). Its PBS jobs read the run directory, the inputs and data_root on storage the portal, the launcher host
+  # and the GPU nodes all mount at the same path. data_root holds the orientation database and the forward caches the
+  # runs read (`laueportal laue-matching install-cache`); a run on it never builds a cache. analysis_python is the env
+  # of environment-gpu.lock and requirements/compute-gpu.lock. A run starts no frame after soft_deadline_seconds,
+  # which must leave 300 s of the walltime, and commits its frames every segment_seconds.
+  pioneer:
+    enabled: false
+    submit_host: user@gpu-scheduler.example.invalid
+    analysis_python: /path/to/gpu-compute/release/env/bin/python
+    code_directory: /path/to/gpu-compute/release/src/backend/src
+    data_root: /path/to/shared/laue-matching
+    module_commands: []
+    pbs: {account: null, queue: GPU_QUEUE, nodes: 1, cpus: 4, mem: 64gb, ngpus: 1, walltime: '01:00:00'}
+    execution:
+      workers: 1
+      reconstruction_workers: 1
+      threads_per_worker: 4
+      laue_matching_indexer: stream
+      segment_seconds: 300
+      soft_deadline_seconds: 2700

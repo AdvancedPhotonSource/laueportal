@@ -90,11 +90,12 @@ selection, a source), put in place of a failed field so that the other fields ca
 LIVE_STAND_INS: dict[str, Any] = {**STAND_INS, "filename_prefixes": ["%d"]}
 """``STAND_INS`` for a live schema, whose one template has exactly one ``%d``."""
 
-TRANSFERRED = "crux"
-"""The target whose inputs are transferred (Globus, to ALCF's Crux) from inside the experiment folder."""
-TRANSFERRED_INPUTS = ("input_path", "geometry_file", "crystal_file", "mask_file")
-"""The fields naming what a transferred run reads (``remote.plan.build_plan``: the manifest's inputs and these
-files)."""
+INSIDE_EXPERIMENT = {"crux": "An ALCF run", "pioneer": "An APS GPU run"}
+"""The targets whose runs read only files inside the experiment folder (Globus transfers a ``crux`` run's from
+there; the GPU cluster mounts only that storage), and how a message names their run."""
+TRANSFERRED_INPUTS = ("input_path", "geometry_file", "crystal_file", "mask_file", "background_file")
+"""The fields naming what such a run reads (``remote.plan.build_plan``: the manifest's inputs and these files; only
+LaueMatching has a background file)."""
 REMOTE_OUTPUT_FOLDER = "analysis"
 """A remote run's output folder stays under ``<files.runs_root>/analysis/`` (``bdp.yaml``'s experiment directory,
 ``remote.plan.build_plan``)."""
@@ -598,8 +599,9 @@ def check_backend(issues: Issues, settings: Settings, checked: Checked) -> None:
     if not checked.usable("backend") or values is None:
         return
     label = title(values, "backend")
+    kind = "laue_matching" if isinstance(values, LaueMatchingParamsV1) else None
     try:
-        offered = [target["value"] for target in programs.execution_targets(settings)]
+        offered = [target["value"] for target in programs.execution_targets(settings, kind)]
     except ProblemError as unusable:
         issues.error(["backend"], "backend_unavailable", f"{label}: {unusable.problem.detail}")
         return
@@ -612,13 +614,13 @@ def check_backend(issues: Issues, settings: Settings, checked: Checked) -> None:
 
 
 def check_transferred_inputs(issues: Issues, settings: Settings, checked: Checked) -> None:
-    """On ``crux`` (``TRANSFERRED``), the files the run reads (the input folder's, and the geometry, crystal and mask
-    files) are inside the experiment folder (``files.runs_root``, which ``bdp.yaml``'s experiment directory must be):
-    ``remote.plan.build_plan`` sends only those to ALCF and refuses any other at submission (an
+    """On ``crux`` and ``pioneer`` (``INSIDE_EXPERIMENT``), the files the run reads (the input folder's, and the
+    geometry, crystal, mask and background files) are inside the experiment folder (``files.runs_root``, which
+    ``bdp.yaml``'s experiment directory must be): ``remote.plan.build_plan`` refuses any other at submission (an
     error on each field)."""
 
     values = checked.values
-    if not remote_target(issues, checked) or values is None or values.backend != TRANSFERRED:
+    if not remote_target(issues, checked) or values is None or values.backend not in INSIDE_EXPERIMENT:
         return
     experiment = _real(issues, ["backend"], title(values, "backend"), settings.files.runs_root)
     if experiment is None:
@@ -634,7 +636,7 @@ def check_transferred_inputs(issues: Issues, settings: Settings, checked: Checke
             issues.error(
                 [name],
                 "remote_input",
-                f"An ALCF run reads only files inside {experiment} (the experiment folder): "
+                f"{INSIDE_EXPERIMENT[values.backend]} reads only files inside {experiment} (the experiment folder): "
                 f"{title(values, name)} is outside it",
             )
 

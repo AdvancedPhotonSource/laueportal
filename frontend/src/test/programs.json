@@ -1353,13 +1353,16 @@
             "x-source": "derived"
           },
           "backend": {
-            "const": "local",
             "default": "local",
-            "description": "Always `local`.",
-            "readOnly": true,
+            "description": "The execution target: `local` (this portal's worker, the CPU indexer) or `pioneer` (the APS cluster's GPU queue, through DM: the GPU stream indexer, with an installed forward cache). The form offers `pioneer` when that target is enabled (`remote.settings.available_backends`).",
+            "enum": ["local", "pioneer"],
             "title": "Run on",
             "type": "string",
-            "x-source": "derived"
+            "x-group": "Execution",
+            "x-hint": "Where the run is computed.",
+            "x-options": [{ "value": "local", "label": "APS" }],
+            "x-source": "form",
+            "x-widget": "target"
           },
           "algorithm_version": {
             "anyOf": [
@@ -1487,6 +1490,10 @@
           {
             "group": "Notes",
             "fields": ["notes"]
+          },
+          {
+            "group": "Execution",
+            "fields": ["backend"]
           }
         ]
       }

@@ -21,7 +21,7 @@ from laueportal.core.settings import RemoteSection
 from laueportal.core.timeutil import utcnow
 from laueportal.files.probe import bounded
 from laueportal.remote.dm import DMClient
-from laueportal.remote.health import CHECKS, RemoteCheck
+from laueportal.remote.health import CHECKS, GPU_CHECKS, RemoteCheck
 from laueportal.remote.settings import DMSettings, load_settings
 from laueportal.remote.transport import shell_command
 from laueportal.system.schemas import RemoteReadiness
@@ -33,8 +33,15 @@ STALE_AFTER = INTERVAL * 2
 
 
 class RemoteStatus:
-    def __init__(self, settings: RemoteSection, *, clock: Callable[[], float] = time.monotonic) -> None:
+    """The readiness of one remote route: ``crux`` (DM and the ALCF route, ``remote.health.CHECKS``) or ``pioneer``
+    (the APS GPU queue and its files, ``GPU_CHECKS``), each probed only while its target is enabled."""
+
+    def __init__(
+        self, settings: RemoteSection, *, target: str = "crux", clock: Callable[[], float] = time.monotonic
+    ) -> None:
         self._settings = settings
+        self._target = target
+        self._names = GPU_CHECKS if target == "pioneer" else CHECKS
         self._clock = clock
         self._lock = threading.Lock()
         self._client = DMClient(DMSettings(), own_session=True)
@@ -89,14 +96,22 @@ class RemoteStatus:
         assert self._settings.settings_file is not None
         file = self._settings.settings_file
         settings = bounded(file, lambda: load_settings(file))
-        if settings.targets.crux is None or not settings.targets.crux.enabled:
+        target = settings.targets.pioneer if self._target == "pioneer" else settings.targets.crux
+        if target is None or not target.enabled:
             return []
         dm = settings.dm
         if not all((dm.launcher_code, dm.launcher_python, dm.launcher_config)):
             raise ValueError("Launcher is not configured")
         packages = str(PurePosixPath(str(dm.launcher_code)) / "backend/src")
         command = shlex.join(
-            [str(dm.launcher_python), "-m", "laueportal.remote.health", "--config", str(dm.launcher_config)]
+            [
+                str(dm.launcher_python),
+                "-m",
+                "laueportal.remote.health",
+                "--config",
+                str(dm.launcher_config),
+                *(["--target", "pioneer"] if self._target == "pioneer" else []),
+            ]
         )
         host = dm.launcher_ssh_host if "launcher_ssh_host" in dm.model_fields_set else dm.ssh_host
         # A remote helper needs its own deadline if SSH disconnects. Locally DMClient's
@@ -107,7 +122,7 @@ class RemoteStatus:
         script = f"export PYTHONNOUSERSITE=1 PYTHONPATH={shlex.quote(packages)}; exec {command}"
         result = self._client.run(shell_command(script, host), timeout=TIMEOUT)
         checks = TypeAdapter(list[RemoteCheck]).validate_python(json.loads(result.stdout))
-        if len(checks) != len(CHECKS) or {c.name for c in checks} != set(CHECKS):
+        if len(checks) != len(self._names) or {c.name for c in checks} != set(self._names):
             raise ValueError("Incomplete readiness answer")
         return checks
 
@@ -116,7 +131,7 @@ class RemoteStatus:
             checks = self._probe()
             failed = False
         except Exception:
-            checks = [RemoteCheck(name=n, state="unknown", detail="Status check unavailable") for n in CHECKS]
+            checks = [RemoteCheck(name=n, state="unknown", detail="Status check unavailable") for n in self._names]
             failed = True
         with self._lock:
             self._checks = checks

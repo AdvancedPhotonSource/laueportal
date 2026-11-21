@@ -8,7 +8,7 @@ A development machine from scratch, and what to do when something breaks. The co
 - Linux x86-64. On a machine with little memory, run at most two heavy processes at once (builds, full test suites,
   browsers).
 - On the `PATH`: `git`, `curl`, `uv` (0.12) and Node 26 (through nvm). Nothing else is installed globally: `make setup` brings
-  micromamba, the conda env (Python 3.12, compilers, GSL, HDF5, supervisor) and pnpm 12 into the scratch space.
+  micromamba, the conda env (Python 3.12, compilers, HDF5, supervisor) and pnpm 12 into the scratch space.
 - Network access to conda-forge, PyPI, the npm registry and GitHub (lauelab and pnpm releases).
 - No local data: every development input is synthetic (the committed fixtures under `backend/tests/fixtures/`
   and what `laueportal seed demo` makes from them with `laueportal.science.synthetic`).
@@ -33,9 +33,9 @@ downloads only from conda-forge, PyPI, the npm registry and GitHub (lauelab and 
 
 1. The workspace directories in `$LAUE_DEV_WORKSPACE`.
 2. micromamba (2.9.0-0), the binary from its GitHub release (checksum checked), in `tools/`, then the conda env in
-   `env/` from `environment.lock` (Python 3.12, compilers, GSL, HDF5, supervisor).
+   `env/` from `environment.lock` (Python 3.12, compilers, HDF5, supervisor).
 3. The locked Python packages (`requirements/dev.lock`, installed with `--no-deps`, then checked).
-4. lauelab from GitHub at `b846009`, built inside the env (its compilers and conda-forge's GSL), then an import
+4. lauelab from GitHub at `daf8225`, built inside the env with its compilers, then an import
    check of its merge APIs and its incremental `PreparedScan` (live runs).
 5. The backend, editable.
 6. pnpm 12.10.1, the standalone binary from its GitHub release (checksum checked), in `tools/`.
@@ -178,8 +178,7 @@ pnpm -C frontend install --frozen-lockfile    # once: node_modules belong to the
 
 | Symptom | What to do |
 |---|---|
-| lauelab fails to link (`relocation ... can not be used when making a shared object; recompile with -fPIC`, from `libgsl.a` or `libgslcblas.a`) | It was built against Ubuntu's `libgsl-dev`, whose static libraries are not position-independent. Build it only inside the env, as `make setup` does (`micromamba run`: conda-forge's GSL 2.8 is PIC). Check that `which gsl-config` points into `$LAUE_DEV_WORKSPACE/env/bin` after `. scripts/env.sh`; never install lauelab with the system's compilers or pip. |
-| lauelab is at another commit, or half-installed | `make setup` reinstalls it when its recorded commit is not `d5de751`; the smoke test of step 8 checks the native code. |
+| lauelab is at another commit, or half-installed | `make setup` reinstalls it when its recorded commit is not the pinned one (`LAUELAB_COMMIT` in `scripts/setup.sh`); the smoke test of step 8 checks the native code. |
 | `make setup` stops at step 7 ("installed from another store") | `node_modules` was linked from another workspace's pnpm store. Use a checkout per workspace (below); `SETUP_ALLOW_STORE_SWITCH=1 make setup` re-links this one on purpose. |
 | `pnpm install` refuses a package as too new, or a build script | `frontend/pnpm-workspace.yaml` resolves only releases at least 7 days old (`minimumReleaseAge`) and runs only the build scripts it allows (`allowBuilds`); adding either is a dependency change for a maintainer ([`AGENTS.md`](../../AGENTS.md)). |
 | `pnpm: command not found` | Source `scripts/env.sh`: pnpm is `$LAUE_DEV_WORKSPACE/tools/pnpm`, on the `PATH` only through it. |

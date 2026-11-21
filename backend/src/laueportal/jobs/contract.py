@@ -43,6 +43,8 @@ class RunRequest:
     live: Mapping[str, Any] | None = None  # a live run's live.json; None for a batch run
     cores: int | None = None  # a live run's cores (the dispatcher's share); None for a batch run
     publish_seconds: float | None = None  # a live run's live.publish_seconds; None for a batch run
+    execution: Mapping[str, Any] | None = None  # a remote run's execution policy (the plan's); None on the worker
+    deadline: float | None = None  # a remote run's soft time limit (time.monotonic()); start no input after it
 
     @property
     def parameters(self) -> Mapping[str, Any]:

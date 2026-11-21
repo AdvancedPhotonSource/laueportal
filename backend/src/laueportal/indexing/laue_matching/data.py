@@ -31,6 +31,30 @@ from laueportal.indexing.schemas import ForwardCacheList
 from laueportal.jobs.validation import Checked, Issues
 
 NOT_SET = "The LaueMatching data folder ([laue_matching] data_root) is not set on this portal"
+GPU = "pioneer"
+"""The target whose runs read the data folder of its own settings (``targets.pioneer.data_root``)."""
+NO_GPU_FOLDER = "The APS GPU target's LaueMatching data folder (targets.pioneer.data_root) is not set"
+GPU_BUILDS_NO_CACHE = (
+    "An APS GPU run reads an installed forward cache: build a new one with an APS run, then install it"
+)
+
+
+def data_root(settings: Settings, backend: str | None = None) -> Path | None:
+    """The data folder a run on ``backend`` reads: the portal's (``[laue_matching] data_root``), or on ``pioneer``
+    the target's (``bdp.yaml``'s ``targets.pioneer.data_root``, on storage the portal mounts too). ``None`` when it
+    is not set; ``WorkflowValidationError`` when the remote settings cannot be read."""
+    if backend != GPU:
+        return settings.laue_matching.data_root
+    from laueportal.remote.settings import RemoteSettingsError, portal_settings
+
+    try:
+        remote = portal_settings(settings.remote, runs_root=settings.files.runs_root)
+    except RemoteSettingsError:
+        raise WorkflowValidationError("The remote settings (remote.settings_file) cannot be used") from None
+    target = None if remote is None else remote.targets.pioneer
+    return None if target is None or target.data_root is None else Path(target.data_root)
+
+
 READ_ERRORS = (OSError, ValueError, KeyError, SyntaxError)
 """What reading a geometry or crystal file raises: ``xml.etree``'s ``ParseError`` is a ``SyntaxError``."""
 DEEP_DEPTH_UM = 100.0
@@ -60,9 +84,9 @@ def _instrument_values(geometry_file: str, crystal_file: str) -> dict[str, Any]:
 def with_instrument(request: LaueMatchingParamsV1, settings: Settings) -> LaueMatchingParamsV1:
     """``request`` with the crystal, detector and database values it freezes. ``WorkflowValidationError`` (run creation's
     own refusal, nothing created) when they cannot be read."""
-    root = settings.laue_matching.data_root
+    root = data_root(settings, request.backend)
     if root is None:
-        raise WorkflowValidationError(NOT_SET)
+        raise WorkflowValidationError(NO_GPU_FOLDER if request.backend == GPU else NOT_SET)
     try:
         values = _instrument_values(request.geometry_file, request.crystal_file)
         return request.with_values(**values, n_orientations=_database_orientations(root))
@@ -107,9 +131,17 @@ def check_laue_matching(issues: Issues, settings: Settings, checked: Checked, pa
     """The energy range, the data folder, and the named cache against the run's crystal, detector and energies."""
     if checked.usable("elo", "ehi") and params.elo >= params.ehi:
         issues.error(["ehi"], "energy_range", "Max Energy must be above Min Energy")
-    root = settings.laue_matching.data_root
+    gpu = checked.usable("backend") and params.backend == GPU
+    if gpu and checked.usable("create_forward_cache") and params.create_forward_cache:
+        issues.error(["forward_cache"], "gpu_builds_no_cache", GPU_BUILDS_NO_CACHE)
+        return
+    try:
+        root = data_root(settings, params.backend if gpu else None)
+    except WorkflowValidationError as error:
+        issues.error(["backend"], "remote_unusable", str(error))
+        return
     if root is None:
-        issues.error(["forward_cache"], "not_configured", NOT_SET)
+        issues.error(["forward_cache"], "not_configured", NO_GPU_FOLDER if gpu else NOT_SET)
         return
     try:
         n_orientations = _database_orientations(root)
@@ -171,17 +203,27 @@ def _suggested_name(geometry_file: str, crystal_file: str, elo: float, ehi: floa
 
 
 def list_forward_caches(
-    settings: Settings, *, geometry_file: str, crystal_file: str, elo: float, ehi: float, max_nr_laue_spots: int
+    settings: Settings,
+    *,
+    geometry_file: str,
+    crystal_file: str,
+    elo: float,
+    ehi: float,
+    max_nr_laue_spots: int,
+    backend: str = "local",
 ) -> ForwardCacheList:
-    """The caches in the data folder whose record exactly fits the form's values, and a free name for a new one. A
-    problem is part of the answer: the form shows it, and offers a new cache."""
+    """The caches in the data folder of a run on ``backend`` whose record exactly fits the form's values, and a free
+    name for a new one. A problem is part of the answer: the form shows it, and offers a new cache."""
 
     def unavailable(problem: str) -> ForwardCacheList:
         return ForwardCacheList(caches=[], suggested_name=None, problem=problem)
 
-    root = settings.laue_matching.data_root
+    try:
+        root = data_root(settings, backend)
+    except WorkflowValidationError as error:
+        return unavailable(str(error))
     if root is None:
-        return unavailable(NOT_SET)
+        return unavailable(NO_GPU_FOLDER if backend == GPU else NOT_SET)
     try:
         geometry = str(resolve_inside_roots(geometry_file, settings)[1])
         crystal = str(resolve_inside_roots(crystal_file, settings)[1])

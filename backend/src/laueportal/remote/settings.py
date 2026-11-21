@@ -17,7 +17,7 @@ What is checked, and when:
   as enabled). Two values a run could start with are refused on purpose: ``auth_profile: null`` (it would use the
   beamline profile with a ``gladier-None.cfg``) and a target ``enabled`` that is not a boolean (a truthiness test would
   read any non-empty value, even ``"false"``, as enabled). An SSH host (``dm.ssh_host``, ``dm.launcher_ssh_host``,
-  ``targets.aps.submit_host``) that starts with ``-`` is refused too: ssh would read it as an option.
+  ``targets.aps.submit_host``, ``targets.pioneer.submit_host``) that starts with ``-`` is refused too: ssh would read it as an option.
 - :func:`portal_settings` is the portal's view: the YAML when ``[remote]`` enables it (``enabled`` forced
   true), else ``None``. It requires what every submission and poll reads (the DM settings, the APS
   storage root, the submission directory), a positive ``poll_seconds``, ``dm.timeout_seconds`` and
@@ -152,11 +152,16 @@ class StorageSections(_Model):
 
 
 class PBSSettings(_Model):
+    """A target's PBS request. ``mem`` (as PBS writes it, ``64gb``) and ``ngpus`` are read on a shared-storage target
+    (``aps``, ``pioneer``) only; without ``ngpus`` its jobs ask for no GPU."""
+
     account: Scalar | None = None
     queue: Scalar | None = None
     walltime: Scalar | None = None
     nodes: WholeNumber = 1
     cpus: WholeNumber = 32
+    mem: Scalar | None = None
+    ngpus: WholeNumber | None = None
 
 
 class ExecutionPolicy(_Model):
@@ -169,6 +174,13 @@ class ExecutionPolicy(_Model):
     indexing_ranks_per_node: WholeNumber = 1
     indexing_threads_per_worker: WholeNumber | None = None
     memory_limit_mb: WholeNumber | None = None
+    laue_matching_indexer: Literal["cpu", "stream"] | None = None
+    """``stream``: LaueMatching runs match with the GPU stream daemon (``pioneer``)."""
+    segment_seconds: Seconds | None = None
+    """How often a LaueMatching run commits the frames it finished (``indexing.laue_matching.output.Segments``)."""
+    soft_deadline_seconds: Seconds | None = None
+    """How long after the PBS job starts a run starts no further frame, then merges and ends, so it ends before the
+    walltime kills it."""
 
 
 class _Target(_Model):
@@ -199,6 +211,30 @@ class ApsTarget(_Target):
     """``targets.aps``: PBS on the APS cluster, submitted by the launcher (``qsub``, over SSH if set)."""
 
     submit_host: SSHHost | None = None
+
+
+class PioneerTarget(_Target):
+    """``targets.pioneer``: LaueMatching on the APS cluster's GPU queue, submitted by the launcher as ``aps`` is
+    (``qsub`` over SSH; the run directory is on storage the cluster mounts). ``data_root`` is the LaueMatching data
+    folder its jobs read (the orientation database and the installed forward caches), on that storage."""
+
+    submit_host: SSHHost | None = None
+    data_root: StrictStr | None = None
+
+    def missing_keys(self) -> list[str]:
+        """Also what makes it a GPU target: a GPU in its PBS request and the stream indexer, never a CPU plan."""
+        missing = [*super().missing_keys(), *(["data_root"] if self.data_root is None else [])]
+        if self.execution is not None:
+            missing += [
+                f"execution.{key}"
+                for key in ("segment_seconds", "soft_deadline_seconds")
+                if getattr(self.execution, key) is None
+            ]
+            if self.execution.laue_matching_indexer != "stream":
+                missing.append("execution.laue_matching_indexer (stream)")
+        if self.pbs is not None and int(self.pbs.ngpus or 0) < 1:
+            missing.append("pbs.ngpus (at least 1)")
+        return missing
 
 
 class ListingSettings(_Model):
@@ -242,6 +278,7 @@ class CruxTarget(_Target):
 class TargetSections(_Model):
     aps: ApsTarget | None = None
     crux: CruxTarget | None = None
+    pioneer: PioneerTarget | None = None
 
 
 def _ignored_flag(value: object) -> object:
@@ -286,7 +323,7 @@ class RemoteSettings(_Model):
             return Path(self.experiment_directory)
         return Path(self.aps_storage().root("aps")) / "LauePortal"
 
-    def target(self, backend: str) -> ApsTarget | CruxTarget:
+    def target(self, backend: str) -> ApsTarget | CruxTarget | PioneerTarget:
         target = getattr(self.targets, backend, None) if backend in REMOTE_BACKENDS else None
         if target is None:
             raise RemoteSettingsError(f"targets.{backend} is not configured")
@@ -415,14 +452,24 @@ def collection_path(storage: StorageSettings, path: str | os.PathLike[str]) -> s
 class BackendOption(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    label: Literal["APS", "ALCF"]
-    value: Literal["local", "aps", "crux"]
+    label: Literal["APS", "ALCF", "APS GPU"]
+    value: Literal["local", "aps", "crux", "pioneer"]
 
 
-def available_backends(settings: RemoteSettings | None) -> list[BackendOption]:
-    """The form's choices: one APS choice, ``local`` (the portal's worker) until the ``aps`` target is enabled;
-    ALCF when the ``crux`` target is."""
+LAUE_MATCHING = "laue_matching"
+"""The program whose runs ``pioneer`` computes, and which no other remote target does."""
+
+
+def available_backends(settings: RemoteSettings | None, program: str | None = None) -> list[BackendOption]:
+    """The form's choices for ``program`` (a ``jobs.programs`` kind). LaueGo and wire: one APS choice, ``local``
+    (the portal's worker) until the ``aps`` target is enabled; ALCF when the ``crux`` target is. LaueMatching: APS
+    (``local``), and APS GPU when the ``pioneer`` target is."""
     targets = settings.targets if settings is not None and settings.enabled else TargetSections()
+    if program == LAUE_MATCHING:
+        options = [BackendOption(label="APS", value="local")]
+        if targets.pioneer is not None and targets.pioneer.enabled:
+            options.append(BackendOption(label="APS GPU", value="pioneer"))
+        return options
     aps_backend = "aps" if targets.aps is not None and targets.aps.enabled else "local"
     options = [BackendOption(label="APS", value=aps_backend)]
     if targets.crux is not None and targets.crux.enabled:
@@ -431,5 +478,8 @@ def available_backends(settings: RemoteSettings | None) -> list[BackendOption]:
 
 
 def require_backend(name: str | None, settings: RemoteSettings | None) -> None:
-    if name not in {option.value for option in available_backends(settings)}:
+    """``name`` is a choice of some program's form (which program a target computes is the plan's check:
+    ``remote.plan.TARGET_KINDS``)."""
+    offered = {option.value for program in (None, LAUE_MATCHING) for option in available_backends(settings, program)}
+    if name not in offered:
         raise ValueError(f"Execution target {name!r} is not enabled")

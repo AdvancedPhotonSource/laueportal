@@ -9,7 +9,6 @@ dependencies:
   - cmake>=3.24
   - ninja
   - patchelf
-  - gsl=2.8.*        # lauelab links static GSL; conda-forge libgsl.a is already PIC
   - hdf5=1.14.*
   - zlib
   - numpy>=2.0

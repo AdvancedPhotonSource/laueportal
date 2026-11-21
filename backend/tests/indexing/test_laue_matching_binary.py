@@ -120,3 +120,67 @@ def test_a_run_builds_a_cache_finds_the_grain_and_the_next_run_reuses_it(tmp_pat
     assert reused.n_indexed == 1, hooks.failures
     with h5py.File(again / "output.h5") as results:
         assert disorientation_deg(reference, unit_columns(results["patterns/reciprocal"][0].T)) < 0.1
+
+
+def test_the_stream_path_with_float32_images_finds_the_same_grains_as_the_cpu_path(tmp_path, monkeypatch):
+    """The GPU daemon receives each prepared image as float32 (its wire format), the CPU binary as float64: the real
+    CPU binary behind the stream stand-in shows what that rounding changes. Same frames, same patterns, same assigned
+    reflections; orientations within 0.001 degrees."""
+    from laueportal.indexing.laue_matching import compute as laue_compute
+    from tests.laue_matching_stream_support import fake_daemon, on_gpu
+
+    reference = lauego_orientation()
+    data_root = tmp_path / "data"
+    data_root.mkdir()
+    n_orientations = write_database(data_root / cache.DATABASE_NAME, reference)
+    values = parameters(
+        data_root,
+        n_orientations=n_orientations,
+        forward_cache="grain",
+        create_forward_cache=True,
+        threshold_method="percentile",
+        threshold_percentile=99.9,
+        min_area=3,
+        min_nr_spots=5,
+        min_good_spots=2,
+        num_threads=4,
+    )
+    built, _, hooks = run(tmp_path, "build", values)
+    assert built.n_indexed == 1, hooks.failures
+    reuse = values | {"create_forward_cache": False}
+    frames = [FRAME, FRAME.with_name("synthetic_ni_grain_b.h5"), FRAME.with_name("synthetic_ni_two_grains.h5")]
+
+    def index(name: str, execution: dict[str, Any] | None) -> Path:
+        directory = tmp_path / name
+        entries = [
+            ManifestEntry(index=i, input_id=f"f{i}", source=str(path), template_index=0, scan_point=i, depth_point=None)
+            for i, path in enumerate(frames)
+        ]
+        request = RunRequest(
+            job_id=1,
+            kind=compute.LAUE_MATCHING_KIND,
+            display_id="I1",
+            run_directory=str(directory),
+            manifest_path=str(directory / "inputs.jsonl"),
+            document={"request": reuse, "output": {}},
+            n_inputs=len(entries),
+            workers=1,
+            max_in_flight=None,
+            execution=execution,
+        )
+        outcome = compute.compute_laue_matching(request, entries, Hooks())
+        assert outcome.n_succeeded == len(frames)
+        return directory / "output.h5"
+
+    cpu = index("cpu", None)
+    daemon = fake_daemon(tmp_path, compute.laue_indexer.require_binary("CPU"))
+    monkeypatch.setattr(laue_compute, "stream_binary", lambda require: daemon)
+    monkeypatch.setattr(laue_compute, "gpu_evidence", on_gpu)
+    gpu = index("gpu", {"laue_matching_indexer": "stream", "segment_seconds": 0})
+
+    with h5py.File(cpu) as first, h5py.File(gpu) as second:
+        assert first["frames/n_patterns"][()].tolist() == second["frames/n_patterns"][()].tolist()
+        assert sum(first["frames/n_patterns"][()]) >= 2
+        np.testing.assert_array_equal(first["assignments/hkl"][()], second["assignments/hkl"][()])
+        for one, other in zip(first["patterns/reciprocal"][()], second["patterns/reciprocal"][()], strict=True):
+            assert disorientation_deg(unit_columns(one.T), unit_columns(other.T)) < 1e-3

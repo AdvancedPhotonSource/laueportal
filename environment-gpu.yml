@@ -1,0 +1,22 @@
+# The conda env of the `pioneer` target's compute nodes (the APS cluster's GPU queue): environment.yml's toolchain and
+# libraries (no supervisor: the portal's services do not run there) plus conda-forge's CUDA compiler, which builds
+# laue-index's LaueMatchingGPUStream (requirements/compute-gpu.in), so the nodes need no CUDA toolkit of their own.
+# cuda-version must be one the nodes' NVIDIA driver runs (nvidia-smi reports the highest).
+name: laueportal-gpu
+channels: [conda-forge, nodefaults]
+dependencies:
+  - python=3.12.*
+  - pip
+  - c-compiler
+  - cxx-compiler
+  - cmake>=3.24
+  - ninja
+  - patchelf
+  - hdf5=1.14.*
+  - zlib
+  - numpy>=2.0
+  - h5py
+  - cffi
+  - cuda-version=12.8
+  - cuda-nvcc
+  - cuda-cudart-dev

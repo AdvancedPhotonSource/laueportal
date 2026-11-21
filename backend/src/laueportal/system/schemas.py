@@ -38,7 +38,8 @@ class Health(_ApiModel):
 
 
 class RemoteReadiness(_ApiModel):
-    """Cached, read-only ALCF checks. Online does not guarantee worker startup or PBS capacity."""
+    """Cached, read-only checks of a remote route (ALCF, or the APS GPU queue). Online does not guarantee worker
+    startup or PBS capacity."""
 
     enabled: bool
     state: Literal["ok", "warning", "error", "unknown", "disabled"]

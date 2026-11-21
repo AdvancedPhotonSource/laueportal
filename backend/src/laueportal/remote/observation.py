@@ -14,7 +14,7 @@ takes it. The format:
 - ``submission_id``, the run's; ``flow_state``, the Flow's step (``InputTransfer``, ``RunPbsJob``, ``ResultTransfer``);
 - and what the portal keeps without reading it (``flow_run_id``, the transfer's counters, ``remote_progress``).
 
-``aps`` runs have none (``OBSERVED_TARGET``). Only the standard library, so the launcher side may use it too.
+``aps`` runs have none (``OBSERVED_TARGETS``). Only the standard library, so the launcher side may use it too.
 """
 
 from __future__ import annotations
@@ -23,8 +23,9 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-OBSERVED_TARGET = "crux"
-"""The execution target whose runs carry an observation (the Globus flow to ALCF); ``aps`` has none."""
+OBSERVED_TARGETS = frozenset({"crux", "pioneer"})
+"""The execution targets whose runs carry an observation: the Globus flow to ALCF, and the GPU queue's PBS job
+(``remote.stage.pbs_observation``); ``aps`` has none."""
 PHASE_LABELS = {
     "uplink": "Uplink",
     "queued": "Queued",
@@ -97,14 +98,14 @@ def is_publishing(value: Any) -> bool:
 def accept(value: Any, *, backend: str | None, submission_id: str | None, stored: Any) -> dict[str, Any] | None:
     """The observation a DM record carries (``remoteObservation``: the JSON text, or the object) for a job of
     ``backend`` and ``submission_id`` that holds ``stored``; None when it
-    carries none (absent or empty) and for a job of another target than ``OBSERVED_TARGET`` (``aps`` has none).
+    carries none (absent or empty) and for a job of a target not in ``OBSERVED_TARGETS`` (``aps`` has none).
 
     Raises ``Refused`` for: a text longer than ``MAX_LENGTH``, or not JSON; a value that is not a JSON object, or whose
     JSON is longer than ``MAX_LENGTH``; one SQLite's JSON functions cannot read (``unreadable``); an unknown ``phase``;
     another ``submission_id`` than the job's; an ``observed_at`` that is not an aware time; one older than the
     ``stored`` observation's (compared as times). A ``stored`` value that is not an object, or has no aware
     ``observed_at``, is no stored one."""
-    if not value or backend != OBSERVED_TARGET:
+    if not value or backend not in OBSERVED_TARGETS:
         return None
     if isinstance(value, str):
         if len(value) > MAX_LENGTH:

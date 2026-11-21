@@ -156,8 +156,8 @@ class RemotePhase(StrEnum):
 
 
 class RemoteObservation(_ApiModel):
-    """A ``crux`` run's latest remote observation: the ``remoteObservation`` that the launcher's DM stage prints and the
-    remote poller accepted from DM's record (``remote.observation``)."""
+    """A ``crux`` or ``pioneer`` run's latest remote observation: the ``remoteObservation`` that the launcher's DM stage
+    prints and the remote poller accepted from DM's record (``remote.observation``)."""
 
     phase: RemotePhase
     detail: str | None

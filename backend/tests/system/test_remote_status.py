@@ -1,5 +1,6 @@
 """A shared on-demand check cannot block page loads or launch one probe per browser."""
 
+import base64
 import json
 import subprocess
 import sys
@@ -167,5 +168,36 @@ dm:
             assert time.monotonic() < deadline, "Probe child survived API shutdown"
             time.sleep(0.01)
         assert settled(cache).stale
+    finally:
+        cache.close()
+
+
+def test_the_gpu_probe_asks_the_launcher_for_the_gpu_checks_only_while_the_target_is_enabled(tmp_path, monkeypatch):
+    from laueportal.remote.health import GPU_CHECKS
+
+    config = tmp_path / "private.yaml"
+    config.write_text("""targets:
+  pioneer: {enabled: true}
+dm:
+  launcher_ssh_host: user@launcher.example.invalid
+  launcher_python: /installed/env/bin/python
+  launcher_code: /installed/source
+  launcher_config: /private/bdp.yaml
+""")
+    cache = RemoteStatus(RemoteSection(enabled=True, settings_file=config), target="pioneer")
+    calls = []
+
+    def run(argv, *, timeout):
+        calls.append(argv)
+        checks = [RemoteCheck(name=name, state="ok", detail="Available") for name in GPU_CHECKS]
+        return subprocess.CompletedProcess(argv, 0, json.dumps([c.model_dump() for c in checks]), "")
+
+    monkeypatch.setattr(cache._client, "run", run)
+    try:
+        assert [check.name for check in cache._probe()] == list(GPU_CHECKS)
+        encoded = calls[0][-1].split("printf %s ", 1)[1].split(" | base64", 1)[0]
+        assert "--target pioneer" in base64.b64decode(encoded).decode()
+        config.write_text("targets:\n  pioneer: {enabled: false}\n  crux: {enabled: true}\n")
+        assert cache._probe() == []  # disabled: no probe, and the indicator shows nothing of it
     finally:
         cache.close()

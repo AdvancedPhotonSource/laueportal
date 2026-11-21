@@ -14,6 +14,7 @@ from typing import Any, Literal
 from pydantic import field_validator
 
 from laueportal.core.params import (
+    BACKEND_NAMES,
     FilenameTemplate,
     PathText,
     ProgramParams,
@@ -108,6 +109,7 @@ class LaueMatchingParamsV1(ProgramParams):
             ),
         ),
         ("Notes", ("notes",)),
+        ("Execution", ("backend",)),
     )
 
     scan_number: int | None = _shared("scan_number")
@@ -338,7 +340,20 @@ class LaueMatchingParamsV1(ProgramParams):
     detector_id: str | None = _instrument("Detector", "The geometry file's detector identifier.")
     n_orientations: int | None = _instrument("Orientations", "The orientation database's size, in orientations.")
 
-    backend: Literal["local"] = param("local", title="Run on", source="derived", description="Always `local`.")
+    backend: Literal["local", "pioneer"] = param(
+        "local",
+        title="Run on",
+        source="form",
+        group="Execution",
+        widget="target",
+        options={"local": BACKEND_NAMES["local"], "pioneer": BACKEND_NAMES["pioneer"]},
+        description=(
+            "The execution target: `local` (this portal's worker, the CPU indexer) or `pioneer` (the APS cluster's "
+            "GPU queue, through DM: the GPU stream indexer, with an installed forward cache). The form offers "
+            "`pioneer` when that target is enabled (`remote.settings.available_backends`)."
+        ),
+        hint="Where the run is computed.",
+    )
     algorithm_version: str | None = algorithm_version_param()
     computer_name: str = computer_name_param()
     priority: int = priority_param()

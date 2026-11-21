@@ -60,7 +60,7 @@ export const ListJobsResponse = zod.object({
   "phase": zod.enum(['uplink', 'queued', 'running', 'downlink', 'login_required']).describe('Where a ``crux`` run is, by its latest remote observation (four phases, and Login needed).'),
   "phase_since": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).describe('Since when the run has been in this phase; null when the launcher did not say.'),
   "stale": zod.boolean().describe('The phase may lag: the launcher could not see the run, or the observation is more than 90 s old.')
-}).describe('A ``crux`` run\'s latest remote observation: the ``remoteObservation`` that the launcher\'s DM stage prints and the\nremote poller accepted from DM\'s record (``remote.observation``).'),zod.null()]).describe('A ``crux`` run\'s latest remote observation as the job page shows it (``JobRemoteRun.observation``, ``stale``\nat the page\'s ``as_of``), for the Status cell while the run is queued or running; null when the job page shows\nnone. It neither sorts nor filters.'),
+}).describe('A ``crux`` or ``pioneer`` run\'s latest remote observation: the ``remoteObservation`` that the launcher\'s DM stage\nprints and the remote poller accepted from DM\'s record (``remote.observation``).'),zod.null()]).describe('A ``crux`` run\'s latest remote observation as the job page shows it (``JobRemoteRun.observation``, ``stale``\nat the page\'s ``as_of``), for the Status cell while the run is queued or running; null when the job page shows\nnone. It neither sorts nor filters.'),
   "phase": zod.union([zod.string(),zod.null()]).describe('The finer execution phase (``created``, ``published``, ``queued``, ``running``, ``finalizing``, then\n``finished``, ``failed``, ``cancelled`` or ``interrupted``).'),
   "run": zod.union([zod.object({
   "id": zod.int(),
@@ -202,7 +202,7 @@ export const GetJobResponse = zod.object({
   "phase": zod.enum(['uplink', 'queued', 'running', 'downlink', 'login_required']).describe('Where a ``crux`` run is, by its latest remote observation (four phases, and Login needed).'),
   "phase_since": zod.union([zod.iso.datetime({"offset":true}),zod.null()]).describe('Since when the run has been in this phase; null when the launcher did not say.'),
   "stale": zod.boolean().describe('The phase may lag: the launcher could not see the run, or the observation is more than 90 s old.')
-}).describe('A ``crux`` run\'s latest remote observation: the ``remoteObservation`` that the launcher\'s DM stage prints and the\nremote poller accepted from DM\'s record (``remote.observation``).'),zod.null()]).describe('A ``crux`` run\'s latest remote observation while the run is queued or running; null otherwise (an ``aps``\nrun, none received yet, or the run ended).'),
+}).describe('A ``crux`` or ``pioneer`` run\'s latest remote observation: the ``remoteObservation`` that the launcher\'s DM stage\nprints and the remote poller accepted from DM\'s record (``remote.observation``).'),zod.null()]).describe('A ``crux`` run\'s latest remote observation while the run is queued or running; null otherwise (an ``aps``\nrun, none received yet, or the run ended).'),
   "target": zod.string().describe('The execution target (``aps``, ``crux``; ``jobs.backends``).')
 }).describe('Where a remote run executes and DM\'s view of it, and for a ``crux`` run where it is (its remote observation). Its\nprogress counters update when the results return; the heartbeat check does not apply.'),zod.null()]).describe('Null for a local run.'),
   "run": zod.union([zod.object({

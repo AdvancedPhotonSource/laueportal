@@ -143,7 +143,7 @@ def param(
 
 
 Backend = Literal["local", "aps", "crux"]
-"""The execution targets (``jobs.backends.BACKENDS``)."""
+"""The execution targets of LaueGo and wire runs (``jobs.backends.BACKENDS`` but ``pioneer``)."""
 
 
 # The keys every program shares, after its own, in their order.
@@ -198,7 +198,7 @@ def algorithm_version_param() -> Any:
     )
 
 
-BACKEND_NAMES: Mapping[str, str] = {"local": "APS", "aps": "APS", "crux": "ALCF"}
+BACKEND_NAMES: Mapping[str, str] = {"local": "APS", "aps": "APS", "crux": "ALCF", "pioneer": "APS GPU"}
 """Where each execution target computes: the one mapping that names a target, as the forms' Run on choices
 (``backend_param``), the run monitor's Execution and the job page's Remote Run card (``jobs.service``) show it. A
 target without a name here is shown as it is."""

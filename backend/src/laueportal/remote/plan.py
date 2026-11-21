@@ -23,14 +23,31 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 from uuid import UUID
 
+from laueportal.indexing.laue_matching.cache import (
+    DATABASE_NAME,
+    ORIENTATION_BYTES,
+    cache_folder,
+    key_from_parameters,
+    reuse_problem,
+)
+from laueportal.jobs.backends import SHARED, transport
 from laueportal.jobs.rundir import read_manifest, read_request, verify_manifest, write_json_file
 from laueportal.remote.paths import PLAN_NAME, child_path
 from laueportal.remote.pbs import build_script
 from laueportal.remote.settings import RemoteSettings, RemoteSettingsError, collection_path
 
 SUBMISSION_LOCK_NAME = ".bdp-submission.lock"
-REMOTE_KINDS = ("lauego_indexing", "wire_reconstruction")
+LAUE_MATCHING_KIND = "laue_matching_indexing"
+REMOTE_KINDS = ("lauego_indexing", "wire_reconstruction", LAUE_MATCHING_KIND)
 """The run kinds a remote target computes: the runners and the poller name each of them."""
+TARGET_KINDS: dict[str, tuple[str, ...]] = {
+    "aps": ("lauego_indexing", "wire_reconstruction"),
+    "crux": ("lauego_indexing", "wire_reconstruction"),
+    "pioneer": (LAUE_MATCHING_KIND,),
+}
+"""The run kinds each remote target computes."""
+LAUE_MATCHING_INPUTS = ("input_path", "geometry_file", "crystal_file", "mask_file", "background_file")
+"""The files a LaueMatching run reads besides its data folder: inside the experiment folder on a remote target."""
 
 
 def submission_path(settings: RemoteSettings, submission_id: str) -> Path:
@@ -55,6 +72,8 @@ def build_plan(
     document = read_request(job.request_path)
     if document["kind"] not in REMOTE_KINDS:
         raise RemoteSettingsError(f"A {document['kind']} run computes only on the portal's own worker")
+    if document["kind"] not in TARGET_KINDS.get(job.backend, ()):
+        raise RemoteSettingsError(f"A {document['kind']} run does not compute on the {job.backend} target")
     xml = document.get("output", {}).get("xml")
     if xml and os.path.isabs(xml):
         child_path(run, xml)  # Remote jobs must publish all outputs inside their run.
@@ -71,14 +90,22 @@ def build_plan(
         "execution": dict(target["execution"]),
         "pbs": dict(target["pbs"]),
     }
-    if job.backend == "aps":
+    if transport(job.backend) == SHARED:
+        path_map = {
+            str(run): str(run / "incoming" / submission_id),
+            source_root: source_root,
+        }
+        if document["kind"] == LAUE_MATCHING_KIND:
+            if job.n_inputs > MAX_STREAM_IMAGES:
+                raise RemoteSettingsError(
+                    f"A remote LaueMatching run takes at most {MAX_STREAM_IMAGES} inputs; this one has {job.n_inputs}"
+                )
+            entries = read_manifest(job.manifest_path)
+            path_map.update(_laue_matching_files(document["request"], target, experiment, progress, entries))
         plan.update(
             control_directory=str(run),
             output_directory=str(run / "incoming" / submission_id),
-            path_map={
-                str(run): str(run / "incoming" / submission_id),
-                source_root: source_root,
-            },
+            path_map=path_map,
             target=dict(target),
         )
         _check_script(plan)
@@ -156,14 +183,66 @@ def build_plan(
     return plan
 
 
+MAX_STREAM_IMAGES = 65535
+"""The most frames one GPU stream daemon matches (its image number is 16 bits: ``indexing.laue_matching.stream``)."""
+
+
+def _laue_matching_files(
+    request: dict[str, Any],
+    target: dict[str, Any],
+    experiment: Path,
+    progress: Callable[[], None],
+    entries: Any = (),
+) -> dict[str, str]:
+    """A LaueMatching run on a remote target: its files inside the experiment folder, which the cluster mounts, and
+    the target's data folder (``data_root``) holding the orientation database and the run's forward cache, exactly
+    fitting the run's frozen values (a remote run never builds a cache). The path map entry from the portal's data
+    folder (the request's ``data_root``) to the target's."""
+    for key in LAUE_MATCHING_INPUTS:
+        value = request.get(key)
+        if value:
+            try:
+                child_path(experiment, value)
+            except ValueError:
+                raise RemoteSettingsError(f"{key} must be inside the experiment folder {experiment}") from None
+    for entry in entries:  # each input as it resolves (a link inside the folder may lead out of it)
+        try:
+            child_path(experiment, entry.source)
+        except ValueError:
+            raise RemoteSettingsError(
+                f"Input {entry.input_id} must be inside the experiment folder {experiment}"
+            ) from None
+        progress()
+    if request.get("create_forward_cache"):
+        raise RemoteSettingsError("A remote LaueMatching run reads an installed forward cache; it never builds one")
+    root = Path(target["data_root"])
+    database = root / DATABASE_NAME
+    try:
+        size = database.stat().st_size
+    except OSError as error:
+        raise RemoteSettingsError(f"The orientation database {database} cannot be read: {error.strerror}") from None
+    if size != int(request["n_orientations"]) * ORIENTATION_BYTES:
+        raise RemoteSettingsError(f"The orientation database {database} is not the one this run was created with")
+    progress()
+    name = str(request["forward_cache"])
+    problem = reuse_problem(cache_folder(root, name), key_from_parameters(request))
+    if problem is not None:
+        raise RemoteSettingsError(f"Forward cache {name} is not installed on the target as this run needs: {problem}")
+    progress()
+    portal_root = request.get("data_root")
+    if not portal_root:
+        raise RemoteSettingsError("The run names no LaueMatching data folder")
+    return {str(portal_root): str(root)}
+
+
 def _check_script(plan: dict[str, Any]) -> None:
     """Refuse a plan the launcher could not build its PBS script from (``remote.pbs.build_script``)."""
     backend = plan["backend"]
     ranks = plan["execution"].get("indexing_ranks_per_node", 1)
-    if backend == "aps" and plan["kind"] == "lauego_indexing" and int(ranks) != 1:
+    if transport(backend) == SHARED and plan["kind"] == "lauego_indexing" and int(ranks) != 1:
         raise RemoteSettingsError(
-            "remote settings: targets.aps.execution.indexing_ranks_per_node must be 1: the aps target starts one "
-            "process (no mpiexec), so more ranks fail the MPI runner's size check"
+            f"remote settings: targets.{backend}.execution.indexing_ranks_per_node must be 1: the {backend} target "
+            "starts one process (no mpiexec), so more ranks fail the MPI runner's size check"
         )
     try:
         build_script(plan)

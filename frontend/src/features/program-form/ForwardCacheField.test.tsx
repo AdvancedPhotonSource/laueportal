@@ -59,6 +59,20 @@ describe("ForwardCacheField", () => {
   })
   afterEach(cleanup)
 
+  it("on APS GPU offers no new cache and drops a name its folder lacks", async () => {
+    answer.data = { caches: [], suggested_name: "Ni_5-30", problem: null }
+    await render(
+      <Form start={{ backend: "pioneer", forward_cache: "only_on_aps" }} />
+    )
+    await vi.waitFor(() => {
+      expect(values()).toMatchObject({
+        forward_cache: "",
+        create_forward_cache: false,
+      })
+    })
+    expect(newName()).toBeNull()
+  })
+
   it("chooses the one cache that fits", async () => {
     answer.data = { caches: ["Ni"], suggested_name: "x", problem: null }
     await render(<Form />)

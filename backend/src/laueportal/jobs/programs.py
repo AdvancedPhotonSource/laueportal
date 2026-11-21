@@ -121,10 +121,11 @@ def build_params(kind: AnyProgramKind, form: Mapping[str, Any], settings: Settin
     return MODELS[kind].from_form(form, fixed=fixed_values(kind, settings))
 
 
-def execution_targets(settings: Settings) -> list[dict[str, str]]:
-    """The execution targets this deployment offers, each ``{"value", "label"}``, in order
-    (``remote.settings.available_backends``): one "APS" choice, ``local`` until the DM ``aps`` target is enabled,
-    then ``aps``; "ALCF" (``crux``) when that target is enabled. A 503 problem when remote execution is enabled but
+def execution_targets(settings: Settings, kind: AnyProgramKind | None = None) -> list[dict[str, str]]:
+    """The execution targets this deployment offers ``kind``'s runs, each ``{"value", "label"}``, in order
+    (``remote.settings.available_backends``): for LaueGo and wire, one "APS" choice, ``local`` until the DM ``aps``
+    target is enabled, then ``aps``, and "ALCF" (``crux``) when that target is enabled; for LaueMatching, "APS"
+    (``local``) and "APS GPU" (``pioneer``) when that target is enabled. A 503 problem when remote execution is enabled but
     its settings cannot be used (``laueportal remote poll`` says why; the reason may quote the file, so it is not
     sent)."""
     try:
@@ -135,7 +136,7 @@ def execution_targets(settings: Settings) -> list[dict[str, str]]:
             "Remote settings unusable",
             "Remote execution is enabled, but its settings (remote.settings_file) cannot be used.",
         ) from None
-    return [{"value": option.value, "label": option.label} for option in available_backends(remote)]
+    return [{"value": option.value, "label": option.label} for option in available_backends(remote, kind)]
 
 
 def parameters_schema(
@@ -161,7 +162,7 @@ def parameters_schema(
     schema["required"] = [name for name in schema.get("required", ()) if name in form]
     schema["x-layout"] = [{"group": group, "fields": list(fields)} for group, fields in model.form_layout]
     if "backend" in form:
-        targets = execution_targets(settings) if targets is None else targets
+        targets = execution_targets(settings, kind) if targets is None else targets
         properties["backend"] |= {"x-options": targets, "default": targets[0]["value"]}
     return schema
 
@@ -177,14 +178,13 @@ def listed_kinds(settings: Settings) -> list[AnyProgramKind]:
 
 
 def list_programs(settings: Settings) -> ProgramList:
-    targets = execution_targets(settings)
     return ProgramList(
         programs=[
             Program(
                 kind=kind,
                 title=TITLES[kind],
                 schema_id=MODELS[kind].model_fields["schema_id"].default,
-                json_schema=parameters_schema(kind, settings, targets=targets),
+                json_schema=parameters_schema(kind, settings),
             )
             for kind in listed_kinds(settings)
         ]

@@ -73,7 +73,7 @@ def _outcome(case: dict[str, Any]) -> str | None:
     try:
         kept = accept(
             case["value"],
-            backend=case.get("backend", observation.OBSERVED_TARGET),
+            backend=case.get("backend", "crux"),
             submission_id=cases.SUBMISSION_ID,
             stored=case["stored"],
         )

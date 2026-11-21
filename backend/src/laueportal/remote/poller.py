@@ -316,7 +316,7 @@ def publish_returned(plan: dict[str, Any]) -> dict[str, Any]:
             if result.n_points != plan["n_inputs"] or result.n_complete != counts["n_succeeded"]:
                 raise ValueError("Returned reconstruction counters disagree with the run summary")
     if status == "Finished":
-        expected = "results" if plan["kind"] == "lauego_indexing" else "reconstruction"
+        expected = "reconstruction" if plan["kind"] == "wire_reconstruction" else "results"
         if expected not in mapped:
             raise ValueError(f"Returned success has no {expected} artifact")
     marker = run / PUBLICATION_MARKER
@@ -678,7 +678,7 @@ def _reconcile(
         if dm_state in TERMINAL_DM_STATES:
             incoming = Path(plan.get("incoming_directory", plan["output_directory"]))
             if (incoming / "run.json").exists():
-                if job.backend == observation.OBSERVED_TARGET:
+                if job.backend in observation.OBSERVED_TARGETS:
                     _publishing(engine, job, observed)
                     observed = None  # merged into "Publishing results"
                 summary = publish_returned(plan)

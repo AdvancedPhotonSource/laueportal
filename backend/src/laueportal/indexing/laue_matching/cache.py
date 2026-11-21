@@ -35,6 +35,12 @@ FORWARD_KIND = "forward_cache"
 _NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 
 
+def forward_bytes(n_orientations: int, max_nr_laue_spots: int) -> int:
+    """The forward file's size the indexer requires (its ``forwardCacheUsable``): per orientation, a count and an
+    x, y pair per spot, each a ``uint16``. A file of any other size is rebuilt over by the indexer."""
+    return 2 * int(n_orientations) * (1 + 2 * int(max_nr_laue_spots))
+
+
 def name_problem(name: str) -> str | None:
     """Why ``name`` cannot name a cache (it becomes a folder name), or ``None``."""
     if _NAME.fullmatch(name):
@@ -135,4 +141,7 @@ def reuse_problem(folder: str | os.PathLike[str], key: CacheKey) -> str | None:
     actual = (path / FORWARD_NAME).stat().st_size
     if size != actual:
         return f"{FORWARD_NAME} is {actual} bytes, and its record says {size}"
+    needed = forward_bytes(key.n_orientations, key.max_nr_laue_spots)
+    if actual != needed:
+        return f"{FORWARD_NAME} is {actual} bytes, and the indexer needs {needed} for this run"
     return record_mismatch(record, key)

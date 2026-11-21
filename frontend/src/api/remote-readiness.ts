@@ -1,8 +1,29 @@
-import { getRemoteReadiness } from "./generated/endpoints"
-import { GetRemoteReadinessResponse } from "./generated/zod/system/system.zod"
+import { getGpuReadiness, getRemoteReadiness } from "./generated/endpoints"
+import {
+  GetGpuReadinessResponse,
+  GetRemoteReadinessResponse,
+} from "./generated/zod/system/system.zod"
 
 /** The route serves cached status immediately. A hung API must not leave an old green dot forever. */
 export async function getRemoteReadinessWithin(signal: AbortSignal) {
+  return within(signal, async (inner) =>
+    GetRemoteReadinessResponse.parse(
+      await getRemoteReadiness({ signal: inner })
+    )
+  )
+}
+
+/** The APS GPU target's readiness, bounded as `getRemoteReadinessWithin`. */
+export async function getGpuReadinessWithin(signal: AbortSignal) {
+  return within(signal, async (inner) =>
+    GetGpuReadinessResponse.parse(await getGpuReadiness({ signal: inner }))
+  )
+}
+
+async function within<T>(
+  signal: AbortSignal,
+  call: (inner: AbortSignal) => Promise<T>
+): Promise<T> {
   const controller = new AbortController()
   const cancel = () => {
     controller.abort(signal.reason)
@@ -13,9 +34,7 @@ export async function getRemoteReadinessWithin(signal: AbortSignal) {
     controller.abort()
   }, 10_000)
   try {
-    return GetRemoteReadinessResponse.parse(
-      await getRemoteReadiness({ signal: controller.signal })
-    )
+    return await call(controller.signal)
   } finally {
     clearTimeout(timer)
     signal.removeEventListener("abort", cancel)

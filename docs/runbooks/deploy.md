@@ -50,7 +50,7 @@ micromamba create -y -p "$root/envs/laue-portal" --file "$root/src/environment.l
 py="$root/envs/laue-portal/bin/python"
 uv pip install --python "$py" --require-hashes --no-deps -r "$root/src/requirements/base.lock"
 micromamba run -p "$root/envs/laue-portal" uv pip install --python "$py" --no-deps \
-    "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@b846009a9628d9dfea2fd531eb5e6607d9b8094b"
+    "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@daf8225e7e4b1ae1dcf89cab0ee52118f71e8438"
 uv pip install --python "$py" --no-deps -e "$root/src/backend"
 uv pip check --python "$py"
 ```

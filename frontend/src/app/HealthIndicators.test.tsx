@@ -8,7 +8,7 @@ import {
 import { act } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import type { Health } from "@/api"
+import type { Health, RemoteReadiness } from "@/api"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { byRole, cleanup, render } from "@/test/render"
 import { HEALTH_POLL_MS } from "./health-indicators"
@@ -36,13 +36,51 @@ function setVisibility(state: DocumentVisibilityState) {
 
 type Fetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
+const GPU_DISABLED: RemoteReadiness = {
+  enabled: false,
+  state: "disabled",
+  checks: [],
+  checked_at: null,
+  stale: false,
+  checking: false,
+  retry_after_seconds: 0,
+}
+
+function gpuReadiness(state: "ok" | "unavailable"): RemoteReadiness {
+  return {
+    enabled: true,
+    state: state === "ok" ? "ok" : "error",
+    checks: [
+      {
+        name: "gpu_queue",
+        state,
+        detail: state === "ok" ? "Enabled" : "Queue disabled or stopped",
+      },
+      { name: "gpu_files", state: "ok", detail: "Accessible" },
+    ],
+    checked_at: "2026-11-20T12:00:00Z",
+    stale: false,
+    checking: false,
+    retry_after_seconds: 300,
+  }
+}
+
 /**
- * Render the indicators (their links need a router) with fetch answering the health check. The health query
- * has its own retry rule (`retryHealth`: the app's, retried after 1 and 2 s), whatever the client's default.
+ * Render the indicators (their links need a router) with fetch answering the health check, and the APS GPU
+ * readiness (`gpu`; disabled when not given). The health query has its own retry rule (`retryHealth`: the app's,
+ * retried after 1 and 2 s), whatever the client's default. The mock returned counts the health checks only.
  */
-async function renderIndicators(answer: Fetch) {
+async function renderIndicators(
+  answer: Fetch,
+  gpu: RemoteReadiness = GPU_DISABLED
+) {
   const fetchMock = vi.fn(answer)
-  vi.stubGlobal("fetch", fetchMock)
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input instanceof Request ? input.url : String(input)
+    return url.includes("/system/gpu-status")
+      ? Promise.resolve(Response.json(gpu))
+      : fetchMock(input, init)
+  })
   vi.spyOn(window, "scrollTo").mockImplementation(() => undefined)
   const router = createRouter({
     routeTree: createRootRoute({ component: HealthIndicators }),
@@ -242,6 +280,23 @@ describe("HealthIndicators", () => {
     expect(indicator()).toMatchObject({
       name: "Local Worker: running",
       words: "Local",
+    })
+  })
+
+  it("merges the APS GPU target: a dot while it is available, its pill when it is not", async () => {
+    vi.useFakeTimers()
+    const ok = () => Promise.resolve(Response.json(HEALTH_OK))
+    await renderIndicators(ok, gpuReadiness("ok"))
+    await act(() => vi.advanceTimersByTimeAsync(100))
+    expect(indicator()).toMatchObject({ name: "Local Worker: running" })
+    cleanup()
+
+    await renderIndicators(ok, gpuReadiness("unavailable"))
+    await act(() => vi.advanceTimersByTimeAsync(100))
+    expect(indicator()).toMatchObject({
+      name: "APS GPU unavailable",
+      tone: "error",
+      words: "APS GPU unavailable",
     })
   })
 

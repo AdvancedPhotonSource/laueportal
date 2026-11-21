@@ -79,8 +79,9 @@ practice that follows. When one of them conflicts with your task, say so and ask
   runs whose geometry, crystal, energies and spot count it exactly fits.
 - A **job** is the execution record of one run: its status (Queued, Running, Finished, Failed, Cancelled) and phase.
 - A **run directory** is the folder that contains a run's frozen request, input manifest, outputs and history.
-- An **execution target** is where a run computes: `local` (the worker), `aps` (the APS cluster, through DM and PBS) or
-  `crux` (ALCF's Crux, through DM, Globus and PBS), as defined in `jobs.backends`.
+- An **execution target** is where a run computes: `local` (the worker), `aps` (the APS cluster, through DM and PBS),
+  `crux` (ALCF's Crux, through DM, Globus and PBS) or `pioneer` (the APS cluster's GPU queue, through DM and PBS; for
+  LaueMatching only), as defined in `jobs.backends`.
 - **DM** is the APS Data Management system, which provides workflows, the DAQ catalog and transfers.
 - A **live run** processes frames while a DAQ writes them; a **live session** is one or two live runs started together.
   A **follower** is a live indexing run that indexes the points of a live reconstruction.
@@ -123,8 +124,8 @@ call a change to a program or to a run's behaviour done, decide for each entry w
 that applied in the pull request.
 
 - Batch and live runs: `params.py` and `live_params.py`, `compute.py` and `live_compute.py`, `jobs.follower`.
-- Each execution target: `local` (the job process); `aps` and `crux` (`remote.plan`, the launcher `remote.stage`,
-  the runners `jobs.runner` and `jobs.mpi_runner`, and `remote.poller`).
+- Each execution target: `local` (the job process); `aps`, `crux` and `pioneer` (`remote.plan`, the launcher
+  `remote.stage`, the runners `jobs.runner` and `jobs.mpi_runner`, and `remote.poller`).
 - Every page that shows runs (the job page, the Run Monitor, the run lists, the scan page, the Status page, the Live
   page and both viewers), in the light and the dark theme.
 - The API and the generated client: run `make gen` and commit `frontend/openapi.json` and `frontend/src/api/generated`

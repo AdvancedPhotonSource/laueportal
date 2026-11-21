@@ -14,6 +14,8 @@ format of ``remote.observation``), which ``02-MONITOR``'s regex keeps as a DM wo
 from the Flow's step, and while the Flow is in ``RunPbsJob`` from a listing of the run's ``results/`` on Eagle
 (:func:`observe`). While its Flow status call fails, it prints the kept observation, stale, and calls again after a
 back-off; only failures lasting longer than ``targets.crux.status_failure_budget_seconds`` fail it (:func:`flow_status`).
+On ``pioneer`` (the GPU queue), ``monitor`` prints an observation from the PBS job's state and the runner's
+``progress.json`` (:func:`pbs_observation`), and a stop leaves a running job to drain (:func:`drains`).
 It reads only the YAML settings: no database, no portal settings
 (import-linter rule 3). gladier and globus-sdk (``requirements/launcher.in``) are imported where needed.
 """
@@ -33,9 +35,10 @@ from pathlib import Path, PurePosixPath
 from typing import Any, cast
 from uuid import UUID
 
+from laueportal.jobs.backends import GLOBUS, transport
 from laueportal.jobs.rundir import write_json_file
 from laueportal.remote.dm import DMClient
-from laueportal.remote.observation import aware_time
+from laueportal.remote.observation import OBSERVED_TARGETS, aware_time
 from laueportal.remote.paths import child_path
 from laueportal.remote.plan import submission_path
 from laueportal.remote.settings import STATUS_FAILURE_BUDGET_SECONDS, ListingSettings, collection_path, load_settings
@@ -92,7 +95,7 @@ def submit(plan, settings):
         raise FileExistsError("This submission was already attempted; inspect its saved state before retrying")
     # Also retain an uncertain state when a network request succeeds but its reply is lost.
     write_json_file(state, {"status": "SUBMISSION_UNCERTAIN"})
-    if plan["backend"] == "crux":
+    if transport(plan["backend"]) == GLOBUS:
         from laueportal.remote.flow import flow_input
 
         client = _client(settings)
@@ -142,14 +145,56 @@ def monitor(plan, settings):
         command = ["/opt/pbs/bin/qstat", "-xf", "-F", "json", data["pbs_id"]]
         if plan["target"].get("submit_host"):
             command = ["ssh", "-T", "-o", "BatchMode=yes", plan["target"]["submit_host"], shlex.join(command)]
-        result = subprocess.run(command, check=True, capture_output=True, text=True, timeout=30)
+        result = _pbs_run(command, check=True, capture_output=True, text=True, timeout=30)
         record = next(iter(json.loads(result.stdout)["Jobs"].values()))
         if record["job_state"] == "F":
             data["status"] = "SUCCEEDED" if record.get("Exit_status") == 0 else "FAILED"
+        elif drains(plan) and not data.get("qdel_sent") and _stop_overdue(plan):
+            _qdel(plan, data["pbs_id"])  # the runner did not drain within STOP_GRACE_SECONDS of the stop
+            data["qdel_sent"] = True
+        if plan["backend"] in OBSERVED_TARGETS:
+            data["observation"] = pbs_observation(plan, data, record["job_state"])
     else:
         raise ValueError("Submission has no returned remote ID; manual reconciliation is required")
     write_json_file(state, data, overwrite=True)
     return data
+
+
+PBS_QUEUED = ("queued", "Waiting for PBS allocation")
+PBS_STALE_SECONDS = 90.0
+"""A running job's ``progress.json`` older than this makes its observation stale (the runner rewrites it every 5 s)."""
+
+
+def pbs_observation(plan, data: Mapping[str, Any], job_state: str) -> dict[str, Any]:
+    """A shared-storage run's observation (the format of ``remote.observation``) from its PBS job's state and the
+    runner's ``progress.json`` in the run's output folder, which the launcher reads directly: queued while PBS holds
+    the job, then running with the frames processed so far. Committed frames only, so the count never goes back."""
+    now = _now()
+    previous = data.get("observation") if isinstance(data.get("observation"), dict) else None
+    stale = None
+    if job_state in ("R", "E", "F"):
+        phase, detail = "running", "Processing"
+        try:
+            progress = json.loads((Path(plan["output_directory"]) / "progress.json").read_text())
+            done = int(progress["n_succeeded"]) + int(progress["n_failed"])
+            detail = f"Processing: {done} of {plan['n_inputs']} frames"
+            heartbeat = aware_time(progress.get("heartbeat_at"))
+            stale = heartbeat is not None and (now - heartbeat).total_seconds() > PBS_STALE_SECONDS and job_state == "R"
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+        if job_state == "F":
+            detail, stale = "Finishing processing", None
+    else:
+        phase, detail = PBS_QUEUED
+    observed = _time_text(now)
+    observation: dict[str, Any] = {"phase": phase, "detail": detail, "observed_at": observed}
+    if stale is not None:
+        observation["stale"] = stale
+    since = previous.get("phase_since") if previous is not None and previous.get("phase") == phase else None
+    observation["phase_since"] = since or observed
+    observation["submission_id"] = plan["submission_id"]
+    observation["pbs"] = {"job_id": data.get("pbs_id")}  # where a crux observation keeps it
+    return observation
 
 
 FLOW_STEPS = {
@@ -720,7 +765,7 @@ def restore_permissions(plan, settings):
     directory relative to it), bounded by ``dm.permissions_timeout_seconds``. Any failure fails the stage."""
     identifier = str(UUID(plan["submission_id"]))
     state = json.loads((_state_directory(settings) / f"{identifier}.json").read_text())
-    if plan["backend"] != "crux" or state["status"] != "SUCCEEDED":
+    if transport(plan["backend"]) != GLOBUS or state["status"] != "SUCCEEDED":
         raise ValueError("Permissions require a completed Globus workflow")
     if not settings.experiment_directory:
         raise ValueError("experiment_directory is required by the permissions stage")
@@ -735,7 +780,7 @@ def restore_permissions(plan, settings):
 
 
 def cancel(plan, settings):
-    if plan["backend"] == "crux":
+    if transport(plan["backend"]) == GLOBUS:
         import globus_sdk
 
         transfer = _transfer_client(settings)
@@ -754,14 +799,79 @@ def cancel(plan, settings):
         if transfer.get_task(result["task_id"])["status"] != "SUCCEEDED":
             raise RuntimeError("Cancellation marker transfer failed")
         return {"status": "CANCEL_REQUESTED"}
+    state = json.loads((_state_directory(settings) / f"{plan['submission_id']}.json").read_text())
+    if drains(plan) and _job_state(plan, state["pbs_id"]) in RUNNING_STATES:
+        # The runner reads the stop request in the run directory and drains (its segments merged, the daemon
+        # ended); ``monitor`` deletes the job if it still runs STOP_GRACE_SECONDS after the request.
+        return {"status": "CANCEL_REQUESTED"}
+    _qdel(plan, state["pbs_id"])
+    return {"status": "CANCEL_REQUESTED"}
+
+
+STOP_GRACE_SECONDS = 600
+"""How long a running job that drains on a stop (:func:`drains`) has before ``monitor`` deletes it with ``qdel``."""
+RUNNING_STATES = ("R", "E")
+"""PBS states of a job whose runner runs (or ends)."""
+
+
+def drains(plan) -> bool:
+    """Whether the run's runner drains on a stop and keeps its committed frames (a run that writes segments: its
+    execution policy has ``segment_seconds``): its running PBS job is then left to end on its own after a stop,
+    since ``qdel`` gives a job only PBS's ``kill_delay`` between SIGTERM and SIGKILL."""
+    return plan["execution"].get("segment_seconds") is not None
+
+
+def _pbs_run(command: list[str], **options: Any) -> subprocess.CompletedProcess[str]:
+    """``qstat`` and ``qdel`` on a shared-storage target (one seam, which the tests replace)."""
+    return subprocess.run(command, **options)
+
+
+def _pbs_command(plan, command: list[str]) -> list[str]:
     import shlex
 
-    state = json.loads((_state_directory(settings) / f"{plan['submission_id']}.json").read_text())
-    command = ["/opt/pbs/bin/qdel", state["pbs_id"]]
-    if plan["target"].get("submit_host"):
-        command = ["ssh", "-T", "-o", "BatchMode=yes", plan["target"]["submit_host"], shlex.join(command)]
-    subprocess.run(command, check=True, capture_output=True, text=True, timeout=30)
-    return {"status": "CANCEL_REQUESTED"}
+    host = plan["target"].get("submit_host")
+    return ["ssh", "-T", "-o", "BatchMode=yes", host, shlex.join(command)] if host else command
+
+
+def _qdel(plan, pbs_id: str) -> None:
+    _pbs_run(_pbs_command(plan, ["/opt/pbs/bin/qdel", pbs_id]), check=True, capture_output=True, text=True, timeout=30)
+
+
+def _job_state(plan, pbs_id: str) -> str:
+    result = _pbs_run(
+        _pbs_command(plan, ["/opt/pbs/bin/qstat", "-xf", "-F", "json", pbs_id]),
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    return next(iter(json.loads(result.stdout)["Jobs"].values()))["job_state"]
+
+
+def _stop_overdue(plan) -> bool:
+    """A stop was requested (``cancel.request`` in the control directory) more than ``STOP_GRACE_SECONDS`` ago: by
+    the time it holds (``requested_at``, the stop's own, which the poller writes again on each pass while the stop is
+    pending), else by the file's modification time."""
+    import time
+
+    path = Path(plan["control_directory"]) / "cancel.request"
+    try:
+        requested: float | None = path.stat().st_mtime
+    except FileNotFoundError:
+        return False
+    except OSError:
+        requested = None
+    try:
+        recorded = json.loads(path.read_text()).get("requested_at")
+    except (OSError, ValueError, AttributeError):
+        recorded = None
+    if isinstance(recorded, str):
+        try:
+            stamp = datetime.fromisoformat(recorded)
+            requested = (stamp if stamp.tzinfo else stamp.replace(tzinfo=UTC)).timestamp()
+        except ValueError:
+            pass
+    return requested is not None and time.time() - requested > STOP_GRACE_SECONDS
 
 
 CLEANUP_WAIT_SECONDS = 600
@@ -806,7 +916,7 @@ def cleanup(plan, settings):
         raise ValueError("The run's results are not published; nothing was removed")
     if published.get("status") != "Finished":
         raise ValueError("The run did not finish (its published status is not Finished); nothing was removed")
-    if plan["backend"] == "crux":
+    if transport(plan["backend"]) == GLOBUS:
         import globus_sdk
 
         endpoint, folder = eagle_run_folder(plan, settings)

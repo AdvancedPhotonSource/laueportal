@@ -150,6 +150,109 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
 
 
 
+export const getGetGpuReadinessUrl = () => {
+
+
+
+
+  return `/api/v1/system/gpu-status`
+}
+
+/**
+ * The APS GPU target's queue and files (``remote.health.GPU_CHECKS``), as ``/system/remote-status`` serves the
+ * ALCF checks: the shared result at once, refreshed at most once every five minutes; read-only, never a PBS job.
+ * `enabled` is false while the target is disabled.
+ * @summary APS GPU readiness
+ */
+export const getGpuReadiness = async ( options?: Parameters<typeof apiFetch>[1]): Promise<RemoteReadiness> => {
+
+  return apiFetch<RemoteReadiness>(getGetGpuReadinessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGpuReadinessQueryKey = () => {
+    return [
+    `/api/v1/system/gpu-status`
+    ] as const;
+    }
+
+
+export const getGetGpuReadinessQueryOptions = <TData = Awaited<ReturnType<typeof getGpuReadiness>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGpuReadiness>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGpuReadinessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGpuReadiness>>> = ({ signal }) => getGpuReadiness({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGpuReadiness>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetGpuReadinessQueryResult = NonNullable<Awaited<ReturnType<typeof getGpuReadiness>>>
+export type GetGpuReadinessQueryError = ErrorType<unknown>
+
+
+export function useGetGpuReadiness<TData = Awaited<ReturnType<typeof getGpuReadiness>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGpuReadiness>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getGpuReadiness>>,
+          TError,
+          Awaited<ReturnType<typeof getGpuReadiness>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetGpuReadiness<TData = Awaited<ReturnType<typeof getGpuReadiness>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGpuReadiness>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getGpuReadiness>>,
+          TError,
+          Awaited<ReturnType<typeof getGpuReadiness>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetGpuReadiness<TData = Awaited<ReturnType<typeof getGpuReadiness>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGpuReadiness>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary APS GPU readiness
+ */
+
+export function useGetGpuReadiness<TData = Awaited<ReturnType<typeof getGpuReadiness>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGpuReadiness>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetGpuReadinessQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 export const getGetRemoteReadinessUrl = () => {
 
 

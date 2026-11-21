@@ -22,7 +22,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SETUP = REPO_ROOT / "scripts" / "setup.sh"
 STORE_CHECK = REPO_ROOT / "scripts" / "pnpm-store-check.sh"
-LOCKS = ("dev", "base", "launcher", "compute")
+LOCKS = ("dev", "base", "launcher", "compute", "compute-gpu")
 """The lock sets, in the order ``make lock`` compiles them."""
 PINS = ("PNPM_VERSION", "MICROMAMBA_VERSION")
 """The tool pins in ``scripts/setup.sh``."""

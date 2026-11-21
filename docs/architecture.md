@@ -94,7 +94,7 @@ Nothing reads settings or opens connections at import time: entry points call `g
   submits with an `Idempotency-Key` (a row of `idempotency_key` in the database, kept 24 h). `jobs.creation.submit`
   claims it, validates again, then the service writes the run and job rows (phase `created`), the run directory's
   `inputs.jsonl` and `request.json` (`published`), and queues it: a `local` run by committing its phase `queued` (the
-  row is its queue entry), an `aps` or `crux` run through DM.
+  row is its queue entry), an `aps`, `crux` or `pioneer` run through DM.
 - **Running it.** The worker's dispatcher claims the next queued run (Running only while still Queued, in one write
   transaction) and starts a job process for it, which verifies the manifest, looks up the compute function by kind and
   calls it with database-backed hooks (heartbeat, progress, cancellation, failures); the outputs go into the run
@@ -222,7 +222,7 @@ workflow once, a call of its own, made only while a stop is pending. The listing
 since the last listing. The poller marks `poller_at` after a pass that needed no DM call or had its answer. `laueportal
 remote poll --once` makes one pass and a listing under the same lock (the runbook's checks and drains; refused while the
 worker's thread holds the lock); the command has no looping form, as it would be a second poller beside the worker. A
-`crux` run's DM record carries the launcher's remote observation (`remoteObservation`): the pass keeps it in
+`crux` or `pioneer` run's DM record carries the launcher's remote observation (`remoteObservation`): the pass keeps it in
 `job.remote_observation`, in its one write of the job, while the run is active when `remote.observation.accept` takes it
 (its checks, and what SQLite's JSON functions cannot read refused; a refusal is logged once per run and reason and
 changes nothing else), and writes the Downlink "Publishing results" before it publishes a returned `crux` run; no call
@@ -554,5 +554,6 @@ A program is a run kind with its own parameters and compute function. For a new 
 
 `laue_matching` is the example of a second program in one domain: `indexing/laue_matching/` has its parameters, compute
 and data-folder checks, `science/laue_matching.py` reads the crystal and detector, and it writes the same results file
-as LaueGo, so the viewers need only its labels. Its GPU plan is in
+as LaueGo, so the viewers need only its labels. On the `pioneer` target it matches with the GPU stream daemon
+(`indexing/laue_matching/stream.py`) and commits segments (`output.py`):
 [`laue-matching-remote-gpu.md`](laue-matching-remote-gpu.md).

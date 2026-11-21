@@ -4,6 +4,7 @@
  * 3DMN Portal API
  * OpenAPI spec version: 2.0.0.dev0
  */
+import type { ListForwardCachesBackend } from './listForwardCachesBackend';
 
 export type ListForwardCachesParams = {
 /**
@@ -29,4 +30,8 @@ ehi: number;
  * @exclusiveMinimum 0
  */
 max_nr_laue_spots: number;
+/**
+ * The run's target: its data folder is listed.
+ */
+backend?: ListForwardCachesBackend;
 };

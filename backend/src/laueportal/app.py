@@ -291,6 +291,7 @@ def create_app(settings: Settings) -> FastAPI:
     probe.configure(settings.files)
     engine = make_engine(settings, create=False)
     remote_status = RemoteStatus(settings.remote)
+    gpu_status = RemoteStatus(settings.remote, target="pioneer")
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -299,6 +300,7 @@ def create_app(settings: Settings) -> FastAPI:
             yield
         finally:
             remote_status.close()
+            gpu_status.close()
             engine.dispose()
 
     app = PortalAPI(
@@ -328,6 +330,7 @@ def create_app(settings: Settings) -> FastAPI:
     # Start's one lock across the one-session check, the creations and the queueing (the api is one process)
     app.state.daq_list = DaqList(settings.live)
     app.state.remote_status = remote_status
+    app.state.gpu_status = gpu_status
     app.state.live_start = threading.Lock()
 
     for router in _routers():

@@ -15,4 +15,6 @@ export const RemoteCheckName = {
   aps: 'aps',
   eagle: 'eagle',
   crux: 'crux',
+  gpu_queue: 'gpu_queue',
+  gpu_files: 'gpu_files',
 } as const;

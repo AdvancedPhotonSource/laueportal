@@ -19,6 +19,30 @@ export const GetHealthResponse = zod.object({
 })
 
 /**
+ * The APS GPU target's queue and files (``remote.health.GPU_CHECKS``), as ``/system/remote-status`` serves the
+ * ALCF checks: the shared result at once, refreshed at most once every five minutes; read-only, never a PBS job.
+ * `enabled` is false while the target is disabled.
+ * @summary APS GPU readiness
+ */
+export const getGpuReadinessResponseChecksItemDetailMax = 160;
+
+
+
+export const GetGpuReadinessResponse = zod.object({
+  "checked_at": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
+  "checking": zod.boolean(),
+  "checks": zod.array(zod.object({
+  "detail": zod.string().max(getGpuReadinessResponseChecksItemDetailMax),
+  "name": zod.enum(['dm', 'flows', 'compute', 'aps', 'eagle', 'crux', 'gpu_queue', 'gpu_files']),
+  "state": zod.enum(['ok', 'login_required', 'denied', 'unavailable', 'unknown', 'disabled'])
+}).describe('One observed component; the detail is fixed text, never an upstream exception.')),
+  "enabled": zod.boolean(),
+  "retry_after_seconds": zod.number(),
+  "stale": zod.boolean(),
+  "state": zod.enum(['ok', 'warning', 'error', 'unknown', 'disabled'])
+}).describe('Cached, read-only checks of a remote route (ALCF, or the APS GPU queue). Online does not guarantee worker\nstartup or PBS capacity.')
+
+/**
  * Return the shared check immediately; refresh at most once every five minutes, with failure backoff.
  * Checks run on the configured launcher host, never submitting a task or allocating PBS resources.
  * @summary ALCF connectivity
@@ -32,14 +56,14 @@ export const GetRemoteReadinessResponse = zod.object({
   "checking": zod.boolean(),
   "checks": zod.array(zod.object({
   "detail": zod.string().max(getRemoteReadinessResponseChecksItemDetailMax),
-  "name": zod.enum(['dm', 'flows', 'compute', 'aps', 'eagle', 'crux']),
+  "name": zod.enum(['dm', 'flows', 'compute', 'aps', 'eagle', 'crux', 'gpu_queue', 'gpu_files']),
   "state": zod.enum(['ok', 'login_required', 'denied', 'unavailable', 'unknown', 'disabled'])
 }).describe('One observed component; the detail is fixed text, never an upstream exception.')),
   "enabled": zod.boolean(),
   "retry_after_seconds": zod.number(),
   "stale": zod.boolean(),
   "state": zod.enum(['ok', 'warning', 'error', 'unknown', 'disabled'])
-}).describe('Cached, read-only ALCF checks. Online does not guarantee worker startup or PBS capacity.')
+}).describe('Cached, read-only checks of a remote route (ALCF, or the APS GPU queue). Online does not guarantee worker\nstartup or PBS capacity.')
 
 /**
  * Database (and its path), API version, the worker and its threads, the queue's counts (the job and conversion

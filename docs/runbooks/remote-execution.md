@@ -27,7 +27,7 @@ Deploy the same reviewed source revision to the enabled execution components. Ea
 | `requirements/compute.lock` | The compute nodes: the standalone runner and the MPI runner (no database or Globus) |
 
 A host that runs both the portal and the launcher installs `base.lock` and `launcher.lock` (they share versions).
-Install lauelab from GitHub at the commit `scripts/setup.sh` pins (`b846009`) with `--no-deps`, as a regular
+Install lauelab from GitHub at the commit `scripts/setup.sh` pins (`daf8225`) with `--no-deps`, as a regular
 (non-editable) install, wherever the compute side or the portal runs. The launcher and portal can share a package recipe
 while retaining independent installed copies. The analysis and Compute endpoint environments remain separate.
 
@@ -69,7 +69,7 @@ micromamba create -y -p "$root/envs/laue-portal" --file "$root/src/environment.l
   ```bash
   uv pip install --python "$py" --require-hashes --no-deps -r "$root/src/requirements/compute.lock"
   micromamba run -p "$root/envs/laue-portal" uv pip install --python "$py" --no-deps \
-      "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@b846009a9628d9dfea2fd531eb5e6607d9b8094b"
+      "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@daf8225e7e4b1ae1dcf89cab0ee52118f71e8438"
   uv pip check --python "$py"
   "$py" -c "from lauelab.indexing import merge_results_files, merge_xml_files"   # the MPI merge APIs
   ```
@@ -85,7 +85,7 @@ micromamba create -y -p "$root/envs/laue-portal" --file "$root/src/environment.l
   ```bash
   uv pip install --python "$py" --require-hashes --no-deps -r "$root/src/requirements/base.lock"
   micromamba run -p "$root/envs/laue-portal" uv pip install --python "$py" --no-deps \
-      "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@b846009a9628d9dfea2fd531eb5e6607d9b8094b"
+      "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@daf8225e7e4b1ae1dcf89cab0ee52118f71e8438"
   uv pip install --python "$py" --no-deps -e "$root/src/backend"
   uv pip check --python "$py"
   ```
@@ -611,6 +611,74 @@ look in DM ("submitted 3 times without its DM job ID being recorded"). Without `
 the inbox copies stay for a later clean-up to read, and the poller says so once per process. To turn it on (see the note
 above): render and register the clean-up workflow (`render-workflows.py` writes `workflow-bdp-cleanup.json` when
 `dm.cleanup_workflow` is set), then set the key in the portal's `bdp.yaml` and restart the worker.
+
+## The APS GPU target
+
+The `pioneer` target runs LaueMatching on the APS cluster's GPU queue (the form's **Run on: APS GPU**, offered for
+LaueMatching only and only while `targets.pioneer.enabled`). It is submitted, followed and stopped as an `aps` run (the
+launcher's `qsub`, `qstat` and `qdel` over SSH to `submit_host`), through the main DM workflow (`dm.workflow`): a run
+is one PBS job of at most the queue's walltime, so no other workflow is registered. How a run works is in
+[`laue-matching-remote-gpu.md`](../laue-matching-remote-gpu.md).
+
+**Storage.** The portal host, the launcher host and the GPU nodes must mount the experiment folder
+(`experiment_directory`, the portal's `files.runs_root`) and `targets.pioneer.data_root` at the same paths. A run's
+inputs, geometry, crystal, mask and background files must be inside the experiment folder (validation and the plan
+refuse others), so keep the geometry folder there too. The launcher writes the PBS script and the run's return
+folder (`incoming/<submission>`) readable by its own account only, so the launcher, the account `submit_host` logs in
+as and the portal must be one account: the job runs as it, writes its results as it, and the portal moves them at
+publication. `03-PERMISSIONS` does not run for it.
+
+**The compute environment.** Install a versioned release on the shared storage and keep the previous one for rollback.
+The env needs no CUDA toolkit on the cluster: `environment-gpu.lock` brings conda-forge's `cuda-nvcc` (CUDA 12.8, which
+the nodes' driver must run: `nvidia-smi` reports the highest CUDA version it runs). Build it on a GPU node or the login host, with `nvcc` from the env on `PATH`:
+
+```bash
+release=/path/to/shared/software/gpu/<release>   # analysis_python = $release/env/bin/python
+git clone <the repository> "$release/src" && git -C "$release/src" checkout --detach <the reviewed commit>
+micromamba create -y -p "$release/env" --file "$release/src/environment-gpu.lock"
+py="$release/env/bin/python"
+micromamba run -p "$release/env" env LAUEMATCHING_CUDA=require \
+    uv pip install --python "$py" --require-hashes --no-deps -r "$release/src/requirements/compute-gpu.lock"
+micromamba run -p "$release/env" uv pip install --python "$py" --no-deps \
+    "lauelab @ git+https://github.com/AdvancedPhotonSource/lauelab.git@daf8225e7e4b1ae1dcf89cab0ee52118f71e8438"
+uv pip check --python "$py"
+"$py" -c "from laue_index import indexer; print(indexer.require_binary('STREAM'))"   # LaueMatchingGPUStream
+```
+
+`LAUEMATCHING_CUDA=require` makes the install fail when it cannot build the GPU binaries. Never set
+`LAUEMATCHING_BIN` in the GPU environment or the PBS script: a run refuses it. Set `code_directory` to
+`$release/src/backend/src`.
+
+**Settings** (`targets.pioneer` in both copies of `bdp.yaml`; `deploy/remote/bdp.yaml.template` has the keys):
+`submit_host`, `analysis_python`, `code_directory`, `data_root`, `pbs` (`queue`, `walltime`, `cpus`, `mem` as PBS writes
+it, `ngpus: 1`) and `execution` (`threads_per_worker`: the daemon's and the preprocessing's threads, at most `cpus`;
+`laue_matching_indexer: stream`; `segment_seconds`; `soft_deadline_seconds`, at least 300 s under the walltime). A run is
+refused at submission, before DM is called, when one of these is missing or when the run's forward cache is not
+installed in `data_root` exactly as the run needs it.
+
+**Installing caches.** A GPU run reads an installed cache and never builds one. Build a cache with an APS run (the
+form's **New…**), then copy it, and once the orientation database, into the target's data folder, as the portal's
+account with the portal's settings:
+
+```bash
+laueportal laue-matching install-cache --database <cache name>...
+```
+
+Each file is copied under a hidden name, checked against the source's sha256 and renamed into place. A cache or
+database already installed is accepted only when its bytes are the source's; a different one is never replaced
+(exit 1). An interrupted install leaves `.<name>.install.lock` in the data folder: remove it once no install runs.
+
+**Readiness.** While the target is enabled, the navbar's Local indicator includes it: the dot turns into an "APS GPU"
+pill when the queue is disabled or stopped, or the analysis Python, the code or the orientation database is missing,
+and its tooltip shows the worker's and the APS GPU's state on their own lines. The check
+(`python -m laueportal.remote.health --target pioneer`, run with the launcher's Python on the launcher host) reads
+`qstat -Q -f` of the queue over the SSH route `qsub` takes and checks the files; it submits no job, runs at most every
+five minutes, and does not depend on the Globus checks.
+
+**Monitoring and stop.** The run's phase is Queued ("Waiting for PBS allocation") until PBS starts the job, then
+Running ("Processing: n of N frames", the committed frames). On Stop, a queued job is deleted at once; a running job is
+left to drain (the runner reads `cancel.request` in the run directory, merges the frames done and ends Cancelled), and
+the launcher's `monitor` stage deletes it with `qdel` if it still runs 10 minutes after the stop.
 
 ## Validation
 

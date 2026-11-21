@@ -186,6 +186,44 @@ def cmd_remote_poll(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_laue_matching_install(args: argparse.Namespace) -> int:
+    """Install forward caches (``NAME``s) and, with ``--database``, the orientation database from the portal's
+    LaueMatching data folder (``[laue_matching] data_root``) into the ``pioneer`` target's (``bdp.yaml``'s
+    ``targets.pioneer.data_root``): each copied under a hidden name, checked against the source's sha256 and renamed
+    into place; one already installed is accepted only when its bytes are the source's (``indexing.laue_matching.install``).
+    Exits 2 when the settings name no folder, 1 when an install is refused or fails."""
+    from laueportal.indexing.laue_matching.install import InstallError, install_cache, install_database
+    from laueportal.remote.settings import RemoteSettingsError, portal_settings
+
+    settings = get_settings()
+    source = settings.laue_matching.data_root
+    try:
+        remote = portal_settings(settings.remote, runs_root=settings.files.runs_root)
+    except RemoteSettingsError as error:
+        print(f"laueportal laue-matching install-cache: {error}", file=sys.stderr)
+        return EXIT_CONFIG_ERROR
+    target = None if remote is None or remote.targets.pioneer is None else remote.targets.pioneer.data_root
+    if source is None or target is None:
+        print(
+            "laueportal laue-matching install-cache: [laue_matching] data_root and the remote settings' "
+            "targets.pioneer.data_root (with remote execution enabled) are both needed",
+            file=sys.stderr,
+        )
+        return EXIT_CONFIG_ERROR
+    if not args.names and not args.database:
+        print("laueportal laue-matching install-cache: name a cache, or --database", file=sys.stderr)
+        return EXIT_CONFIG_ERROR
+    try:
+        if args.database:
+            install_database(Path(source), Path(target))
+        for name in args.names:
+            install_cache(Path(source), Path(target), name)
+    except (InstallError, OSError) as error:
+        print(f"laueportal laue-matching install-cache: {error}", file=sys.stderr)
+        return EXIT_FAILURE
+    return 0
+
+
 def cmd_jobs_reconcile(args: argparse.Namespace) -> int:
     """Reconcile the database's unfinished runs and conversions (``jobs.reconciler``, which the worker runs every
     ``execution.reconcile_seconds``): one cycle with ``--once``, else a cycle every ``reconcile_seconds`` until
@@ -764,6 +802,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--once", action="store_true", required=True, help="one reconciliation pass, then exit (required)"
     )
     poll.set_defaults(func=cmd_remote_poll)
+
+    laue_matching = commands.add_parser("laue-matching", help="LaueMatching's data folders")
+    laue_matching_commands = laue_matching.add_subparsers(
+        dest="laue_matching_command", required=True, metavar="LAUE_MATCHING_COMMAND"
+    )
+    install = laue_matching_commands.add_parser(
+        "install-cache",
+        help="copy forward caches (and the orientation database) into the APS GPU target's data folder",
+    )
+    install.add_argument("names", nargs="*", metavar="NAME", help="a forward cache in [laue_matching] data_root")
+    install.add_argument("--database", action="store_true", help="also the orientation database")
+    install.set_defaults(func=cmd_laue_matching_install)
 
     config = commands.add_parser("config", help="inspect the settings")
     config_commands = config.add_subparsers(dest="config_command", required=True, metavar="CONFIG_COMMAND")

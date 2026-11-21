@@ -23,7 +23,7 @@ for part in "$@"; do
 done
 
 # Pins (bump deliberately).
-LAUELAB_COMMIT=b846009a9628d9dfea2fd531eb5e6607d9b8094b
+LAUELAB_COMMIT=daf8225e7e4b1ae1dcf89cab0ee52118f71e8438
 LAUELAB_URL="git+https://github.com/AdvancedPhotonSource/lauelab.git@$LAUELAB_COMMIT"
 PNPM_VERSION=12.10.1
 PNPM_SHA256=502a275984a4cd01e5579ac72049a241091cac5118e44becf84951130c3e079e   # pnpm-linux-x64.tar.gz

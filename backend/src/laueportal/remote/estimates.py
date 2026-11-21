@@ -35,7 +35,7 @@ from typing import Any, Literal
 from laueportal.core.settings import Settings
 from laueportal.files.patterns import compile_filename_templates
 from laueportal.files.roots import PathNotAllowed, resolve_inside_roots
-from laueportal.jobs.backends import LOCAL, REMOTE_BACKENDS
+from laueportal.jobs.backends import GLOBUS, LOCAL, REMOTE_BACKENDS, transport
 from laueportal.remote.settings import BackendOption, ExecutionPolicy, RemoteSettings, available_backends
 from laueportal.util.srange import srange
 
@@ -275,14 +275,21 @@ def _number(value: float | None) -> float:
     return float(value)
 
 
+PROFILE_MACHINES = {LOCAL: "aps", "aps": "aps", "crux": "crux"}
+"""The measured profiles (``backend``) each execution target is estimated from: the portal's worker runs on the APS
+cluster's hardware. A target with none here has no estimate."""
+
+
 def choose_profile(kind: Kind, backend: str, layout: ExecutionLayout) -> tuple[dict[str, Any], list[str]]:
-    machine = "crux" if backend == "crux" else "aps"
+    machine = PROFILE_MACHINES.get(backend)
     workers = layout.reconstruction_workers if kind == "reconstruction" else layout.workers
     threads = layout.threads_per_worker if kind == "reconstruction" else 1
     window = layout.max_in_flight or 2 * workers
     nodes = layout.nodes
     ranks = layout.indexing_ranks_per_node if kind == "indexing" else 1
     candidates = [p for p in measured_profiles()["profiles"] if p["backend"] == machine and p["kind"] == kind]
+    if not candidates:
+        raise ValueError(f"No measured {kind} profile for this execution target")
     profile = min(
         candidates,
         key=lambda p: (
@@ -452,6 +459,7 @@ def estimate_targets(
         except (ValueError, OSError) as error:
             results.append(TargetEstimate(option, walltime_seconds=walltime, error=str(error)))
             continue
-        transfer = estimate_transfers(kind, estimate.selection) if backend == "crux" else None
+        globus = backend in REMOTE_BACKENDS and transport(backend) == GLOBUS
+        transfer = estimate_transfers(kind, estimate.selection) if globus else None
         results.append(TargetEstimate(option, layout, estimate, transfer, walltime))
     return results
