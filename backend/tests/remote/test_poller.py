@@ -174,6 +174,17 @@ def test_pending_then_running_then_done_publishes_and_finalizes(remote):
     assert poll_once(engine=engine, settings=settings, client=client) == []
 
 
+def test_a_checkpoint_failure_without_a_report_does_not_record_a_nonexistent_path(remote):
+    run, plan, client = _submit(remote)
+    incoming = _return(plan, status="Failed", succeeded=1, failed=1, message="Checkpoint kept unpublished")
+    (incoming / "failures.jsonl").unlink()  # the segment's failure evidence could not be verified
+    client.status("done")
+    assert poll_once(engine=remote.engine, settings=remote.settings, client=client) == [run.job_id]
+    job = load_job(remote.engine, run.job_id)
+    assert job.status == JobStatus.FAILED and job.n_failed == 1
+    assert job.failure_report_path is None
+
+
 @pytest.mark.parametrize("state", ["failed", "aborted"])
 def test_a_failed_or_aborted_dm_job_without_a_return_fails_the_run(remote, state):
     run, _plan, client = _submit(remote)

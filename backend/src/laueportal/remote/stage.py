@@ -16,30 +16,87 @@ from the Flow's step, and while the Flow is in ``RunPbsJob`` from a listing of t
 back-off; only failures lasting longer than ``targets.crux.status_failure_budget_seconds`` fail it (:func:`flow_status`).
 On ``pioneer`` (the GPU queue), ``monitor`` prints an observation from the PBS job's state and the runner's
 ``progress.json`` (:func:`pbs_observation`), and a stop leaves a running job to drain (:func:`drains`).
-It reads only the YAML settings: no database, no portal settings
-(import-linter rule 3). gladier and globus-sdk (``requirements/launcher.in``) are imported where needed.
+A ``pioneer`` plan with a ``continuation`` is one run over sequential PBS allocations, which the launcher chains
+(:func:`monitor_continued`; the module's section "Continued runs"). It reads only the YAML settings: no database, no
+portal settings (import-linter rule 3). gladier and globus-sdk (``requirements/launcher.in``) are imported where needed.
+
+Continued runs
+--------------
+
+The state file keeps the run's allocations (``allocations``: each one's number, PBS job name, mode, state, ``qsub``
+outcome, PBS job ID and how it ended); the same record, with the run's status and the reason it failed, is written to
+``allocations/ledger.json`` in the run's output folder. A run ends in one of three ways: the allocation that attempts
+the last input (or that drains after a stop) writes the run's summary; a stop is finalized with the committed work;
+anything unexpected fails the run with its files kept (:func:`_fail`). Nothing is retried or rescued. The rules:
+
+- **One allocation at a time.** The next one is submitted only once PBS reports the previous one finished (``F``) and
+  its hand-off checks (:func:`read_result`: the runner's ``result.json`` for this submission and allocation, with more
+  inputs committed than before). The run ends when an allocation writes the run's summary (``run.json``): Finished,
+  Failed or Cancelled as it says. After ``F`` the launcher waits up to ``VISIBILITY_GRACE_SECONDS`` for either file to
+  be visible on the shared storage before it takes the allocation to have ended without them.
+- **Recorded before PBS is asked, submitted once.** A new allocation's number, unique job name
+  (``remote.pbs.allocation_name``), ``allocation.json`` and PBS script are written, and its ``qsub`` is recorded,
+  before ``qsub`` runs. PBS's history is asked for the name first (``qselect -x -N``): a job found is adopted, so a
+  lost reply never leads to a second job. An allocation is never submitted twice: when no job of its name appears
+  within ``RECONCILE_SECONDS`` of a lost reply, the run fails and says so (the runner of a job that PBS shows later
+  refuses to start, the ledger saying the run ended). A refused ``qsub`` fails the run.
+- **Re-entrant and serialized.** Each pass first saves what PBS said, then decides what follows
+  (:func:`_after_allocation`); until that decision has added the next allocation or ended the run, the next pass
+  makes it again. ``submit``, ``monitor`` and ``cancel`` of one submission hold ``<state_directory>/<submission>.lock``
+  (``fcntl.flock``) while they read, decide and write; a monitor that cannot take it within ``LOCK_WAIT_SECONDS``
+  prints the kept observation.
+- **A stop** (``cancel.request``): no processing allocation is submitted after it; a queued processing allocation is
+  deleted at once; a running one drains, commits, merges and writes the run's summary (Cancelled), and is deleted
+  ``STOP_GRACE_SECONDS`` after the stop (or after it started running, when that is later) if it still runs. When the
+  allocation in PBS at the stop ended without the summary, one *finalizing* allocation (``allocation.json``'s
+  ``finalize``) merges the committed work and ends the run Cancelled: it asks for the target's ``finalize_pbs`` (a CPU
+  request, no GPU), processes no input and starts no daemon. With nothing committed the run ends ``CANCELLED`` at
+  once.
+- **Anything unexpected** (an allocation that ended without the summary or a hand-off that checks, a hand-off that
+  committed nothing, a finalizing allocation without the summary, a refused or never confirmed ``qsub``, an error of
+  the launcher itself): the run is ``FAILED`` with the reason, no allocation is submitted after it, an allocation
+  still in PBS is deleted (the message says when that could not be done), and the committed segments,
+  ``checkpoint.json`` and every allocation's PBS output stay in the output folder for the operator (the runbook's
+  salvage).
+- **PBS or the shared storage that does not answer** (``qstat``, ``qselect``, ``qdel`` failing or timing out; an
+  ``OSError`` on the run's output folder): the stage prints the kept observation, stale, keeps the reason in the state
+  file (``unavailable``) and tries again on the next pass, until DM's monitor stage ends (``dm.monitor_seconds``). An
+  allocation PBS cannot be asked about is never taken to have ended.
 """
 
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import json
 import os
 import re
 import subprocess
 import sys
 import threading
-from collections.abc import Callable, Mapping
+import time
+from collections.abc import Callable, Iterator, Mapping
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
 from uuid import UUID
 
 from laueportal.jobs.backends import GLOBUS, transport
-from laueportal.jobs.rundir import write_json_file
+from laueportal.jobs.rundir import (
+    ALLOCATION_LEDGER_FILENAME,
+    ALLOCATION_RECORD_FILENAME,
+    ALLOCATION_RESULT_FILENAME,
+    ALLOCATION_RESULT_FORMAT,
+    ALLOCATIONS_DIRECTORY,
+    PBS_OUTPUT_FILENAME,
+    allocation_directory,
+    write_json_file,
+)
 from laueportal.remote.dm import DMClient
 from laueportal.remote.observation import OBSERVED_TARGETS, aware_time
 from laueportal.remote.paths import child_path
+from laueportal.remote.pbs import allocation_name, build_script
 from laueportal.remote.plan import submission_path
 from laueportal.remote.settings import STATUS_FAILURE_BUDGET_SECONDS, ListingSettings, collection_path, load_settings
 
@@ -89,6 +146,8 @@ def _state_directory(settings):
 
 
 def submit(plan, settings):
+    if continued(plan):
+        return submit_continued(plan, settings)
     state = _state_directory(settings) / f"{plan['submission_id']}.json"
     state.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     if state.exists():
@@ -130,6 +189,8 @@ def submit(plan, settings):
 
 
 def monitor(plan, settings):
+    if continued(plan):
+        return monitor_continued(plan, settings)
     state = _state_directory(settings) / f"{plan['submission_id']}.json"
     data = json.loads(state.read_text())
     if data.get("flow_id"):
@@ -799,6 +860,8 @@ def cancel(plan, settings):
         if transfer.get_task(result["task_id"])["status"] != "SUCCEEDED":
             raise RuntimeError("Cancellation marker transfer failed")
         return {"status": "CANCEL_REQUESTED"}
+    if continued(plan):
+        return cancel_continued(plan, settings)
     state = json.loads((_state_directory(settings) / f"{plan['submission_id']}.json").read_text())
     if drains(plan) and _job_state(plan, state["pbs_id"]) in RUNNING_STATES:
         # The runner reads the stop request in the run directory and drains (its segments merged, the daemon
@@ -852,13 +915,17 @@ def _stop_overdue(plan) -> bool:
     """A stop was requested (``cancel.request`` in the control directory) more than ``STOP_GRACE_SECONDS`` ago: by
     the time it holds (``requested_at``, the stop's own, which the poller writes again on each pass while the stop is
     pending), else by the file's modification time."""
-    import time
+    requested = _stop_time(plan)
+    return requested is not None and time.time() - requested > STOP_GRACE_SECONDS
 
+
+def _stop_time(plan) -> float | None:
+    """When the run's stop was requested (:func:`_stop_overdue`'s rule), as a POSIX time; None without a stop."""
     path = Path(plan["control_directory"]) / "cancel.request"
     try:
         requested: float | None = path.stat().st_mtime
     except FileNotFoundError:
-        return False
+        return None
     except OSError:
         requested = None
     try:
@@ -871,7 +938,9 @@ def _stop_overdue(plan) -> bool:
             requested = (stamp if stamp.tzinfo else stamp.replace(tzinfo=UTC)).timestamp()
         except ValueError:
             pass
-    return requested is not None and time.time() - requested > STOP_GRACE_SECONDS
+    if requested is None and path.exists():
+        return time.time()
+    return requested
 
 
 CLEANUP_WAIT_SECONDS = 600
@@ -931,7 +1000,544 @@ def cleanup(plan, settings):
         if transfer.get_task(result["task_id"])["status"] != "SUCCEEDED":
             raise RuntimeError("The Eagle folder's delete task failed")
     (_state_directory(settings) / f"{plan['submission_id']}.json").unlink(missing_ok=True)
+    (_state_directory(settings) / f"{plan['submission_id']}.lock").unlink(missing_ok=True)
     return {"status": "CLEANED"}
+
+
+# --- Continued runs (the module's docstring) -------------------------------------------------------------------------
+
+LOCK_WAIT_SECONDS = 45.0
+"""How long ``submit``, ``monitor`` and ``cancel`` wait for a continued run's lock (another of them holds it only
+for its PBS calls)."""
+RECONCILE_SECONDS = 120.0
+"""How long after a ``qsub`` whose reply was lost the launcher looks for its job in PBS's history before it fails the
+run (it never submits the allocation again)."""
+VISIBILITY_GRACE_SECONDS = 60.0
+"""How long after PBS reports an allocation finished (``F``) its runner's ``run.json`` and ``result.json`` may stay
+invisible to the launcher (the shared storage's attribute caches) before the allocation is taken to have ended
+without either."""
+TERMINAL_STATUSES = ("SUCCEEDED", "FAILED", "CANCELLED")
+QUEUED_DETAIL = "Waiting for next PBS allocation"
+"""A continued run's detail while a processing allocation after its first waits in PBS."""
+FINALIZE_QUEUED = "Stopping: waiting to merge"
+"""A stopped run's detail while its finalizing allocation waits in PBS."""
+FINALIZE_RUNNING = "Stopping: merging results"
+"""A stopped run's detail while its finalizing allocation runs."""
+
+
+class SchedulerUnavailable(Exception):
+    """A PBS command (``qstat``, ``qselect``, ``qdel``) that did not answer usefully: it failed, timed out, could not
+    run, or printed what cannot be read. Its message is the concrete reason (the command and its exit status, the tail
+    of its stderr), never a value from a request."""
+
+
+def continued(plan) -> bool:
+    """Whether ``plan`` is a run continued over PBS allocations (a ``pioneer`` plan's ``continuation``)."""
+    return plan.get("continuation") is not None
+
+
+@contextlib.contextmanager
+def _locked(settings, submission_id: str) -> Iterator[None]:
+    """Hold ``<state_directory>/<submission>.lock`` (``TimeoutError`` after ``LOCK_WAIT_SECONDS``)."""
+    directory = _state_directory(settings)
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    descriptor = os.open(directory / f"{submission_id}.lock", os.O_CREAT | os.O_RDWR | os.O_CLOEXEC, 0o600)
+    try:
+        deadline = time.monotonic() + LOCK_WAIT_SECONDS
+        while True:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("another launcher stage holds this run's lock") from None
+                time.sleep(0.2)
+        yield
+    finally:
+        os.close(descriptor)  # releases the lock
+
+
+def _state_path(plan, settings) -> Path:
+    return _state_directory(settings) / f"{plan['submission_id']}.json"
+
+
+def _save(plan, settings, data: dict[str, Any], *, ledger: bool = False) -> None:
+    """Write the state file (atomically) and, with ``ledger``, its copy ``allocations/ledger.json`` in the output
+    folder. The state file is the launcher's record; the ledger (the run's record of its allocations, and what the
+    portal reads as the reason of a failure) is written as well as the shared storage allows: a failed write is
+    printed, and the next change writes it again."""
+    write_json_file(_state_path(plan, settings), data, overwrite=True)
+    if not ledger:
+        return
+    ledger_document = {
+        "format": "laue-portal-allocation-ledger",
+        "version": 1,
+        "submission_id": plan["submission_id"],
+        "status": data["status"],
+        "message": data.get("message"),
+        "allocations": data["allocations"],
+    }
+    try:
+        folder = Path(plan["output_directory"]) / ALLOCATIONS_DIRECTORY
+        folder.mkdir(parents=True, exist_ok=True)
+        write_json_file(folder / ALLOCATION_LEDGER_FILENAME, ledger_document, overwrite=True)
+    except OSError as error:
+        print(f"The allocation ledger could not be written ({_failure(error)})", file=sys.stderr)
+
+
+def _cancel_requested(plan) -> bool:
+    return (Path(plan["control_directory"]) / "cancel.request").exists()
+
+
+def _committed_work(plan) -> bool:
+    """Whether the run has a committed segment (``segments/<NNNNNN>``) in its output folder. An unreadable folder is
+    an ``OSError`` (the storage failing: decided on a later pass), never "nothing committed"."""
+    try:
+        names = os.listdir(Path(plan["output_directory"]) / "segments")
+    except FileNotFoundError:
+        return False
+    return any(re.fullmatch(r"[0-9]{6}", name) for name in names)
+
+
+def _scheduler(plan, command: list[str], *, timeout: float = 30) -> subprocess.CompletedProcess[str]:
+    """Run a PBS command (``_pbs_run``, over SSH when the target has ``submit_host``); ``SchedulerUnavailable`` with
+    the concrete reason when it fails, times out or cannot run."""
+    name = command[0].rsplit("/", 1)[-1]
+    try:
+        return _pbs_run(_pbs_command(plan, command), check=True, capture_output=True, text=True, timeout=timeout)
+    except subprocess.CalledProcessError as error:
+        tail = (error.stderr or "").strip()[-200:] if isinstance(error.stderr, str) else ""
+        raise SchedulerUnavailable(f"{name} exit {error.returncode}" + (f": {tail}" if tail else "")) from None
+    except subprocess.TimeoutExpired:
+        raise SchedulerUnavailable(f"{name} did not answer within {timeout:g} s") from None
+    except OSError as error:
+        raise SchedulerUnavailable(f"{name} could not run: {error.strerror or type(error).__name__}") from None
+
+
+def _qselect(plan, name: str) -> list[str]:
+    """The IDs of every job PBS has or had (``qselect -x``) named ``name``."""
+    result = _scheduler(plan, ["/opt/pbs/bin/qselect", "-x", "-N", name])
+    ids = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not all(re.fullmatch(PBS_JOB_ID, pbs_id) for pbs_id in ids):
+        raise SchedulerUnavailable("qselect printed something other than job IDs")
+    return ids
+
+
+def _qstat(plan, pbs_id: str) -> Mapping[str, Any]:
+    result = _scheduler(plan, ["/opt/pbs/bin/qstat", "-xf", "-F", "json", pbs_id])
+    try:
+        record = next(iter(json.loads(result.stdout)["Jobs"].values()))
+        if not isinstance(record, dict) or not isinstance(record.get("job_state"), str):
+            raise ValueError("no job_state")
+    except (ValueError, KeyError, TypeError, StopIteration, AttributeError):
+        raise SchedulerUnavailable(f"qstat printed no readable state of {pbs_id}") from None
+    return record
+
+
+def _qdel_continued(plan, pbs_id: str) -> None:
+    _scheduler(plan, ["/opt/pbs/bin/qdel", pbs_id])
+
+
+def _now_text() -> str:
+    return _time_text(_now())
+
+
+def _age(value: Any) -> float:
+    stamp = aware_time(value)
+    return float("inf") if stamp is None else (_now() - stamp).total_seconds()
+
+
+def _new_allocation(plan, data: dict[str, Any], *, finalize: bool = False) -> dict[str, Any]:
+    """Add the run's next allocation, ``submitting``: its folder, ``allocation.json`` (its number, name and whether it
+    only ends a stopped run) and PBS script (a finalizing allocation's asks for the target's CPU ``finalize_pbs``) are
+    written, then it is appended to ``data`` (saved by the caller before any ``qsub``). Written again in full when an
+    earlier pass failed before the state file recorded it: no ``qsub`` was made for it."""
+    sequence = len(data["allocations"]) + 1
+    name = allocation_name(plan, sequence)
+    folder = allocation_directory(plan["output_directory"], sequence)
+    folder.mkdir(parents=True, exist_ok=True)
+    now = _now_text()
+    record = {
+        "format": "laue-portal-allocation",
+        "version": 1,
+        "submission_id": plan["submission_id"],
+        "sequence": sequence,
+        "name": name,
+        "finalize": finalize,
+        "created_at": now,
+    }
+    write_json_file(folder / ALLOCATION_RECORD_FILENAME, record, overwrite=True)
+    partial = folder / ".job.pbs.partial"
+    partial.write_text(build_script(plan, allocation=sequence, finalize=finalize), encoding="utf-8")
+    os.replace(partial, folder / "job.pbs")
+    entry: dict[str, Any] = {
+        "sequence": sequence,
+        "name": name,
+        "mode": "finalize" if finalize else "process",
+        "state": "submitting",
+        "created_at": now,
+    }
+    data["allocations"].append(entry)
+    return entry
+
+
+def _fail(plan, data: dict[str, Any], reason: str) -> None:
+    """End the run ``FAILED`` (the module's docstring: the one answer to anything unexpected). Nothing is submitted
+    after it; an allocation still in PBS is deleted, and the message says so, or says that it may still run; the
+    message names the run's output folder, where the committed segments, ``checkpoint.json`` and every allocation's
+    PBS output are kept."""
+    entry = data["allocations"][-1] if data["allocations"] else None
+    notes = [reason]
+    if entry is not None and entry["state"] == "submitted":
+        try:
+            _qdel_continued(plan, entry["pbs_id"])
+        except SchedulerUnavailable as error:
+            notes.append(f"PBS job {entry['pbs_id']} could not be deleted ({error}) and may still run")
+        else:
+            entry["qdel_sent"] = _now_text()
+            notes.append(f"Deletion requested for PBS job {entry['pbs_id']}")
+    notes.append(f"the run's files are kept in {plan['output_directory']} (committed segments, checkpoint.json, logs)")
+    data.update(status="FAILED", message="; ".join(notes))
+
+
+def advance_submission(plan, settings, data: dict[str, Any], entry: dict[str, Any], *, first: bool = False) -> None:
+    """Bring the ``submitting`` allocation ``entry`` into PBS, exactly once (the module's docstring): adopt the job
+    PBS has of its name; else, after a ``qsub`` whose reply was lost (or a stage killed during one), wait
+    ``RECONCILE_SECONDS`` for it to appear, then fail the run; else, for a processing allocation after a stop, submit
+    nothing (``not_submitted``); else record the ``qsub``, save, and run it. A refusal fails the run (``first``: the
+    ``submit`` stage, which then fails too). PBS commands that fail raise ``SchedulerUnavailable``."""
+    ids = _qselect(plan, entry["name"])
+    if ids:
+        entry.update(state="submitted", pbs_id=ids[0], submitted_at=entry.get("submitted_at") or _now_text())
+        return
+    if entry.get("qsub") is not None:  # a qsub was made, and PBS's history has no job of the name
+        if _age(entry["qsub_at"]) < RECONCILE_SECONDS:
+            return
+        _fail(
+            plan,
+            data,
+            f"PBS never confirmed allocation {entry['sequence']}'s submission (qsub: {entry['qsub']}; no job named"
+            f" {entry['name']} in its history after {RECONCILE_SECONDS:g} s). Nothing was submitted again: check"
+            f" qselect -x -N {entry['name']}. The failure ledger blocks a late job only if it can be written;"
+            " confirm PBS has no active job before restarting or salvaging",
+        )
+        return
+    if entry["mode"] == "process" and _cancel_requested(plan):
+        entry.update(state="not_submitted", ended_at=_now_text())
+        _after_allocation(plan, settings, data, entry)
+        return
+    entry.update(qsub="pending", qsub_at=_now_text())
+    try:
+        _save(plan, settings, data)  # the qsub is on record before PBS is asked
+    except BaseException:
+        del entry["qsub"], entry["qsub_at"]  # not recorded, so never made
+        raise
+    folder = allocation_directory(plan["output_directory"], entry["sequence"])
+    command = _pbs_command(
+        plan, ["/opt/pbs/bin/qsub", "-o", str(folder / PBS_OUTPUT_FILENAME), str(folder / "job.pbs")]
+    )
+    try:
+        result = _pbs_run(command, check=False, capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        entry["qsub"] = "no reply within 60 s"
+        return
+    except OSError as error:  # the command never ran
+        refused = f"qsub could not run: {error.strerror or type(error).__name__}"
+    else:
+        pbs_id = result.stdout.strip()
+        if result.returncode == 0 and re.fullmatch(PBS_JOB_ID, pbs_id):
+            entry.update(qsub="accepted", state="submitted", pbs_id=pbs_id, submitted_at=_now_text())
+            return
+        if result.returncode in (0, 255):  # an unreadable reply, or ssh's own failure: PBS may have the job
+            entry["qsub"] = f"exit {result.returncode}, no job ID in its reply"
+            return
+        refused = f"qsub exit {result.returncode}: {result.stderr.strip()[-300:]}"
+    entry.update(qsub="refused", state="not_submitted", ended_at=_now_text())
+    _fail(plan, data, f"PBS refused allocation {entry['sequence']} ({refused})")
+    if first:
+        _save(plan, settings, data, ledger=True)
+        raise RuntimeError(data["message"])
+
+
+def submit_continued(plan, settings) -> dict[str, Any]:
+    """``01-SUBMIT`` of a continued run: its output folder, then its first allocation, recorded before ``qsub``
+    (:func:`advance_submission`). A lost reply, and PBS that does not answer, are left to the monitor (``RUNNING``)."""
+    state = _state_path(plan, settings)
+    state.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with _locked(settings, plan["submission_id"]):
+        if state.exists():
+            raise FileExistsError("This submission was already attempted; inspect its saved state before retrying")
+        Path(plan["output_directory"]).mkdir(parents=True, exist_ok=False)
+        data: dict[str, Any] = {"status": "RUNNING", "allocations": []}
+        entry = _new_allocation(plan, data)
+        _save(plan, settings, data)
+        try:
+            advance_submission(plan, settings, data, entry, first=True)
+        except SchedulerUnavailable as error:  # qselect: nothing was submitted yet; the monitor tries again
+            print(f"PBS did not answer the first submission: {error}", file=sys.stderr)
+        _save(plan, settings, data, ledger=True)
+    return data
+
+
+RESULT_MISSING = "it wrote no result"
+""":func:`read_result`'s problem when the allocation's ``result.json`` is absent (which may be the shared storage's
+lag: ``VISIBILITY_GRACE_SECONDS``)."""
+
+
+def read_result(plan, entry: Mapping[str, Any], before: int) -> tuple[dict[str, Any] | None, str | None]:
+    """The runner's ``result.json`` of the allocation ``entry``, when it checks: this format, submission and
+    allocation; ``handoff`` or ``interrupted``; committed counts that are whole and add up, more inputs than
+    ``before`` for a hand-off, and fewer than the manifest. The next allocation checks every committed segment itself.
+    Else None and why: ``RESULT_MISSING`` when the file is absent. An error reading a file that is there (``EIO``, a
+    stale handle) is raised: the storage failing, not the allocation."""
+    folder = allocation_directory(plan["output_directory"], entry["sequence"])
+    try:
+        os.listdir(folder)  # a fresh listing of the folder before the look-up (the client's directory cache)
+        text = (folder / ALLOCATION_RESULT_FILENAME).read_text()
+    except FileNotFoundError:
+        return None, RESULT_MISSING
+    try:
+        result = json.loads(text)
+        if not isinstance(result, dict) or result.get("format") != ALLOCATION_RESULT_FORMAT:
+            raise ValueError("not an allocation result")
+        if (result.get("submission_id"), result.get("allocation")) != (plan["submission_id"], entry["sequence"]):
+            raise ValueError("another allocation's result")
+        if result.get("status") not in ("handoff", "interrupted"):
+            raise ValueError("an unknown status")
+        committed = result["committed"]
+        attempted, succeeded, failed = (committed[key] for key in ("n_attempted", "n_succeeded", "n_failed"))
+        if not all(type(value) is int and value >= 0 for value in (attempted, succeeded, failed)) or (
+            succeeded + failed != attempted
+        ):
+            raise ValueError("its committed counts do not add up")
+        if attempted >= int(plan["n_inputs"]) or (result["status"] == "handoff" and attempted <= before):
+            raise ValueError(f"it committed {attempted} inputs (before it, {before}; the run has {plan['n_inputs']})")
+    except (ValueError, TypeError, KeyError) as error:
+        return None, f"its result does not check: {error}"
+    return result, None
+
+
+def _committed_before(data: Mapping[str, Any], sequence: int) -> int:
+    """The inputs committed by the last hand-off before allocation ``sequence`` (0 before any)."""
+    for entry in reversed(data["allocations"]):
+        if entry["sequence"] < sequence and isinstance(entry.get("committed"), int):
+            return entry["committed"]
+    return 0
+
+
+def _next_allocation(plan, settings, data: dict[str, Any], *, finalize: bool = False) -> None:
+    entry = _new_allocation(plan, data, finalize=finalize)
+    _save(plan, settings, data, ledger=True)  # recorded before any qsub
+    advance_submission(plan, settings, data, entry)
+
+
+def _summary_written(plan) -> bool:
+    """Whether the run's summary (``run.json``) is in its output folder (``OSError`` but for its absence)."""
+    try:
+        os.stat(Path(plan["output_directory"]) / "run.json")
+    except FileNotFoundError:
+        return False
+    return True
+
+
+def _after_allocation(plan, settings, data: dict[str, Any], entry: dict[str, Any]) -> None:
+    """Decide what follows allocation ``entry``, which PBS reports finished (``ended``) or which was not submitted
+    after a stop (``not_submitted``). Re-entrant: until it has added the next allocation or ended the run, the entry
+    stays the run's last and the next pass decides again (an error reading the shared storage, or a launcher killed,
+    in between never leads to a second allocation).
+
+    - The run's summary is written: the run ends as it says (``final``).
+    - Neither the summary nor the allocation's ``result.json`` is visible yet: wait (``VISIBILITY_GRACE_SECONDS``).
+    - A hand-off that checks: the next processing allocation, or after a stop the finalizing one.
+    - A processing allocation that did not hand the run on after a stop: the finalizing allocation when work is
+      committed, else ``CANCELLED``.
+    - Anything else (no result, one that does not check, an interrupted allocation, a finalizing allocation without
+      the summary): ``FAILED`` (:func:`_fail`)."""
+    if _summary_written(plan):
+        entry["result"] = "final"
+        data["status"] = "SUCCEEDED" if entry.get("exit_status") == 0 else "FAILED"
+        return
+    stopped = _cancel_requested(plan)
+    result = problem = None
+    if entry["state"] == "ended":
+        result, problem = read_result(plan, entry, _committed_before(data, entry["sequence"]))
+        if problem == RESULT_MISSING and _age(entry["ended_at"]) < VISIBILITY_GRACE_SECONDS:
+            return
+        entry["result"] = result["status"] if result is not None else "none"
+        if result is not None:
+            entry["committed"] = result["committed"]["n_attempted"]
+        if problem:
+            entry["problem"] = problem
+    if result is not None and result["status"] == "handoff" and entry["mode"] == "process":
+        _next_allocation(plan, settings, data, finalize=stopped)
+        return
+    if entry["mode"] == "process" and stopped:
+        if _committed_work(plan):
+            _next_allocation(plan, settings, data, finalize=True)
+        else:
+            data.update(status="CANCELLED", message="Stopped before any input was committed")
+        return
+    if result is not None:
+        problem = f"it was interrupted ({result.get('reason')})"
+    log = allocation_directory(plan["output_directory"], entry["sequence"]) / PBS_OUTPUT_FILENAME
+    _fail(
+        plan,
+        data,
+        f"{'The finalizing allocation' if entry['mode'] == 'finalize' else 'Allocation'} {entry['sequence']} (PBS"
+        f" {entry.get('pbs_id')}, exit status {entry.get('exit_status')}) ended without the run's summary or a"
+        f" hand-off: {problem}; see {log}",
+    )
+
+
+def _stop_continued(plan, entry: dict[str, Any], job_state: str) -> None:
+    """A stop while ``entry`` is in PBS: a queued processing allocation is deleted at once; a running processing
+    allocation that has not drained ``STOP_GRACE_SECONDS`` after the stop (or after it started running, when later)
+    is deleted. A finalizing allocation is never deleted: it only merges the committed work."""
+    requested = _stop_time(plan)
+    if requested is None or entry.get("qdel_sent") or job_state == "F" or entry["mode"] != "process":
+        return
+    if job_state in RUNNING_STATES:
+        running = aware_time(entry.get("running_since"))
+        if time.time() - max(requested, running.timestamp() if running is not None else requested) <= (
+            STOP_GRACE_SECONDS
+        ):
+            return
+    _qdel_continued(plan, entry["pbs_id"])
+    entry["qdel_sent"] = _now_text()
+
+
+def _step(plan, settings, data: dict[str, Any]) -> None:
+    entry = data["allocations"][-1]
+    if entry["state"] == "submitting":
+        advance_submission(plan, settings, data, entry)
+        return
+    if entry["state"] == "submitted":
+        record = _qstat(plan, entry["pbs_id"])
+        job_state = entry["job_state"] = str(record["job_state"])
+        if job_state in RUNNING_STATES and not entry.get("running_since"):
+            entry["running_since"] = _now_text()
+        if job_state != "F":
+            _stop_continued(plan, entry, job_state)
+            return
+        entry.update(state="ended", ended_at=_now_text(), exit_status=record.get("Exit_status"))
+        _save(plan, settings, data)  # PBS's answer on record before the decision that follows it
+    _after_allocation(plan, settings, data, entry)
+
+
+def monitor_continued(plan, settings) -> dict[str, Any]:
+    """``02-MONITOR`` of a continued run (the module's docstring): under the run's lock, one step of its current
+    allocation (reconcile or submit it, read its PBS state, act on a stop, decide what follows its end), then its
+    observation. A run whose lock another stage holds past ``LOCK_WAIT_SECONDS`` prints its kept observation, stale."""
+    try:
+        with _locked(settings, plan["submission_id"]):
+            return _monitor_step(plan, settings)
+    except TimeoutError:
+        data = json.loads(_state_path(plan, settings).read_text())
+        kept = data.get("observation")
+        return {**data, "observation": {**kept, "stale": True} if isinstance(kept, dict) else None}
+
+
+def _monitor_step(plan, settings) -> dict[str, Any]:
+    """One monitor pass under the lock. PBS that does not answer (``SchedulerUnavailable``) and the shared storage
+    failing (``OSError``) are waited out: the run stays ``RUNNING``, its observation stale, the reason kept in the
+    state file (``unavailable``), and the next pass resumes where this one stopped; an allocation PBS cannot be asked
+    about is never taken to have ended. Any other error fails the run (:func:`_fail`)."""
+    data = json.loads(_state_path(plan, settings).read_text())
+    if data["status"] in TERMINAL_STATUSES:
+        return data
+    before = json.dumps([data["status"], data["allocations"]], sort_keys=True)
+    try:
+        _step(plan, settings, data)
+    except SchedulerUnavailable as error:
+        data["unavailable"] = f"PBS: {error}"
+    except OSError as error:
+        data["unavailable"] = f"shared storage: {type(error).__name__}: {error.strerror or error}"
+    except Exception as error:  # anything else: the run fails, its files kept
+        _fail(plan, data, f"The launcher failed: {type(error).__name__}: {error}")
+        data.pop("unavailable", None)
+    else:
+        data.pop("unavailable", None)
+    if data.get("unavailable"):
+        print(f"{data['unavailable']}; the run waits", file=sys.stderr)
+    try:
+        observation = None if data.get("unavailable") else continued_observation(plan, data)
+    except OSError:
+        observation = None
+    if observation is None:  # the kept observation, stale (none before the first one)
+        kept = data.get("observation")
+        observation = {**kept, "stale": True} if isinstance(kept, dict) else None
+    data["observation"] = observation
+    _save(plan, settings, data, ledger=json.dumps([data["status"], data["allocations"]], sort_keys=True) != before)
+    return data
+
+
+def cancel_continued(plan, settings) -> dict[str, Any]:
+    """The cancel stage of a continued run (``cancel.request`` is already in the control folder), under its lock: a
+    queued processing allocation is deleted at once (:func:`_stop_continued`); the monitor does the rest. PBS that
+    does not answer, or the lock held past ``LOCK_WAIT_SECONDS``, leaves it to the monitor: the stage still reports
+    the stop requested, so DM's cancel workflow never fails for them."""
+    try:
+        with _locked(settings, plan["submission_id"]):
+            state = _state_path(plan, settings)
+            if not state.exists():
+                return {"status": "CANCEL_REQUESTED"}
+            data = json.loads(state.read_text())
+            entry = data["allocations"][-1] if data.get("allocations") else None
+            if data["status"] not in TERMINAL_STATUSES and entry is not None and entry["state"] == "submitted":
+                try:
+                    _stop_continued(plan, entry, str(_qstat(plan, entry["pbs_id"])["job_state"]))
+                except SchedulerUnavailable as error:
+                    print(f"PBS did not answer the stop ({error}); the monitor deletes the job", file=sys.stderr)
+                _save(plan, settings, data, ledger=True)
+    except TimeoutError:
+        print("Another launcher stage holds this run's lock; the monitor acts on the stop", file=sys.stderr)
+    return {"status": "CANCEL_REQUESTED"}
+
+
+def continued_observation(plan, data: Mapping[str, Any]) -> dict[str, Any]:
+    """A continued run's observation (the format of ``remote.observation``): ``queued`` while its allocation waits
+    (``Waiting for PBS allocation``, then ``Waiting for next PBS allocation``; a finalizing one ``FINALIZE_QUEUED``),
+    ``running`` with the run's committed frames while a processing allocation runs (``progress.json``: the whole run's,
+    never fewer than shown before; ``FINALIZE_RUNNING`` for a finalizing one), and ``Finishing processing`` once the
+    run has ended. ``pbs`` names the allocation's job, number and mode (``process``, ``finalize``)."""
+    now = _now()
+    previous = data.get("observation") if isinstance(data.get("observation"), dict) else None
+    entry = data["allocations"][-1] if data.get("allocations") else {}
+    shown = previous.get("frames_done") if previous is not None else None
+    done = shown if type(shown) is int else 0
+    heartbeat = None
+    try:
+        progress = json.loads((Path(plan["output_directory"]) / "progress.json").read_text())
+        done = max(done, int(progress["n_succeeded"]) + int(progress["n_failed"]))
+        heartbeat = aware_time(progress.get("heartbeat_at"))
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    stopping = _cancel_requested(plan)
+    stale = None
+    running = entry.get("state") == "submitted" and entry.get("job_state") in RUNNING_STATES
+    if data.get("status") in TERMINAL_STATUSES or entry.get("result") == "final":
+        phase, detail = "running", "Finishing processing"
+    elif entry.get("state") in ("ended", "not_submitted"):
+        phase, detail = "running", f"Ending allocation {entry.get('sequence')}"
+    elif entry.get("mode") == "finalize":
+        phase, detail = ("running", FINALIZE_RUNNING) if running else ("queued", FINALIZE_QUEUED)
+    elif running:
+        phase, detail = "running", f"{'Stopping' if stopping else 'Processing'}: {done} of {plan['n_inputs']} frames"
+        stale = heartbeat is not None and (now - heartbeat).total_seconds() > PBS_STALE_SECONDS
+    elif stopping:
+        phase, detail = "queued", "Stopping"
+    else:
+        phase, detail = PBS_QUEUED if int(entry.get("sequence", 1)) == 1 else ("queued", QUEUED_DETAIL)
+    observed = _time_text(now)
+    observation: dict[str, Any] = {"phase": phase, "detail": detail, "observed_at": observed}
+    if stale is not None:
+        observation["stale"] = stale
+    since = previous.get("phase_since") if previous is not None and previous.get("phase") == phase else None
+    observation["phase_since"] = since or observed
+    observation["submission_id"] = plan["submission_id"]
+    observation["pbs"] = {"job_id": entry.get("pbs_id"), "allocation": entry.get("sequence"), "mode": entry.get("mode")}
+    observation["frames_done"] = done
+    return observation
 
 
 def main():

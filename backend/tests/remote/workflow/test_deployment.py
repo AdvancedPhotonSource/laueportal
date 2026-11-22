@@ -88,6 +88,27 @@ def test_rendered_workflow_executes_wrapper_with_quoted_site_paths(outside_check
     ]
 
 
+@pytest.mark.parametrize(("seconds", "repeats"), [(None, 120960), (3 * 24 * 3600, 25920), (15, 2)])
+def test_the_monitor_stage_follows_a_run_for_the_monitoring_horizon(outside_checkout, seconds, repeats):
+    """``02-MONITOR`` repeats every 10 s for ``dm.monitor_seconds`` (14 days by default, not the 48 hours of
+    earlier versions): a ``pioneer`` run continues over allocations for days."""
+    settings = site(outside_checkout)
+    if seconds is not None:
+        settings["dm"]["monitor_seconds"] = seconds
+    output = outside_checkout / f"definitions-{seconds}"
+    tool("render-workflows.py")["render_workflows"](settings, output)
+    monitor = json.loads((output / "workflow-bdp.json").read_text())["stages"]["02-MONITOR"]
+    assert (monitor["repeatPeriod"], monitor["maxRepeats"]) == (10, repeats)
+
+
+@pytest.mark.parametrize("seconds", [0, -1, "1d", True])
+def test_a_monitoring_horizon_that_is_not_a_duration_is_refused(outside_checkout, seconds):
+    settings = site(outside_checkout)
+    settings["dm"]["monitor_seconds"] = seconds
+    with pytest.raises(ValueError, match="dm.monitor_seconds"):
+        tool("render-workflows.py")["render_workflows"](settings, outside_checkout / "definitions")
+
+
 def test_the_cleanup_workflow_is_rendered_when_it_is_set_and_runs_the_cleanup_stage(outside_checkout):
     """The clean-up DM workflow (``dm.cleanup_workflow``) runs the launcher's ``cleanup`` stage."""
     tmp_path = outside_checkout

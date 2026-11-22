@@ -3,7 +3,8 @@
 The stage command is the launcher checkout's deploy/remote/dm-stage.sh, which runs `python -m laueportal.remote.stage`.
 The workflow names (dm.workflow, dm.cancel_workflow) and the templates (workflow-bdp*.json.template) are the deployed
 ones; the optional dm.cleanup_workflow (workflow-bdp-cleanup.json.template, the launcher's cleanup stage) is rendered
-when it is set. Usage:
+when it is set. The monitor stage repeats for dm.monitor_seconds (by default 14 days, MONITOR_SECONDS): its
+maxRepeats is that over its repeatPeriod, rounded up. Usage:
 
     python deploy/remote/render-workflows.py --config <private bdp.yaml> --output-dir <outside the checkout>
 """
@@ -12,12 +13,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import shlex
 from pathlib import Path
 
 import yaml
+
+
+MONITOR_SECONDS = 14 * 24 * 3600
+"""dm.monitor_seconds's default (laueportal.remote.settings.MONITOR_SECONDS; this tool imports no portal code)."""
 
 
 def _replace(value, variables):
@@ -57,6 +63,9 @@ def render_workflows(settings, output_directory):
         "USER_ACCOUNT": dm.get("user_account") or dm["owner"],
         "STAGE_COMMAND": command,
     }
+    horizon = dm.get("monitor_seconds", MONITOR_SECONDS)
+    if isinstance(horizon, bool) or not isinstance(horizon, int | float) or not 0 < horizon < math.inf:
+        raise ValueError("dm.monitor_seconds must be a positive number of seconds")
     documents = {}
     for name, workflow in [
         ("workflow-bdp", dm["workflow"]),
@@ -65,7 +74,11 @@ def render_workflows(settings, output_directory):
     ]:
         if workflow:
             template = json.loads((source / f"{name}.json.template").read_text())
-            documents[output_directory / f"{name}.json"] = _replace(template, {**variables, "WORKFLOW_NAME": workflow})
+            document = _replace(template, {**variables, "WORKFLOW_NAME": workflow})
+            monitor = document["stages"].get("02-MONITOR")
+            if monitor is not None:
+                monitor["maxRepeats"] = math.ceil(horizon / monitor["repeatPeriod"])
+            documents[output_directory / f"{name}.json"] = document
     for path in documents:
         if path.exists() or path.is_symlink():
             raise FileExistsError(path)

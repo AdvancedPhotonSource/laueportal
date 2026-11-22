@@ -94,6 +94,8 @@ def _set(values: dict[str, Any], path: tuple[str, ...], value: Any) -> dict[str,
         (("dm", "timeout_seconds"), None),  # no timeout (subprocess's timeout=None)
         (("dm", "permissions_timeout_seconds"), None),  # null: no timeout either
         (("dm", "permissions_timeout_seconds"), 600),
+        (("dm", "monitor_seconds"), 3 * 24 * 3600),
+        (("targets", "pioneer", "execution", "max_frames_per_allocation"), 2),
     ],
 )
 def test_values_the_code_can_use_are_accepted_and_kept_as_written(path, value):
@@ -134,6 +136,9 @@ def test_the_files_own_enabled_is_ignored_whatever_scalar_it_holds(tmp_path, val
         (("dm", "owner"), ["a-value-that-must-not-be-echoed"]),
         (("dm", "timeout_seconds"), "30 s"),
         (("dm", "permissions_timeout_seconds"), "5 min"),
+        (("dm", "monitor_seconds"), 0),
+        (("dm", "monitor_seconds"), None),  # the horizon is always bounded
+        (("targets", "pioneer", "execution", "max_frames_per_allocation"), 1.5),
         (("enabled",), ["a-value-that-must-not-be-echoed"]),  # not a scalar
         # a run could start with these two; they are refused on purpose (the module docstring and the runbook list them)
         (("auth_profile",), None),  # the beamline profile, with a gladier-None.cfg

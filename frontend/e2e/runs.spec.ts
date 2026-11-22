@@ -497,7 +497,16 @@ test.describe("indexations", () => {
   test("lists the runs newest first with their columns, their sources linked", async ({
     page,
   }) => {
-    const api = await mockRunList(page, "/api/v1/indexing-runs", indexations())
+    const rows = indexations().map((row) =>
+      row.id === 73
+        ? {
+            ...row,
+            method: "laue_matching" as const,
+            method_label: "LaueMatching",
+          }
+        : row
+    )
+    const api = await mockRunList(page, "/api/v1/indexing-runs", rows)
     await open(page, "/indexing")
     await expect(page).toHaveTitle("Indexations · 3DMN Portal")
     await expect(headerLabels(page)).toHaveText([
@@ -511,6 +520,8 @@ test.describe("indexations", () => {
       "Status",
     ])
     await expect(cell(page, 75, "id")).toHaveText("I75")
+    await expect(cell(page, 75, "method_label")).toHaveText("LaueGo")
+    await expect(cell(page, 73, "method_label")).toHaveText("LaueMatching")
     expect(api.requests[0]?.search).toBe("?offset=0&limit=100&sort=-id")
     await expect(cell(page, 75, "status")).toHaveText("Running 37/441")
     // A source is the scan and the reconstruction indexed, or the scan alone, or neither.

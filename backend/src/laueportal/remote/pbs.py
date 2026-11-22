@@ -2,7 +2,8 @@
 
 :func:`build_script` writes the PBS script: ``python -m laueportal.jobs.runner <control directory>``, or
 ``laueportal.jobs.mpi_runner`` when ``pbs.nodes x indexing_ranks_per_node > 1``; the target's ``code_directory`` is then
-a checkout's ``backend/src``. :func:`run_pbs_job` is the Globus Compute function of the ``crux`` flow (it runs on the
+a checkout's ``backend/src``. A continued run (a ``pioneer`` plan's ``continuation``) has one script per allocation,
+named so that the scheduler can be asked for it (:func:`allocation_name`). :func:`run_pbs_job` is the Globus Compute function of the ``crux`` flow (it runs on the
 login node, so it imports nothing at module level). :func:`fallback` is the summary the task writes when PBS ended
 without the runner's. Standard library and ``jobs.backends`` only (import-linter rule 3); :func:`run_pbs_job` uses
 neither, so the endpoint never imports this package.
@@ -23,8 +24,37 @@ MPI_RUNNER_MODULE = "laueportal.jobs.mpi_runner"
 """The MPI runner."""
 
 
-def build_script(plan):
+def allocation_name(plan, sequence: int) -> str:
+    """The PBS job name of a continued run's allocation ``sequence`` (``L<submission hex>-<sequence>``): unique to the
+    allocation, so ``qselect -x -N`` finds the job a lost ``qsub`` reply did not name (``remote.stage``)."""
+    return f"L{plan['submission_id'].replace('-', '')}-{int(sequence)}"
+
+
+def runner_command(plan, sequence: int | None = None) -> list[str]:
+    """The runner's command line: ``python -m <runner> <control directory>``, and ``--allocation <sequence>`` for a
+    continued run's allocation."""
+    command = [plan["target"]["analysis_python"], "-m", RUNNER_MODULE, plan["control_directory"]]
+    return command if sequence is None else [*command, "--allocation", str(int(sequence))]
+
+
+def build_script(plan, allocation: int | None = None, *, finalize: bool = False):
+    """The PBS script of ``plan``; for a continued run (the plan's ``continuation``), of its allocation
+    ``allocation`` (1 when not given): named by :func:`allocation_name`, not rerun by PBS after a node failure (the
+    launcher decides what follows an allocation that ended without its result: ``remote.stage``), and running the
+    runner with ``--allocation``. ``finalize``: a continued run's finalizing allocation, which only merges and
+    publishes the committed work: it asks for the target's ``finalize_pbs`` (a CPU request, no GPU; required, never
+    the GPU request instead) and has no soft deadline. The launcher submits one only after a stop."""
     target, pbs = plan["target"], plan["pbs"]
+    continued = plan.get("continuation") is not None
+    if finalize:
+        if not continued:
+            raise ValueError("Only a continued run has finalizing allocations")
+        pbs = target.get("finalize_pbs")
+        if not pbs:
+            raise ValueError("The target has no finalize_pbs: a finalizing allocation never asks for the GPU queue")
+        if int(pbs.get("ngpus") or 0) != 0:
+            raise ValueError("A finalizing allocation asks for no GPU (finalize_pbs.ngpus 0 or absent)")
+    sequence = (allocation or 1) if continued else None
     globus = transport(plan["backend"]) == GLOBUS
     nodes = int(pbs.get("nodes", 1))
     if nodes < 1 or (not globus and nodes != 1):
@@ -42,7 +72,7 @@ def build_script(plan):
     gpus = int(pbs.get("ngpus") or 0)
     if gpus < 0:
         raise ValueError("PBS ngpus must not be negative")
-    deadline = plan["execution"].get("soft_deadline_seconds")
+    deadline = None if finalize else plan["execution"].get("soft_deadline_seconds")
     if deadline is not None and float(deadline) + DEADLINE_MARGIN_SECONDS > walltime_seconds(pbs["walltime"]):
         raise ValueError(
             f"execution.soft_deadline_seconds must leave {DEADLINE_MARGIN_SECONDS} s of the walltime for the merge "
@@ -54,10 +84,17 @@ def build_script(plan):
     if account and not re.fullmatch(r"[A-Za-z0-9_:@.+-]+", str(account)):
         raise ValueError("Unsafe PBS account")
     module = MPI_RUNNER_MODULE if nodes * ranks_per_node > 1 else RUNNER_MODULE
-    command = [target["analysis_python"], "-m", module, plan["control_directory"]]
+    if continued and (globus or module != RUNNER_MODULE):
+        raise ValueError("Only a shared-storage run with one runner process continues over allocations")
+    command = (
+        runner_command(plan, sequence)
+        if continued
+        else [target["analysis_python"], "-m", module, plan["control_directory"]]
+    )
     lines = [
         "#!/bin/bash -l",
-        "#PBS -N Laue",
+        f"#PBS -N {allocation_name(plan, sequence)}" if sequence is not None else "#PBS -N Laue",
+        *(["#PBS -r n"] if continued else []),
         *([f"#PBS -A {account}"] if account else []),
         f"#PBS -q {pbs['queue']}",
         f"#PBS -l walltime={pbs['walltime']}",

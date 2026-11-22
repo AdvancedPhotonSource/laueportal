@@ -7,8 +7,9 @@ worker's dispatcher claims (``jobs.dispatch``). A remote run goes to DM.
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, fields
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Engine, select
@@ -100,6 +101,7 @@ def enqueue_run(
     at_front: bool = False,
     remote: RemoteSettings | None = None,
     dm_client: Any = None,
+    sources: Callable[[str], Path] | None = None,
 ) -> str:
     """Hand a published run to its target exactly once; returns its queue identity.
 
@@ -108,7 +110,8 @@ def enqueue_run(
     claims; a second call raises. ``at_front`` queues it moved to the front (``moved_to_front_at``, as Move to Front),
     which a remote run refuses (its scheduler orders it). A job whose ``backend`` is remote (``aps``, ``crux``) goes to
     DM through ``remote.submission.submit_run`` with the ``remote`` settings (``remote.settings.portal_settings``;
-    ``None`` when remote execution is disabled, which refuses it) and returns DM's job ID.
+    ``None`` when remote execution is disabled, which refuses it) and returns DM's job ID; ``sources`` is the portal's
+    check of the files it reads (``remote.submission.source_check``), which a ``pioneer`` run requires.
     """
 
     with Session(engine) as session:
@@ -119,7 +122,7 @@ def enqueue_run(
             raise ValueError("DM jobs cannot be moved ahead of scheduler jobs")
         from laueportal.remote.submission import submit_run  # the DM client is never loaded for local runs
 
-        return submit_run(job_id, engine=engine, settings=remote, client=dm_client)
+        return submit_run(job_id, engine=engine, settings=remote, client=dm_client, sources=sources)
 
     queue_id = run_queue_id(job_id)
     with Session(engine) as session, session.begin():

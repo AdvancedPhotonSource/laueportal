@@ -118,7 +118,7 @@ def test_enqueue_hands_a_remote_job_to_dm_submission_and_never_to_the_worker(eng
     result = core.enqueue_run(run.job_id, engine=engine, remote=remote, dm_client=client)  # type: ignore[arg-type]
 
     assert result == "dm-7" and dispatch_queue(engine) == []
-    assert calls == [(run.job_id, {"engine": engine, "settings": remote, "client": client})]
+    assert calls == [(run.job_id, {"engine": engine, "settings": remote, "client": client, "sources": None})]
     with pytest.raises(ValueError, match="cannot be moved ahead of scheduler jobs"):
         core.enqueue_run(run.job_id, engine=engine, at_front=True)
     assert len(calls) == 1
@@ -140,7 +140,7 @@ def test_the_run_id_wrappers_hand_remote_runs_to_dm_submission(engine, tmp_path,
     result = enqueue(run.id, engine=engine, remote=remote, dm_client=client)  # type: ignore[arg-type]
 
     assert result == "dm-9" and dispatch_queue(engine) == []
-    assert calls == [(run.job_id, {"engine": engine, "settings": remote, "client": client})]
+    assert calls == [(run.job_id, {"engine": engine, "settings": remote, "client": client, "sources": None})]
     with pytest.raises(ValueError, match="cannot be moved ahead of scheduler jobs"):
         enqueue(run.id, engine=engine, at_front=True, remote=remote)  # type: ignore[arg-type]
     assert len(calls) == 1 and dispatch_queue(engine) == []

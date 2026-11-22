@@ -9,8 +9,21 @@ was writing, and the committed files can be read while the run goes on. At the e
 (``lauelab.indexing.merge_results_files``, :func:`merge_native_tables`) into the run's two files, which are validated
 against every frame's identity, and the segment folders are removed.
 
-A frame's failure is reported (``RunHooks.record_failure``) when its segment is committed, so that the failure report
-names only frames whose result is durable.
+A segment's record names every input it attempted, in manifest order (``attempted_ids``), which of them succeeded
+(``frame_ids``) and failed (``failed_ids``, with each failure's full record in the segment's ``failures.jsonl``), the
+checksum of each of its files, and the run's identity (``identity``, the checksum of ``checkpoint.json``:
+:func:`checkpoint_identity`). A run that continues over several allocations (``pioneer``) is therefore resumed from its
+committed segments alone (:meth:`Segments.resume`): each record and file is checked, and the attempted inputs together
+must be exactly the start of the manifest (:func:`skip_committed`), so no input is attempted, counted or published
+twice, and none is skipped. Anything that does not check is a :class:`CheckpointError`: the run stops and its files
+are kept. A continued run's failures are reported (``RunHooks.record_failure``) once, when the run ends
+(:meth:`Segments.committed_failures`), so that the failure report names only frames whose result is durable, each once;
+a run of one allocation reports a segment's failures when the segment is committed.
+
+A continued run's end merges the segments into partial files, validates and publishes them; the runner then writes
+the failure report and the run's summary, and only then removes the segments. An end that is killed is not resumed:
+merged files found in the output folder at a later end are never trusted or replaced (``CheckpointError``), and the
+committed segments stay for the operator (:func:`committed_segments` reads them, checked, without changing them).
 
 Standard library, numpy and h5py only (import-linter rule 3).
 """
@@ -20,9 +33,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any, Protocol, cast
 
@@ -30,7 +44,7 @@ import h5py
 import numpy as np
 
 from laueportal.jobs.contract import RunHooks
-from laueportal.jobs.rundir import RESULTS_FILENAME, FailureRecord, write_json_file
+from laueportal.jobs.rundir import RESULTS_FILENAME, FailureRecord, ManifestEntry, json_text, write_json_file
 
 SOLUTION_COLUMNS = 34
 SPOT_COLUMNS = 11
@@ -39,6 +53,17 @@ NATIVE_FORMAT = "laue-matching-native-tables"
 SEGMENTS_DIRNAME = "segments"
 SEGMENT_RECORD = "segment.json"
 SEGMENT_FORMAT = "laue-matching-segment"
+SEGMENT_VERSION = 2
+SEGMENT_FAILURES = "failures.jsonl"
+"""A segment's failure records, one ``FailureRecord`` JSON line each, in the order the inputs were attempted."""
+CHECKPOINT_RECORD = "checkpoint.json"
+CHECKPOINT_FORMAT = "laue-matching-checkpoint"
+_COMMITTED = re.compile(r"[0-9]{6}")
+_PARTIAL = re.compile(r"\.[0-9]{6}\.partial")
+
+
+class CheckpointError(ValueError):
+    """A committed checkpoint that does not check against its records or the run: the run stops, its files kept."""
 
 
 class FrameTables(Protocol):
@@ -177,7 +202,8 @@ class SingleOutput:
         self.frame_ids: list[str] = []
         self.columns: tuple[str, str] | None = None
 
-    def append(self, frame_id: str, result: Any, tables: FrameTables) -> None:
+    def append(self, frame_id: str, result: Any, tables: FrameTables, **counts: Any) -> None:
+        """One processed frame (``counts``, which :class:`Segments` keeps, are the caller's here)."""
         self.writer.append(result, frame_id=frame_id)
         self.native.append(frame_id, tables)
         self.frame_ids.append(frame_id)
@@ -210,20 +236,60 @@ class SingleOutput:
 
 
 class Segments:
-    """A remote run's output in committed segments under ``<run>/segments/`` (the module's docstring)."""
+    """A remote run's output in committed segments under ``<run>/segments/`` (the module's docstring).
+
+    ``identity``: the run's identity (:func:`checkpoint_identity`), recorded in every segment and required of every
+    segment :meth:`resume` reads; ``allocation``: the PBS allocation writing the segments (None for a run of one)."""
 
     def __init__(
-        self, run_directory: Path, writer: Callable[[Path], Writer], hooks: RunHooks, *, seconds: float
+        self,
+        run_directory: Path,
+        writer: Callable[[Path], Writer],
+        hooks: RunHooks,
+        *,
+        seconds: float,
+        identity: str | None = None,
+        allocation: int | None = None,
+        report_at_commit: bool = False,
     ) -> None:
+        """``report_at_commit``: report each segment's failures when it is committed (a run of one allocation);
+        else once at the run's end (:meth:`committed_failures`)."""
+        self.report_at_commit = report_at_commit
         self.root = run_directory / SEGMENTS_DIRNAME
         self.root.mkdir(parents=True, exist_ok=True)
         self.writer_factory = writer
         self.hooks = hooks
         self.seconds = seconds
+        self.identity = identity
+        self.allocation = allocation
         self.committed: list[dict[str, Any]] = []
         self.frame_ids: list[str] = []
+        self.attempted_ids: list[str] = []
+        self.n_failed = 0
+        self.n_indexed = 0
+        self.unmatched = 0
+        self.deep = False
         self.columns: tuple[str, str] | None = None
         self._open: dict[str, Any] | None = None
+
+    def resume(self) -> int:
+        """Read the segments committed before (by earlier allocations), checked (:func:`committed_segments`), after
+        removing any segment folder an allocation never committed (``.<n>.partial``). Returns how many inputs they
+        attempted."""
+        if self.committed or self._open is not None:
+            raise RuntimeError("segments resume before any frame of this allocation")
+        for name in os.listdir(self.root):
+            if _PARTIAL.fullmatch(name):
+                shutil.rmtree(self.root / name)
+        for record in committed_segments(self.root, self.identity):
+            self.committed.append(record)
+            self.attempted_ids.extend(record["attempted_ids"])
+            self.frame_ids.extend(record["frame_ids"])
+            self.n_failed += record["n_failed"]
+            self.n_indexed += record["n_indexed"]
+            self.unmatched += record["unmatched_spots"]
+            self.deep = self.deep or record["deep"]
+        return len(self.attempted_ids)
 
     def _segment(self) -> dict[str, Any]:
         if self._open is None:
@@ -240,19 +306,40 @@ class Segments:
                 "writer": self.writer_factory(partial / RESULTS_FILENAME).__enter__(),
                 "native": native,
                 "frame_ids": [],
+                "attempted_ids": [],
                 "failures": [],
+                "n_indexed": 0,
+                "unmatched_spots": 0,
+                "deep": False,
                 "started": time.monotonic(),
             }
         return self._open
 
-    def append(self, frame_id: str, result: Any, tables: FrameTables) -> None:
+    def append(
+        self,
+        frame_id: str,
+        result: Any,
+        tables: FrameTables,
+        *,
+        indexed: bool = False,
+        unmatched: int = 0,
+        deep: bool = False,
+    ) -> None:
+        """One processed frame; ``indexed``, ``unmatched`` and ``deep`` are its counts for the run's summary, which
+        the segment keeps so that a resumed run still counts them."""
         segment = self._segment()
         segment["writer"].append(result, frame_id=frame_id)
         segment["native"].append(frame_id, tables)
         segment["frame_ids"].append(frame_id)
+        segment["attempted_ids"].append(frame_id)
+        segment["n_indexed"] += int(bool(indexed))
+        segment["unmatched_spots"] += int(unmatched)
+        segment["deep"] = segment["deep"] or bool(deep)
 
     def fail(self, record: FailureRecord) -> None:
-        self._segment()["failures"].append(record)
+        segment = self._segment()
+        segment["failures"].append(record)
+        segment["attempted_ids"].append(record.input_id)
 
     def set_columns(self, columns: tuple[str, str]) -> None:
         if self.columns is None:
@@ -264,8 +351,8 @@ class Segments:
         return self._open is not None and time.monotonic() - self._open["started"] >= self.seconds
 
     def commit(self) -> None:
-        """Close the open segment's files, record what they hold and rename its folder into place; then report its
-        failures. Nothing to do when no segment is open."""
+        """Close the open segment's files, write its failure records, record what it holds and rename its folder into
+        place. Nothing to do when no segment is open."""
         segment, self._open = self._open, None
         if segment is None:
             return
@@ -277,26 +364,52 @@ class Segments:
         if writer.failed:
             raise RuntimeError(f"results file write failed after {writer.count} frames: {writer.error}")
         partial: Path = segment["partial"]
+        names = [RESULTS_FILENAME, NATIVE_FILENAME]
+        if segment["failures"]:
+            with open(partial / SEGMENT_FAILURES, "x", encoding="utf-8", newline="\n") as stream:
+                stream.writelines(failure.to_json() + "\n" for failure in segment["failures"])
+                stream.flush()
+                os.fsync(stream.fileno())
+            names.append(SEGMENT_FAILURES)
         record = {
             "format": SEGMENT_FORMAT,
-            "version": 1,
+            "version": SEGMENT_VERSION,
             "number": segment["number"],
+            "allocation": self.allocation,
+            "identity": self.identity,
+            "first": len(self.attempted_ids),
+            "attempted_ids": segment["attempted_ids"],
             "frame_ids": segment["frame_ids"],
             "n_failed": len(segment["failures"]),
             "failed_ids": [failure.input_id for failure in segment["failures"]],
-            "files": {name: sha256(partial / name) for name in (RESULTS_FILENAME, NATIVE_FILENAME)},
+            "n_indexed": segment["n_indexed"],
+            "unmatched_spots": segment["unmatched_spots"],
+            "deep": segment["deep"],
+            "files": {name: sha256(partial / name) for name in names},
         }
+        _sync_files(partial, names)
         write_json_file(partial / SEGMENT_RECORD, record)
         final = self.root / f"{segment['number']:06d}"
         os.rename(partial, final)
         _sync_directory(self.root)
         self.committed.append({**record, "folder": final})
+        self.attempted_ids.extend(segment["attempted_ids"])
         self.frame_ids.extend(segment["frame_ids"])
-        for failure in segment["failures"]:
-            self.hooks.record_failure(failure)
+        self.n_failed += record["n_failed"]
+        self.n_indexed += record["n_indexed"]
+        self.unmatched += record["unmatched_spots"]
+        self.deep = self.deep or record["deep"]
+        if self.report_at_commit:
+            for failure in segment["failures"]:
+                self.hooks.record_failure(failure)
 
     def close(self) -> None:
         self.commit()
+
+    def committed_failures(self) -> Iterator[FailureRecord]:
+        """Every committed segment's failures, in the order attempted, each checked against its segment's record."""
+        for segment in self.committed:
+            yield from read_segment_failures(segment["folder"], segment)
 
     def merge(self, results: Path, native: Path, merge_results: Callable[..., Any]) -> None:
         """Merge the committed segments into ``results`` and ``native`` (partial files; ``merge_results`` is
@@ -322,12 +435,172 @@ class Segments:
         return [
             {
                 "number": segment["number"],
+                "allocation": segment.get("allocation"),
                 "n_frames": len(segment["frame_ids"]),
                 "n_failed": segment["n_failed"],
                 "files": segment["files"],
             }
             for segment in self.committed
         ]
+
+    def handoff(self) -> dict[str, Any]:
+        """What the committed segments hold, for an allocation's hand-off record (``jobs.runner``): the inputs
+        attempted, succeeded and failed."""
+        return {"n_attempted": len(self.attempted_ids), "n_succeeded": len(self.frame_ids), "n_failed": self.n_failed}
+
+
+def _sync_files(folder: Path, names: Iterable[str]) -> None:
+    for name in names:
+        descriptor = os.open(folder / name, os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+
+def committed_segments(root: Path, identity: str | None) -> list[dict[str, Any]]:
+    """Every committed segment's record under ``root`` (``segments/``), each checked (:func:`_checked_segment`) and
+    with its ``folder``: numbered from 0 with none missing, each record's run identity ``identity``, each segment's
+    first input right after the ones before it, and each file its recorded checksum. A folder never committed
+    (``.<n>.partial``) is skipped; anything else in ``root``, or anything that does not check, is a
+    ``CheckpointError``. Nothing is written."""
+    names = sorted(os.listdir(root))
+    for name in names:
+        if not (_COMMITTED.fullmatch(name) or _PARTIAL.fullmatch(name)):
+            raise CheckpointError(f"{SEGMENTS_DIRNAME}/{name} is not a segment")
+    numbers = [int(name) for name in names if _COMMITTED.fullmatch(name)]
+    if numbers != list(range(len(numbers))):
+        raise CheckpointError(f"the committed segments are not numbered from 0 without a gap: {numbers}")
+    records: list[dict[str, Any]] = []
+    first = 0
+    for number in numbers:
+        folder = root / f"{number:06d}"
+        record = _checked_segment(folder, number, identity, first=first)
+        first += len(record["attempted_ids"])
+        records.append({**record, "folder": folder})
+    return records
+
+
+def _ids(value: Any, name: str) -> list[str]:
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise CheckpointError(f"its {name} is not a list of input IDs")
+    return value
+
+
+def _checked_segment(folder: Path, number: int, identity: str | None, *, first: int) -> dict[str, Any]:
+    """A committed segment's record, checked (``CheckpointError`` otherwise, naming the segment): this version's
+    format and ``number``, the run's ``identity``, its first input right after the segments before it (``first``),
+    its succeeded and failed inputs exactly its attempted ones in their order, its counts whole numbers, and each file
+    named in it present with its recorded checksum."""
+    where = f"segment {number}"
+    try:
+        record = json.loads((folder / SEGMENT_RECORD).read_text())
+    except (FileNotFoundError, ValueError) as error:
+        raise CheckpointError(f"{where} has no readable record: {error}") from None
+    try:
+        if not isinstance(record, dict) or record.get("format") != SEGMENT_FORMAT:
+            raise CheckpointError("it is not a LaueMatching segment record")
+        if record.get("version") != SEGMENT_VERSION or record.get("number") != number:
+            raise CheckpointError("it is not this version's record of this segment")
+        if record.get("identity") != identity:
+            raise CheckpointError("it was committed by another run, or for other inputs, cache or parameters")
+        if record.get("first") != first:
+            raise CheckpointError(f"its first input is number {record.get('first')}, not {first}")
+        attempted = _ids(record.get("attempted_ids"), "attempted_ids")
+        succeeded = _ids(record.get("frame_ids"), "frame_ids")
+        failed = _ids(record.get("failed_ids"), "failed_ids")
+        if not attempted or len(set(attempted)) != len(attempted):
+            raise CheckpointError("its attempted inputs are empty or repeat one")
+        succeeded_set, failed_set = set(succeeded), set(failed)
+        if succeeded_set & failed_set or [i for i in attempted if i in succeeded_set] != succeeded:
+            raise CheckpointError("its succeeded inputs are not its attempted ones in order")
+        if [i for i in attempted if i in failed_set] != failed or len(succeeded) + len(failed) != len(attempted):
+            raise CheckpointError("its failed inputs are not the rest of its attempted ones in order")
+        for key in ("n_failed", "n_indexed", "unmatched_spots"):
+            if type(record.get(key)) is not int or record[key] < 0:
+                raise CheckpointError(f"its {key} is not a count")
+        if record["n_failed"] != len(failed) or record["n_indexed"] > len(succeeded):
+            raise CheckpointError("its counts disagree with its inputs")
+        if not isinstance(record.get("deep"), bool):
+            raise CheckpointError("its deep flag is not a boolean")
+        files = record.get("files")
+        expected = {RESULTS_FILENAME, NATIVE_FILENAME} | ({SEGMENT_FAILURES} if failed else set())
+        if not isinstance(files, dict) or set(files) != expected:
+            raise CheckpointError("its files are not the segment's")
+        for name, digest in files.items():
+            try:
+                actual = sha256(folder / name)
+            except FileNotFoundError as error:
+                raise CheckpointError(f"its {name} cannot be read: {error.strerror}") from None
+            if actual != digest:
+                raise CheckpointError(f"its {name} changed after it was committed")
+    except CheckpointError as error:
+        raise CheckpointError(f"{where}: {error}") from None
+    return record
+
+
+def read_segment_failures(folder: Path, record: Mapping[str, Any]) -> list[FailureRecord]:
+    """A committed segment's failure records, which must be exactly its record's ``failed_ids`` in order."""
+    if not record["failed_ids"]:
+        return []
+    try:
+        records = [
+            FailureRecord.from_dict(json.loads(line))
+            for line in (folder / SEGMENT_FAILURES).read_text(encoding="utf-8").splitlines()
+            if line
+        ]
+    except (FileNotFoundError, ValueError, RuntimeError) as error:  # ManifestError: a malformed record
+        raise CheckpointError(f"segment {record['number']}'s failure records cannot be read: {error}") from None
+    if [failure.input_id for failure in records] != record["failed_ids"]:
+        raise CheckpointError(f"segment {record['number']}'s failure records are not its failed inputs")
+    return records
+
+
+def checkpoint_identity(directory: Path, identity: Mapping[str, Any]) -> str:
+    """The run's identity in ``<directory>/checkpoint.json``: what its results depend on (the request, the manifest,
+    the files read, the cache, the matcher), written by its first allocation. Every later allocation must compute the
+    same document (``CheckpointError`` otherwise: the run's inputs, cache or code changed). Returns its checksum, which
+    every segment records."""
+    path = directory / CHECKPOINT_RECORD
+    text = json_text(identity)
+    try:
+        existing = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        try:
+            write_json_file(path, identity)
+        except FileExistsError:
+            existing = path.read_text(encoding="utf-8")
+        else:
+            existing = text
+    if existing != text:
+        try:
+            before = json.loads(existing)
+        except ValueError:
+            before = None
+        changed = (
+            sorted(key for key in set(before) | set(identity) if before.get(key) != identity.get(key))
+            if isinstance(before, dict)
+            else ["the whole record"]
+        )
+        raise CheckpointError(
+            f"the run's {CHECKPOINT_RECORD} disagrees with this allocation ({', '.join(changed)}): its inputs, cache "
+            "or code changed since its first allocation"
+        )
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def skip_committed(entries: Iterable[ManifestEntry], attempted: Sequence[str]) -> Iterator[ManifestEntry]:
+    """The manifest entries after the committed ones, checking that the committed inputs are exactly the manifest's
+    first ones in order (``CheckpointError`` otherwise)."""
+    remaining = iter(entries)
+    for position, input_id in enumerate(attempted):
+        entry = next(remaining, None)
+        if entry is None or entry.input_id != input_id:
+            raise CheckpointError(
+                f"the committed inputs are not the start of the manifest (input {position} is "
+                f"{None if entry is None else entry.input_id!r}, the segments have {input_id!r})"
+            )
+    return remaining
 
 
 def _sync_directory(path: Path) -> None:

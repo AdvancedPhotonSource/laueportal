@@ -541,6 +541,100 @@ def test_the_form_offers_the_gpu_target_only_when_enabled_and_refuses_the_portal
             programs.build_params("laue_matching", place.form("laue_matching", **{name: 1}), place.settings)
 
 
+@pytest.mark.parametrize(
+    ("frames", "geometry", "refused"),
+    [
+        ("shared", "shared", set()),
+        ("shared", "elsewhere", set()),  # off the shared storage: staged into the run at submission
+        ("elsewhere", "shared", {"input_path"}),  # frames are never copied
+        ("link", "shared", {"input_path"}),  # by the link's target, never by its text
+    ],
+)
+def test_a_gpu_run_reads_frames_on_the_shared_storage_and_its_other_files_anywhere_in_the_roots(
+    tmp_path, frames, geometry, refused
+):
+    import yaml
+
+    elsewhere = tmp_path / "elsewhere"
+    (elsewhere / "frames").mkdir(parents=True)
+    write_frame(elsewhere / "frames" / "frame_1.h5")
+    (elsewhere / "geometry.xml").write_bytes(GEOMETRY.read_bytes())
+    made = make_place(tmp_path, roots={"data": tmp_path / "root", "elsewhere": elsewhere})
+    try:
+        made.geometry.write_bytes(GEOMETRY.read_bytes())
+        made.crystal.write_bytes(CRYSTAL.read_bytes())
+        settings = offering(made, "pioneer")
+        document = yaml.safe_load(Path(settings.remote.settings_file).read_text())
+        document["storage"]["aps"]["filesystem_root"] = str(made.root)  # the shared storage holds the experiment
+        Path(settings.remote.settings_file).write_text(yaml.safe_dump(document))
+        if frames == "link":
+            (made.root / "linked").symlink_to(elsewhere / "frames")
+        folder = {"shared": made.data, "elsewhere": elsewhere / "frames", "link": made.root / "linked"}[frames]
+        validated = checked(
+            made,
+            settings,
+            backend="pioneer",
+            input_path=str(folder),
+            geometry_file=str(made.geometry if geometry == "shared" else elsewhere / "geometry.xml"),
+            output_path_template=str(made.root / "analysis" / "lm_%d"),
+        )
+    finally:
+        made.engine.dispose()
+    assert {issue[0][0] for issue in found(validated) if issue[2] == "remote_input"} == refused
+
+
+@pytest.mark.parametrize(
+    ("geometry", "expected"),
+    [
+        ("shared_outside_experiment", set()),  # on the shared storage, outside the experiment folder: read there
+        ("elsewhere_in_roots", set()),  # inside the roots, off the shared storage: staged at submission
+        ("outside_roots", {(("geometry_file",), "error", "path_not_allowed")}),
+        ("link_out_of_roots", {(("geometry_file",), "error", "path_not_allowed")}),  # by its target, not its text
+    ],
+)
+def test_a_gpu_runs_geometry_must_be_inside_the_portals_roots_wherever_it_is(tmp_path, geometry, expected):
+    """``jobs.validation`` on ``pioneer``: the frames on the shared storage (``storage.aps.filesystem_root``), each
+    other file anywhere inside the portal's roots, its links resolved; ``remote.plan`` checks them again against the
+    actual roots when it stages them."""
+    import yaml
+
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (elsewhere / "geometry.xml").write_bytes(GEOMETRY.read_bytes())
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "geometry.xml").write_bytes(GEOMETRY.read_bytes())
+    made = make_place(tmp_path, roots={"data": tmp_path / "root", "elsewhere": elsewhere})
+    try:
+        made.geometry.write_bytes(GEOMETRY.read_bytes())
+        made.crystal.write_bytes(CRYSTAL.read_bytes())
+        shared = made.root / "shared"
+        shared.mkdir()
+        (shared / "geometry.xml").write_bytes(GEOMETRY.read_bytes())
+        (made.root / "linked.xml").symlink_to(outside / "geometry.xml")
+        settings = offering(made, "pioneer")
+        document = yaml.safe_load(Path(settings.remote.settings_file).read_text())
+        document["storage"]["aps"]["filesystem_root"] = str(made.root)
+        Path(settings.remote.settings_file).write_text(yaml.safe_dump(document))
+        path = {
+            "shared_outside_experiment": shared / "geometry.xml",
+            "elsewhere_in_roots": elsewhere / "geometry.xml",
+            "outside_roots": outside / "geometry.xml",
+            "link_out_of_roots": made.root / "linked.xml",
+        }[geometry]
+        validated = checked(
+            made,
+            settings,
+            backend="pioneer",
+            geometry_file=str(path),
+            output_path_template=str(made.root / "analysis" / "lm_%d"),
+        )
+    finally:
+        made.engine.dispose()
+    assert {issue for issue in found(validated) if issue[0] == ("geometry_file",)} == expected
+    assert not {issue for issue in found(validated) if issue[2] == "remote_input"}
+
+
 def test_an_unset_data_folder_is_one_error(place):
     validated = checked(place, place.settings)
     assert cache_issues(validated) == {(("forward_cache",), "error", "not_configured")}

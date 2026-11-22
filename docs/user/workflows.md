@@ -68,9 +68,13 @@ of 100 million orientations, so it can find several grains in one frame.
   pixel or more, and the portal warns about them.
 - Raw frames use your **Background File**, or the median of the run's first frame. Reconstructed frames use none.
 - **Run on: APS GPU** (when it is set up) indexes on the APS cluster's GPU queue. It reads only a forward cache that
-  was installed there: build a new cache with an APS run first. Its files must be inside the experiment folder. A run
-  has the GPU queue's time limit: it stops starting frames shortly before it, keeps the frames it did, and leaves the
-  rest not run, so choose runs that fit.
+  was installed there: build a new cache with an APS run first. Its frames must be on the beamline's shared storage;
+  a geometry, crystal, mask or background file elsewhere is copied into the run when it is submitted. A large run
+  continues over several of the queue's one-hour allocations as one run: between them it shows Running, "Waiting for
+  next PBS allocation", its frame count never goes back, and each frame is indexed once. After **Stop** no further
+  frame is indexed: the frames done are merged (on a CPU queue, "Stopping: waiting to merge", when no allocation is
+  running) and the run ends Cancelled with them. When the cluster fails the run instead (an allocation lost or
+  refused), it ends Failed with the reason; the frames done are kept, and an operator can merge them for you.
 
 In the results, **Quality** replaces Goodness for these runs. It is `NMatches × √Intensity`, so do not compare it with a
 LaueGo run's Goodness. RMS error is empty, because LaueMatching records only predicted spot positions. Peaks are

@@ -205,7 +205,12 @@ def _enqueue(
         backend = session.scalar(select(Job.backend).where(Job.job_id == job_id))
     try:
         remote = portal_settings(settings.remote, runs_root=settings.files.runs_root) if is_remote(backend) else None
-        queue_id = enqueue_run(job_id, engine=engine, remote=remote)
+        sources = None
+        if remote is not None:
+            from laueportal.remote.submission import source_check  # the DM client is never loaded for local runs
+
+            sources = source_check(settings)
+        queue_id = enqueue_run(job_id, engine=engine, remote=remote, sources=sources)
     except Exception as error:
         logger.exception("%s%s could not be queued on %s", program.label, run_id, backend)
         _fail_unqueued(job_id, error, engine=engine)

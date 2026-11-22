@@ -196,6 +196,17 @@ RUNNER_LOCK_FILENAME = ".runner.lock"  # the runner's start-once lock, in the ou
 RANKS_FILENAME = "ranks.json"  # the MPI runner's per-rank summaries, in the output directory
 SHARDS_DIRECTORY = "shards"  # the MPI runner's rank-private outputs, beside the output directory
 PBS_OUTPUT_FILENAME = "pbs-output.log"  # PBS's output of the batch job (qsub -o), in the output directory
+# A run continued over PBS allocations (pioneer): in the output directory, allocations/<NNNNNN>/ holds the launcher's
+# record of allocation N (allocation.json, written before its qsub), its PBS script and output, the runner's lock and,
+# when it did not end the run, its result (result.json); allocations/ledger.json is the launcher's record of them all,
+# with the run's status and why it failed.
+ALLOCATIONS_DIRECTORY = "allocations"
+ALLOCATION_RECORD_FILENAME = "allocation.json"
+ALLOCATION_RESULT_FILENAME = "result.json"
+ALLOCATION_LOCK_FILENAME = "runner.lock"
+ALLOCATION_LEDGER_FILENAME = "ledger.json"
+ALLOCATION_RESULT_FORMAT = "laue-portal-allocation-result"
+STAGED_INPUTS_DIRECTORY = "staged-inputs"  # a pioneer run's copies of files not on the shared storage
 
 # Names a run directory reserves for support and authoritative files: an Output XML may not take one
 # of them, and neither may a directory of a relative Output XML name.
@@ -233,6 +244,9 @@ RESERVED_RUN_FILENAMES = frozenset(
         "pbs.json.tmp",
         PBS_OUTPUT_FILENAME,
         "job.pbs",
+        # A continued run's allocations (in the output directory) and staged inputs (in the run directory).
+        ALLOCATIONS_DIRECTORY,
+        STAGED_INPUTS_DIRECTORY,
         # A live run's files, reserved for every run.
         LIVE_FILENAME,
         ARRIVALS_FILENAME,
@@ -244,6 +258,11 @@ RESERVED_RUN_FILENAMES = frozenset(
 # Name prefixes of the portal's markers and temporary files in a run directory: .bdp-submission.lock,
 # .bdp-publication.json and the publication's .bdp-return-* copies; .cancel-job.json and .cancel-sent.
 RESERVED_RUN_PREFIXES = (".bdp-", ".cancel-")
+
+
+def allocation_directory(output_directory: str | os.PathLike[str], sequence: int) -> Path:
+    """``<output directory>/allocations/<NNNNNN>``: allocation ``sequence``'s folder."""
+    return Path(output_directory) / ALLOCATIONS_DIRECTORY / f"{int(sequence):06d}"
 
 
 def reconstruction_catalog_path(run_directory: str | os.PathLike[str]) -> str:

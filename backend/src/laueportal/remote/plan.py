@@ -12,12 +12,33 @@ it reads (``RemoteSettings.target_document``), or when the launcher could not bu
 (``remote.pbs.build_script``'s rules: one node and, for LaueGo, one rank per node on ``aps``, which starts no
 ``mpiexec``; one to four ranks per node; an allocation on ``crux``; safe PBS values): such a
 submission's DM job would fail on the remote side.
+
+A ``pioneer`` plan (LaueMatching on the GPU queue) also has:
+
+- ``continuation``: the run goes on over sequential PBS allocations, one at a time, each attempting at most
+  ``max_frames_per_allocation`` frames (``remote.stage`` submits them; ``jobs.runner`` runs one). The whole manifest
+  stays one run, of any size.
+- ``staged_inputs``, when the run reads a geometry, crystal, mask or background file that is not on the shared
+  storage (``storage.aps.filesystem_root``, which the portal, the launcher and the GPU nodes mount at the same path):
+  :func:`save_plan` copies each such file into ``<run>/staged-inputs/<key>/`` before the plan is written, and the plan
+  records where it came from (``source``, its real path ``resolved``), its ``size``, ``sha256`` and file identity
+  (``device``, ``inode``). The runner reads the copy, checked against that checksum (``jobs.runner.load_request``). A
+  file on the shared storage is read where it is, and frames are never copied: every input must be on the shared
+  storage. The request keeps the paths the run was created with.
+
+Every geometry, crystal, mask and background file a ``pioneer`` plan reads, and its input folder, is checked against
+the portal's actual file roots twice (``source_check``, which the portal passes: this module reads no portal settings,
+import-linter rule 3): when the plan is built, and, for a staged file, again immediately before it is copied. The copy
+reads the file it opened (``O_NOFOLLOW``), which must be the checked real path (``/proc/self/fd``) with the identity,
+size and checksum the plan recorded: a path that resolves elsewhere since, a replaced file or a link swapped in is
+refused, never copied. Without ``source_check`` a ``pioneer`` plan is refused.
 """
 
 from __future__ import annotations
 
 import hashlib
 import os
+import stat
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -31,10 +52,22 @@ from laueportal.indexing.laue_matching.cache import (
     reuse_problem,
 )
 from laueportal.jobs.backends import SHARED, transport
-from laueportal.jobs.rundir import read_manifest, read_request, verify_manifest, write_json_file
+from laueportal.jobs.rundir import (
+    STAGED_INPUTS_DIRECTORY,
+    create_unique_partial,
+    publish_file,
+    read_manifest,
+    read_request,
+    verify_manifest,
+    write_json_file,
+)
 from laueportal.remote.paths import PLAN_NAME, child_path
 from laueportal.remote.pbs import build_script
-from laueportal.remote.settings import RemoteSettings, RemoteSettingsError, collection_path
+from laueportal.remote.settings import MAX_STREAM_IMAGES, RemoteSettings, RemoteSettingsError, collection_path
+
+SourceCheck = Callable[[str], Path]
+"""The portal's check of a path a run reads (``remote.submission.source_check``): its real path when it is inside the
+portal's file roots (``files.roots.resolve_inside_roots``); an error otherwise."""
 
 SUBMISSION_LOCK_NAME = ".bdp-submission.lock"
 LAUE_MATCHING_KIND = "laue_matching_indexing"
@@ -46,8 +79,16 @@ TARGET_KINDS: dict[str, tuple[str, ...]] = {
     "pioneer": (LAUE_MATCHING_KIND,),
 }
 """The run kinds each remote target computes."""
-LAUE_MATCHING_INPUTS = ("input_path", "geometry_file", "crystal_file", "mask_file", "background_file")
-"""The files a LaueMatching run reads besides its data folder: inside the experiment folder on a remote target."""
+STAGED_KEYS = ("geometry_file", "crystal_file", "mask_file", "background_file")
+"""The small files a LaueMatching run reads besides its frames: a ``pioneer`` run reads each on the shared storage, or
+a copy staged into its run directory."""
+STAGED_INPUTS_DIRNAME = STAGED_INPUTS_DIRECTORY
+"""``<run>/staged-inputs/<key>/<file name>``: a ``pioneer`` run's copies of the files it reads that are not on the
+shared storage."""
+MAX_STAGED_BYTES = 1 << 30
+"""The largest file a plan stages (1 GiB): a geometry, crystal, mask or background file is far smaller; anything
+larger is refused rather than copied."""
+CONTINUATION_VERSION = 1
 
 
 def submission_path(settings: RemoteSettings, submission_id: str) -> Path:
@@ -56,10 +97,16 @@ def submission_path(settings: RemoteSettings, submission_id: str) -> Path:
 
 
 def build_plan(
-    job: Any, settings: RemoteSettings, submission_id: str, *, progress: Callable[[], None] = lambda: None
+    job: Any,
+    settings: RemoteSettings,
+    submission_id: str,
+    *,
+    progress: Callable[[], None] = lambda: None,
+    source_check: SourceCheck | None = None,
 ) -> dict[str, Any]:
     """Keep request/manifest immutable, recording their digest and effective path map. ``progress`` is called
-    after the manifest's check and after each input's (``crux``: one stat per input, slow on a slow mount)."""
+    after the manifest's check and after each input's (``crux``: one stat per input, slow on a slow mount).
+    ``source_check``: the portal's check of the files a ``pioneer`` run reads (the module's docstring)."""
     submission_id = str(UUID(submission_id))
     target = settings.target_document(job.backend)
     source = settings.aps_storage()
@@ -95,19 +142,26 @@ def build_plan(
             str(run): str(run / "incoming" / submission_id),
             source_root: source_root,
         }
+        staged: dict[str, dict[str, Any]] = {}
         if document["kind"] == LAUE_MATCHING_KIND:
-            if job.n_inputs > MAX_STREAM_IMAGES:
-                raise RemoteSettingsError(
-                    f"A remote LaueMatching run takes at most {MAX_STREAM_IMAGES} inputs; this one has {job.n_inputs}"
-                )
             entries = read_manifest(job.manifest_path)
-            path_map.update(_laue_matching_files(document["request"], target, experiment, progress, entries))
+            files, staged = _laue_matching_files(
+                document["request"], target, Path(source_root), run, progress, entries, source_check=source_check
+            )
+            path_map.update(files)
         plan.update(
             control_directory=str(run),
             output_directory=str(run / "incoming" / submission_id),
             path_map=path_map,
             target=dict(target),
         )
+        if document["kind"] == LAUE_MATCHING_KIND:
+            plan["continuation"] = {
+                "version": CONTINUATION_VERSION,
+                "max_frames_per_allocation": _frames_per_allocation(target),
+            }
+            if staged:
+                plan["staged_inputs"] = staged
         _check_script(plan)
         return plan
     destination = settings.storage.eagle
@@ -183,35 +237,133 @@ def build_plan(
     return plan
 
 
-MAX_STREAM_IMAGES = 65535
-"""The most frames one GPU stream daemon matches (its image number is 16 bits: ``indexing.laue_matching.stream``)."""
+def _frames_per_allocation(target: dict[str, Any]) -> int:
+    """``execution.max_frames_per_allocation``, at most one daemon's ``MAX_STREAM_IMAGES`` (also when not set)."""
+    value = target["execution"].get("max_frames_per_allocation")
+    frames = MAX_STREAM_IMAGES if value is None else int(value)
+    if not 1 <= frames <= MAX_STREAM_IMAGES:
+        raise RemoteSettingsError(
+            f"remote settings: execution.max_frames_per_allocation must be from 1 to {MAX_STREAM_IMAGES}"
+        )
+    return frames
+
+
+def on_shared_storage(shared: Path, path: str) -> bool:
+    """Whether ``path``, its links resolved, is inside ``shared`` (the resolved shared root): never by its text."""
+    try:
+        child_path(shared, path)
+    except ValueError:
+        return False
+    return True
+
+
+def checked_source(source_check: SourceCheck | None, key: str, value: str) -> Path:
+    """``value``'s real path, by the portal's check (``source_check``): ``RemoteSettingsError`` when there is no check
+    or it refuses the path (outside the portal's file roots, a ``..``, a root that does not answer)."""
+    if source_check is None:
+        raise RemoteSettingsError(f"A GPU run's {key} is checked against the portal's file roots; no check was given")
+    try:
+        return Path(source_check(value))
+    except Exception as error:  # the portal's refusal (PathNotAllowed, NotResponding): the plan is refused
+        raise RemoteSettingsError(f"{key} is refused: {error}") from None
+
+
+def _open_source(key: str, resolved: Path) -> tuple[int, os.stat_result]:
+    """Open the checked real path ``resolved`` for reading: not through a link (``O_NOFOLLOW``), never blocking on a
+    FIFO, a regular file, and (where ``/proc/self/fd`` tells) the very file at ``resolved``, so that a folder or link
+    swapped in after the check is refused. Returns the descriptor and its ``fstat``."""
+    flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    try:
+        descriptor = os.open(resolved, flags)
+    except OSError as error:
+        raise RemoteSettingsError(f"{key} cannot be opened: {error.strerror}") from None
+    try:
+        info = os.fstat(descriptor)
+        if not stat.S_ISREG(info.st_mode):
+            raise RemoteSettingsError(f"{key} is not a regular file")
+        link = f"/proc/self/fd/{descriptor}"
+        if os.path.islink(link) and os.readlink(link) != str(resolved):
+            raise RemoteSettingsError(f"{key} was moved or replaced while it was opened; submit the run again")
+    except BaseException:
+        os.close(descriptor)
+        raise
+    return descriptor, info
+
+
+def _staged_input(key: str, value: str, resolved: Path, run: Path) -> dict[str, Any]:
+    """What the plan records of a file it stages (``key``, ``source``, ``resolved``, ``path``, ``size``, ``sha256``,
+    ``device``, ``inode``), read from the file opened at the checked real path ``resolved`` (:func:`_open_source`):
+    its copy's path is ``<run>/staged-inputs/<key>/<its name>``. Refused unless it is a regular file of at most
+    ``MAX_STAGED_BYTES``."""
+    descriptor, info = _open_source(key, resolved)
+    try:
+        if info.st_size > MAX_STAGED_BYTES:
+            raise RemoteSettingsError(
+                f"{key} is larger than {MAX_STAGED_BYTES >> 20} MiB and not on the shared storage: it is not copied"
+            )
+        digest = hashlib.sha256()
+        with os.fdopen(os.dup(descriptor), "rb") as stream:
+            while chunk := stream.read(1 << 20):
+                digest.update(chunk)
+    finally:
+        os.close(descriptor)
+    return {
+        "key": key,
+        "source": value,
+        "resolved": str(resolved),
+        "path": str(run / STAGED_INPUTS_DIRNAME / key / resolved.name),
+        "size": info.st_size,
+        "sha256": digest.hexdigest(),
+        "device": info.st_dev,
+        "inode": info.st_ino,
+    }
+
+
+def file_sha256(path: str | os.PathLike[str]) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        while chunk := stream.read(1 << 20):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _laue_matching_files(
     request: dict[str, Any],
     target: dict[str, Any],
-    experiment: Path,
+    shared_root: Path,
+    run: Path,
     progress: Callable[[], None],
     entries: Any = (),
-) -> dict[str, str]:
-    """A LaueMatching run on a remote target: its files inside the experiment folder, which the cluster mounts, and
-    the target's data folder (``data_root``) holding the orientation database and the run's forward cache, exactly
-    fitting the run's frozen values (a remote run never builds a cache). The path map entry from the portal's data
-    folder (the request's ``data_root``) to the target's."""
-    for key in LAUE_MATCHING_INPUTS:
+    *,
+    source_check: SourceCheck | None = None,
+) -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
+    """A LaueMatching run on ``pioneer``: its input folder and every input on the shared storage (``shared_root``,
+    which the portal, the launcher and the GPU nodes mount at the same path; checked with links resolved, so a link
+    leading off it is refused); its geometry, crystal, mask and background files read there, or staged into the run
+    (:func:`_staged_input`) when they are not; and the target's data folder (``data_root``) holding the orientation
+    database and the run's forward cache, exactly fitting the run's frozen values (a remote run never builds a cache).
+    The path map entry from the portal's data folder (the request's ``data_root``) to the target's, and the staged
+    files by key. The input folder and each of those files must pass the portal's ``source_check`` first."""
+    shared = shared_root.resolve()
+    folder = request.get("input_path")
+    if folder:
+        checked_source(source_check, "input_path", folder)
+        if not on_shared_storage(shared, folder):
+            raise RemoteSettingsError(f"input_path must be on the shared storage {shared}, which the GPU nodes mount")
+    staged = {}
+    for key in STAGED_KEYS:
         value = request.get(key)
-        if value:
-            try:
-                child_path(experiment, value)
-            except ValueError:
-                raise RemoteSettingsError(f"{key} must be inside the experiment folder {experiment}") from None
+        if not value:
+            continue
+        resolved = checked_source(source_check, key, value)
+        if not on_shared_storage(shared, str(resolved)):
+            staged[key] = _staged_input(key, value, resolved, run)
+            progress()
     for entry in entries:  # each input as it resolves (a link inside the folder may lead out of it)
-        try:
-            child_path(experiment, entry.source)
-        except ValueError:
+        if not on_shared_storage(shared, entry.source):
             raise RemoteSettingsError(
-                f"Input {entry.input_id} must be inside the experiment folder {experiment}"
-            ) from None
+                f"Input {entry.input_id} must be on the shared storage {shared}, which the GPU nodes mount"
+            )
         progress()
     if request.get("create_forward_cache"):
         raise RemoteSettingsError("A remote LaueMatching run reads an installed forward cache; it never builds one")
@@ -232,7 +384,7 @@ def _laue_matching_files(
     portal_root = request.get("data_root")
     if not portal_root:
         raise RemoteSettingsError("The run names no LaueMatching data folder")
-    return {str(portal_root): str(root)}
+    return {str(portal_root): str(root)}, staged
 
 
 def _check_script(plan: dict[str, Any]) -> None:
@@ -246,23 +398,73 @@ def _check_script(plan: dict[str, Any]) -> None:
         )
     try:
         build_script(plan)
+        if plan.get("continuation") is not None:
+            build_script(plan, finalize=True)  # its finalizing allocations' CPU request
     except ValueError as error:
         raise RemoteSettingsError(f"remote settings: targets.{backend} cannot run this job: {error}") from None
 
 
 def save_plan(
-    job: Any, settings: RemoteSettings, submission_id: str, *, progress: Callable[[], None] = lambda: None
+    job: Any,
+    settings: RemoteSettings,
+    submission_id: str,
+    *,
+    progress: Callable[[], None] = lambda: None,
+    source_check: SourceCheck | None = None,
 ) -> dict[str, Any]:
-    plan = build_plan(job, settings, submission_id, progress=progress)
+    plan = build_plan(job, settings, submission_id, progress=progress, source_check=source_check)
     incoming = Path(plan.get("incoming_directory", plan["output_directory"]))
     if incoming.exists():
         raise FileExistsError(f"Return destination already exists: {incoming}")
     # A second process must not race the shared partial-file publisher.
     with open(Path(job.run_directory) / SUBMISSION_LOCK_NAME, "x", encoding="utf-8") as lock:
         lock.write(submission_id)
+    for spec in plan.get("staged_inputs", {}).values():
+        stage_input(spec, source_check)
     path = Path(job.run_directory) / PLAN_NAME
     write_json_file(path, plan)  # Exclusive publication; no existing file is replaced.
     inbox = submission_path(settings, submission_id)
     inbox.parent.mkdir(parents=True, exist_ok=True)
     write_json_file(inbox, plan)
     return plan
+
+
+def stage_input(spec: dict[str, Any], source_check: SourceCheck | None) -> None:
+    """Copy one staged file (``spec``: :func:`_staged_input`'s record) to its ``path`` in the run, through a partial
+    file synced before its rename. Immediately before, the source is checked again against the portal's file roots
+    (``source_check``: it must still resolve to the recorded real path) and opened at that path
+    (:func:`_open_source`): its device, inode and size must be those recorded, and the bytes copied the recorded
+    ``sha256``. Anything else is refused: a source that changed, was replaced or now resolves elsewhere is never
+    copied. An existing copy is kept only when it holds the recorded bytes (a copy is never replaced). The source is
+    never written."""
+    key = spec.get("key", "a staged file")
+    destination = Path(spec["path"])
+    if destination.exists() or destination.is_symlink():
+        if destination.is_symlink() or file_sha256(destination) != spec["sha256"]:
+            raise FileExistsError(f"A different staged file already exists: {destination}")
+        return
+    resolved = checked_source(source_check, key, spec["source"])
+    if str(resolved) != spec["resolved"]:
+        raise RemoteSettingsError(f"{key} now resolves to another file than the plan checked; submit the run again")
+    descriptor, info = _open_source(key, resolved)
+    try:
+        if (info.st_dev, info.st_ino, info.st_size) != (spec["device"], spec["inode"], spec["size"]):
+            raise RemoteSettingsError(f"{key} was replaced or changed after the plan read it; submit the run again")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        partial, target = create_unique_partial(destination)
+        digest = hashlib.sha256()
+        size = 0
+        try:
+            with os.fdopen(os.dup(descriptor), "rb") as source, open(target, "wb") as copy:
+                while chunk := source.read(1 << 20):
+                    digest.update(chunk)
+                    size += len(chunk)
+                    copy.write(chunk)
+            if (digest.hexdigest(), size) != (spec["sha256"], spec["size"]):
+                raise RemoteSettingsError(f"{key} changed while it was staged; submit the run again")
+            os.chmod(partial, 0o444)
+            publish_file(partial, destination)  # synced; never replaces a file that appeared meanwhile
+        finally:
+            partial.unlink(missing_ok=True)
+    finally:
+        os.close(descriptor)

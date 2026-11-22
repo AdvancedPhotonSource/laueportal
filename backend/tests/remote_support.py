@@ -169,6 +169,7 @@ def bdp_settings(layout: Layout) -> dict[str, Any]:
                     "ngpus": 1,
                     "walltime": "01:00:00",
                 },
+                "finalize_pbs": {"queue": "cpu", "cpus": 4, "mem": "64gb", "walltime": "02:00:00"},
                 "execution": {
                     "workers": 1,
                     "max_in_flight": 2,

@@ -675,13 +675,20 @@ def _reconcile(
         ):
             request_cancellation(job, settings, client, records)
         summary = None
+        reason = None
+        failure_report_path = None
         if dm_state in TERMINAL_DM_STATES:
             incoming = Path(plan.get("incoming_directory", plan["output_directory"]))
+            reason = launcher_reason(plan) if dm_state in {"failed", "aborted"} else None
             if (incoming / "run.json").exists():
                 if job.backend in observation.OBSERVED_TARGETS:
                     _publishing(engine, job, observed)
                     observed = None  # merged into "Publishing results"
                 summary = publish_returned(plan)
+                # Older summaries omit the failure_report key. Only record a path when publication actually
+                # supplied the file, including for a checkpoint failure whose report could not be reconstructed.
+                if (run_directory / "failures.jsonl").is_file():
+                    failure_report_path = str(run_directory / "failures.jsonl")
             elif dm_state == "done":
                 raise ValueError("DM completed without returning a run summary")
         with Session(engine) as session, session.begin():
@@ -708,13 +715,14 @@ def _reconcile(
                     current,
                     status=JobStatus[summary["status"].upper()],
                     message=summary.get("message"),
-                    failure_report_path=str(run_directory / "failures.jsonl"),
+                    failure_report_path=failure_report_path,
                 )
             elif dm_state in {"failed", "aborted"}:
                 state.finalize(
                     current,
                     status=JobStatus.CANCELLED if current.cancel_requested_at else JobStatus.FAILED,
-                    message=f"DM job {external_id} {dm_state}; inspect DM stage diagnostics",
+                    message=f"DM job {external_id} {dm_state}"
+                    + (f": {reason}" if reason else "; inspect DM stage diagnostics"),
                 )
         return True
     except Exception as error:
@@ -738,6 +746,28 @@ def _reconcile(
         # A transient DM/filesystem failure is not evidence that remote work stopped.
         logger.exception("Could not reconcile remote job %s", job.job_id)
         return changed
+
+
+LEDGER_MESSAGE_LIMIT = 500
+"""The most of the launcher's message a job's message takes (:func:`launcher_reason`)."""
+
+
+def launcher_reason(plan: dict[str, Any]) -> str | None:
+    """Why the launcher ended a continued run without its summary: the message of its allocation ledger
+    (``allocations/ledger.json`` in the output folder, ``remote.stage``), which names where the run's files are kept;
+    None for another run, or when the ledger cannot be read or names none."""
+    if plan.get("continuation") is None:
+        return None
+    try:
+        ledger = json.loads(
+            (Path(plan["output_directory"]) / "allocations" / "ledger.json").read_text(encoding="utf-8")
+        )
+    except (OSError, ValueError):
+        return None
+    message = ledger.get("message") if isinstance(ledger, dict) else None
+    if not isinstance(message, str) or not message:
+        return None
+    return message if len(message) <= LEDGER_MESSAGE_LIMIT else message[: LEDGER_MESSAGE_LIMIT - 1] + "…"
 
 
 def _observe(job: Job, record: dict[str, Any], refusals: RefusedObservations) -> dict[str, Any] | None:

@@ -217,6 +217,8 @@ nothing useful. Restore the run directory's permissions by hand with DM's toolin
 **Once, when switching to this version:** re-render the workflows (`render-workflows.py`, above) and update the
 registered `dm.workflow` with DM's administrative tooling (an administrator does it; nothing registers it here). Until
 then the registered workflow has no `03-PERMISSIONS` and its check stage is still `03-CHECK`, which works as before.
+A workflow registered before `dm.monitor_seconds` existed follows a run for 48 hours (`maxRepeats: 17280`): render
+and register it again before enabling `pioneer`, whose runs continue over several days ("The APS GPU target").
 
 ## Connectivity monitor
 
@@ -616,17 +618,25 @@ above): render and register the clean-up workflow (`render-workflows.py` writes 
 
 The `pioneer` target runs LaueMatching on the APS cluster's GPU queue (the form's **Run on: APS GPU**, offered for
 LaueMatching only and only while `targets.pioneer.enabled`). It is submitted, followed and stopped as an `aps` run (the
-launcher's `qsub`, `qstat` and `qdel` over SSH to `submit_host`), through the main DM workflow (`dm.workflow`): a run
-is one PBS job of at most the queue's walltime, so no other workflow is registered. How a run works is in
-[`laue-matching-remote-gpu.md`](../laue-matching-remote-gpu.md).
+launcher's `qsub`, `qstat`, `qselect` and `qdel` over SSH to `submit_host`), through the main DM workflow
+(`dm.workflow`): one run continues over as many sequential PBS allocations as it needs, which the launcher's
+`02-MONITOR` stage submits one at a time, so DM's monitor stage must follow it for days (`dm.monitor_seconds`, below).
+How a run works is in [`laue-matching-remote-gpu.md`](../laue-matching-remote-gpu.md).
 
-**Storage.** The portal host, the launcher host and the GPU nodes must mount the experiment folder
-(`experiment_directory`, the portal's `files.runs_root`) and `targets.pioneer.data_root` at the same paths. A run's
-inputs, geometry, crystal, mask and background files must be inside the experiment folder (validation and the plan
-refuse others), so keep the geometry folder there too. The launcher writes the PBS script and the run's return
-folder (`incoming/<submission>`) readable by its own account only, so the launcher, the account `submit_host` logs in
-as and the portal must be one account: the job runs as it, writes its results as it, and the portal moves them at
-publication. `03-PERMISSIONS` does not run for it.
+**Storage.** The portal host, the launcher host and the GPU nodes must mount the shared storage
+(`storage.aps.filesystem_root`, which holds the experiment folder, `experiment_directory`, the portal's
+`files.runs_root`) and `targets.pioneer.data_root` at the same paths. A run's frames must be on the shared storage
+(validation and the plan check them with links resolved, and refuse others); they are never copied. Its geometry,
+crystal, mask and background files are read where they are when they are on the shared storage, inside the experiment
+folder or not; any other (inside the portal's file roots: the calibration folder on the portal host) is copied into
+the run's `staged-inputs/` at submission, with its source and sha256 in the plan. Each such file is checked against the
+portal's file roots when the plan is built and again immediately before it is copied, and the copy reads the very file
+checked (its real path, device, inode, size and checksum): one retargeted, replaced or moved out of the roots in
+between is refused, never copied. No shared copy of the geometry
+folder is needed. The launcher writes the PBS scripts and the run's return folder (`incoming/<submission>`) readable
+by its own account only, so the launcher, the account `submit_host` logs in as and the portal must be one account: the
+job runs as it, writes its results as it, and the portal moves them at publication. `03-PERMISSIONS` does not run for
+it.
 
 **The compute environment.** Install a versioned release on the shared storage and keep the previous one for rollback.
 The env needs no CUDA toolkit on the cluster: `environment-gpu.lock` brings conda-forge's `cuda-nvcc` (CUDA 12.8, which
@@ -652,9 +662,18 @@ uv pip check --python "$py"
 **Settings** (`targets.pioneer` in both copies of `bdp.yaml`; `deploy/remote/bdp.yaml.template` has the keys):
 `submit_host`, `analysis_python`, `code_directory`, `data_root`, `pbs` (`queue`, `walltime`, `cpus`, `mem` as PBS writes
 it, `ngpus: 1`) and `execution` (`threads_per_worker`: the daemon's and the preprocessing's threads, at most `cpus`;
-`laue_matching_indexer: stream`; `segment_seconds`; `soft_deadline_seconds`, at least 300 s under the walltime). A run is
-refused at submission, before DM is called, when one of these is missing or when the run's forward cache is not
-installed in `data_root` exactly as the run needs it.
+`laue_matching_indexer: stream`; `segment_seconds`; `soft_deadline_seconds`, at least 300 s under the walltime;
+optionally `max_frames_per_allocation`, from 1 to 65,535, its default) and `finalize_pbs` (`queue`, `walltime`, `cpus`,
+`mem`; no `ngpus`, or `0`): the CPU request of a stopped run's finalizing allocation, which only merges and publishes
+the committed work. It is required: without it the target is not configured, and a finalizing allocation never falls
+back to the GPU request. A run is refused at submission, before DM is called, when one of these is missing or when the run's
+forward cache is not installed in `data_root` exactly as the run needs it. On the inference queue (one GPU, one hour,
+one running job and 20 queued per account) use `cpus: 4`, `mem: 64gb`, `ngpus: 1`, `walltime: 01:00:00`,
+`soft_deadline_seconds: 2700` and `segment_seconds: 300`; give `finalize_pbs` a CPU queue the launcher's account may
+use, with a few CPUs, the memory the merge needs and a walltime of a couple of hours (for example `cpus: 4`, `mem: 64gb`,
+`walltime: 02:00:00`). For a pilot,
+make a few-frame run continue over several allocations with `max_frames_per_allocation` (a few frames) or a short
+`soft_deadline_seconds`, then return to these values while no run is active.
 
 **Installing caches.** A GPU run reads an installed cache and never builds one. Build a cache with an APS run (the
 form's **New…**), then copy it, and once the orientation database, into the target's data folder, as the portal's
@@ -675,10 +694,85 @@ and its tooltip shows the worker's and the APS GPU's state on their own lines. T
 `qstat -Q -f` of the queue over the SSH route `qsub` takes and checks the files; it submits no job, runs at most every
 five minutes, and does not depend on the Globus checks.
 
-**Monitoring and stop.** The run's phase is Queued ("Waiting for PBS allocation") until PBS starts the job, then
-Running ("Processing: n of N frames", the committed frames). On Stop, a queued job is deleted at once; a running job is
-left to drain (the runner reads `cancel.request` in the run directory, merges the frames done and ends Cancelled), and
-the launcher's `monitor` stage deletes it with `qdel` if it still runs 10 minutes after the stop.
+**Allocations.** The launcher keeps each run's allocations in its state file (`state_directory/<submission>.json`)
+and, for the record, in `incoming/<submission>/allocations/ledger.json`, which is published with the run: the run's
+status and, when it failed, why; each allocation's number, PBS job name (`L<submission hex>-<number>`), `qsub`
+outcome, PBS job ID, exit status and result. Each allocation is recorded, with its `allocation.json` and PBS script in
+`allocations/<n>/`, before `qsub` runs, and its submission first asks PBS's history for the job name
+(`qselect -x -N`), so a lost `qsub` reply, a restarted launcher or two monitor runs at once never make a second job (the
+stages of one run take `<submission>.lock` in `state_directory`). PBS's job history must therefore stay enabled
+(`job_history_enable`). An allocation is submitted once and never again. The scripts carry `#PBS -r n`: PBS never
+reruns an allocation. After PBS reports an allocation finished, the launcher waits up to 60 s for its `result.json` or
+`run.json` to be visible before it takes them to be missing; a file that is there and does not check is decided at
+once.
+
+**How a run ends.** There are three outcomes, and nothing is retried or rescued:
+
+- **It finishes.** The allocation that attempts the last input merges every committed segment and writes the run's
+  summary: Finished, or Failed ("Not all inputs completed successfully") with each failed frame in the failure report,
+  as on one allocation.
+- **A user stops it** (below): Cancelled, with the committed frames merged and published.
+- **Anything unexpected** ends it Failed with the reason in the portal's message, and submits nothing after it. The
+  run's files stay in `incoming/<submission>/` (in the run directory when a summary was published): the committed
+  `segments/`, `checkpoint.json`, `allocations/<n>/pbs-output.log` and the ledger. The cases: an allocation killed
+  (walltime, node failure, signal) or ended without a result or hand-off that checks; a hand-off that committed no
+  input; a refused `qsub`; a `qsub` whose reply was lost and whose job PBS's history does not show within two minutes
+  (the message names the job; a job of that name that PBS starts later finds the ledger's FAILED and refuses to run,
+  but delete it with `qdel` if you find it); an error of the runner (a changed checkpoint, input, cache or software;
+  the storage failing; a daemon that does not start; a merge that fails), which writes the run's summary Failed with
+  the committed segments kept unmerged and its counts those last committed; an error of the launcher itself, which
+  requests deletion of the allocation in PBS (the message says when that could not be done and the job may still run). A
+  finalizing allocation that fails after a stop ends the run Failed the same way. The operator can salvage the
+  committed frames (below).
+
+The failure ledger blocks a job PBS accepts late from starting. If shared storage prevents writing that ledger, a
+late job may still start. Confirm PBS has no active allocation before restarting or salvaging the run.
+
+PBS (`qstat`, `qselect`, `qdel`) or the shared storage that does not answer is no failure: the run stays Running, its
+observation delayed, the reason in the state file (`unavailable`), and the next pass goes on where this one stopped;
+an allocation PBS cannot be asked about is never taken to have ended. Only DM's monitoring horizon bounds such an
+outage.
+
+**Monitoring horizon.** `dm.monitor_seconds` (in the launcher's `bdp.yaml`; 14 days by default) is how long DM's
+`02-MONITOR` stage repeats: `render-workflows.py` writes its `maxRepeats` from it (120,960 runs of 10 s by default,
+where earlier versions had 17,280, 48 hours). A run must end within it. When DM stops following a run the portal ends
+it Failed; an allocation may still be queued or running: find it with `qselect -x -N L<submission hex>-<n>` and
+delete it; the committed segments stay in `incoming/<submission>/segments/` (see Salvaging). Changing the value needs
+the workflow rendered and registered again. The horizon is the main workflow's, so it applies to `aps` and `crux` runs
+too: their monitor stage may now follow a run for 14 days instead of 48 hours. An `aps` run's monitor stage still fails
+at the first `qstat` that fails, and a `crux` run's after `targets.crux.status_failure_budget_seconds` of failed Flow
+status calls, as before.
+
+**Monitoring and stop.** The run's phase is Queued ("Waiting for PBS allocation") until PBS starts its first
+allocation, then Running ("Processing: n of N frames", the whole run's committed frames, never fewer than before), and
+Queued "Waiting for next PBS allocation" while a later allocation waits. On Stop no processing allocation is submitted
+any more, and a queued processing allocation is deleted at once (by the cancel stage); a running one is left to drain
+(the runner reads `cancel.request` in the run directory, merges the committed frames and ends Cancelled), and the
+launcher's `monitor` stage deletes it with `qdel` if it still runs 10 minutes after the stop (or after it started
+running, when later). When the allocation in PBS at the stop ended without the run's summary (deleted while queued or
+after the grace, or between allocations), one finalizing allocation on `finalize_pbs` merges the committed work and
+ends the run Cancelled ("Stopping: waiting to merge", then "Stopping: merging results"); with nothing committed the run
+ends Cancelled at once. A stop never leads to a further processing allocation, and never to a GPU request.
+
+**Salvaging a failed run.** A run that failed cannot be resumed from the portal: submit a new run for the inputs it did
+not finish. Its committed frames can be merged into a new folder, once DM's job has ended and
+`qselect -x -N L<submission hex>-<n>` shows no allocation of the run queued or running. As the launcher's account, on
+a host that mounts the shared storage, with the run's own GPU environment (no GPU is needed: use a CPU PBS job or a
+login shell with few threads):
+
+```bash
+PYTHONPATH=<code_directory> <analysis_python> -c 'import sys; from laueportal.indexing.laue_matching.compute import salvage; print(salvage(sys.argv[1], sys.argv[2]))' <output folder> <new folder>
+```
+
+`<output folder>` is the run's `incoming/<submission>` (or its run directory, once the portal published the failed
+summary); `<new folder>` must not exist. It checks each committed segment against its record and `checkpoint.json`,
+computes no input, writes nothing in the run's folders, and writes `output.h5`, `laue_matching.h5` and the committed
+frames' `failures.jsonl` into the new folder. It refuses segments that do not check. The salvaged files are not the
+run's: the portal does not know them, the viewers do not open them as the run's results, and the inputs the run did not
+attempt are in no file (compare the frame IDs with the run's `inputs.jsonl`). Never edit or move a segment,
+`checkpoint.json` or `background.json` while a run is active: an allocation that finds them changed ends the run
+Failed. Never replace an active run's software in place (its next allocation ends the run Failed rather than resume
+with other science): install a new release beside it.
 
 ## Validation
 

@@ -555,5 +555,6 @@ A program is a run kind with its own parameters and compute function. For a new 
 `laue_matching` is the example of a second program in one domain: `indexing/laue_matching/` has its parameters, compute
 and data-folder checks, `science/laue_matching.py` reads the crystal and detector, and it writes the same results file
 as LaueGo, so the viewers need only its labels. On the `pioneer` target it matches with the GPU stream daemon
-(`indexing/laue_matching/stream.py`) and commits segments (`output.py`):
-[`laue-matching-remote-gpu.md`](laue-matching-remote-gpu.md).
+(`indexing/laue_matching/stream.py`) and commits checked segments (`output.py`), so that one run continues over
+sequential PBS allocations, which the launcher chains (`remote/stage.py`) and the runner runs one at a time
+(`jobs/runner.py`): [`laue-matching-remote-gpu.md`](laue-matching-remote-gpu.md).

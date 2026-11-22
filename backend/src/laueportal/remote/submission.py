@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -29,12 +30,14 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from laueportal.core.db import begin_write
+from laueportal.core.settings import Settings
 from laueportal.core.timeutil import utcnow
+from laueportal.files.roots import resolve_inside_roots
 from laueportal.jobs import state
 from laueportal.jobs.models import Job
 from laueportal.jobs.state import ExecutionStateError
 from laueportal.remote.dm import DMClient
-from laueportal.remote.plan import save_plan, submission_path
+from laueportal.remote.plan import SourceCheck, save_plan, submission_path
 from laueportal.remote.settings import RemoteSettings, require_backend
 
 logger = logging.getLogger(__name__)
@@ -69,16 +72,35 @@ def plan_progress(job_id: int, *, engine: Engine) -> Callable[[], None]:
     return progress
 
 
+def source_check(settings: Settings) -> SourceCheck:
+    """``remote.plan``'s check of the files a ``pioneer`` run reads, against the portal's actual file roots
+    (``files.roots.resolve_inside_roots``: no ``..``, inside a root with links resolved): the real path, or the
+    refusal."""
+
+    def check(path: str) -> Path:
+        return resolve_inside_roots(path, settings)[1]
+
+    return check
+
+
 def queue_identity(submission_id: str) -> str:
     """The job's ``queue_job_id`` while DM runs it."""
     return f"dm:{submission_id}"
 
 
-def submit_run(job_id: int, *, engine: Engine, settings: RemoteSettings | None, client: Any = None) -> str:
+def submit_run(
+    job_id: int,
+    *,
+    engine: Engine,
+    settings: RemoteSettings | None,
+    client: Any = None,
+    sources: SourceCheck | None = None,
+) -> str:
     """Submit a published remote run to DM; returns DM's processing job ID.
 
     ``settings`` are the portal's remote settings (``remote.settings.portal_settings``), which are ``None`` while
-    ``[remote]`` is disabled: a remote run is then refused.
+    ``[remote]`` is disabled: a remote run is then refused. ``sources``: the portal's check of the files a run reads
+    (:func:`source_check`), which a ``pioneer`` plan requires.
     """
     if settings is None:
         raise ValueError(
@@ -95,7 +117,9 @@ def submit_run(job_id: int, *, engine: Engine, settings: RemoteSettings | None, 
             raise ValueError(f"Job {job_id} does not exist")
         state.assert_enqueueable(job)
         require_backend(job.backend, settings)
-        plan = save_plan(job, settings, submission_id, progress=plan_progress(job_id, engine=engine))
+        plan = save_plan(
+            job, settings, submission_id, progress=plan_progress(job_id, engine=engine), source_check=sources
+        )
     try:
         with Session(engine) as session, session.begin():
             begin_write(session)  # a stop (jobs.controls.cancel_run) either came first or waits for this commit

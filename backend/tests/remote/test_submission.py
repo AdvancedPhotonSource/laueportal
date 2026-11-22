@@ -75,12 +75,12 @@ def test_a_plan_built_slowly_records_its_progress_so_the_creation_timeout_counts
         session.get(Job, run.job_id).updated_at = utcnow() - timedelta(minutes=11)  # published 11 minutes ago
     build_plan, checks, verdicts = remote_plan.build_plan, [], []
 
-    def reconciled_meanwhile(job, settings, submission_id, *, progress):
+    def reconciled_meanwhile(job, settings, submission_id, *, progress, source_check=None):
         def counted():
             progress()
             checks.append(1)
 
-        written = build_plan(job, settings, submission_id, progress=counted)
+        written = build_plan(job, settings, submission_id, progress=counted, source_check=source_check)
         verdicts.append(reconciler.reconcile_runs(engine, stale_after_seconds=300, creation_timeout_seconds=600))
         return written
 

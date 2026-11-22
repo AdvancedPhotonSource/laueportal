@@ -16,7 +16,7 @@
       "command": "{{STAGE_COMMAND}} monitor $submissionId",
       "repeatPeriod": 10,
       "repeatUntil": "\"$remoteStatus\" in (\"SUCCEEDED\", \"FAILED\", \"CANCELLED\")",
-      "maxRepeats": 17280,
+      "maxRepeats": 120960,
       "outputVariableRegexList": [
         "Status: (?P<remoteStatus>.*)",
         "Observation: (?P<remoteObservation>.*)"

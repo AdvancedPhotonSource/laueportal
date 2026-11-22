@@ -58,6 +58,7 @@ from laueportal.jobs import programs
 from laueportal.jobs.backends import is_remote
 from laueportal.reconstruction.wire.live_params import WireLiveParamsV1
 from laueportal.reconstruction.wire.params import WireParamsV1
+from laueportal.remote.settings import RemoteSettingsError, portal_settings
 
 Severity = Literal["error", "warning"]
 Params = LaueGoParamsV1 | LaueMatchingParamsV1 | WireParamsV1
@@ -90,9 +91,14 @@ selection, a source), put in place of a failed field so that the other fields ca
 LIVE_STAND_INS: dict[str, Any] = {**STAND_INS, "filename_prefixes": ["%d"]}
 """``STAND_INS`` for a live schema, whose one template has exactly one ``%d``."""
 
-INSIDE_EXPERIMENT = {"crux": "An ALCF run", "pioneer": "An APS GPU run"}
+INSIDE_EXPERIMENT = {"crux": "An ALCF run"}
 """The targets whose runs read only files inside the experiment folder (Globus transfers a ``crux`` run's from
-there; the GPU cluster mounts only that storage), and how a message names their run."""
+there), and how a message names their run."""
+ON_SHARED_STORAGE = {"pioneer": "An APS GPU run"}
+"""The targets whose runs read their frames on the shared storage (``bdp.yaml``'s ``storage.aps.filesystem_root``,
+which the portal, the launcher and the GPU nodes mount at the same path), and how a message names their run. Their
+geometry, crystal, mask and background files may be anywhere inside the roots: one that is not on the shared storage
+is copied into the run at submission (``remote.plan``)."""
 TRANSFERRED_INPUTS = ("input_path", "geometry_file", "crystal_file", "mask_file", "background_file")
 """The fields naming what such a run reads (``remote.plan.build_plan``: the manifest's inputs and these files; only
 LaueMatching has a background file)."""
@@ -614,13 +620,19 @@ def check_backend(issues: Issues, settings: Settings, checked: Checked) -> None:
 
 
 def check_transferred_inputs(issues: Issues, settings: Settings, checked: Checked) -> None:
-    """On ``crux`` and ``pioneer`` (``INSIDE_EXPERIMENT``), the files the run reads (the input folder's, and the
-    geometry, crystal, mask and background files) are inside the experiment folder (``files.runs_root``, which
-    ``bdp.yaml``'s experiment directory must be): ``remote.plan.build_plan`` refuses any other at submission (an
-    error on each field)."""
+    """On ``crux`` (``INSIDE_EXPERIMENT``), the files the run reads (the input folder's, and the geometry, crystal
+    and mask files) are inside the experiment folder (``files.runs_root``, which ``bdp.yaml``'s experiment directory
+    must be); on ``pioneer`` (``ON_SHARED_STORAGE``) the input folder is on the shared storage
+    (:func:`check_shared_inputs`). ``remote.plan.build_plan`` refuses any other at submission (an error on each
+    field)."""
 
     values = checked.values
-    if not remote_target(issues, checked) or values is None or values.backend not in INSIDE_EXPERIMENT:
+    if not remote_target(issues, checked) or values is None:
+        return
+    if values.backend in ON_SHARED_STORAGE:
+        check_shared_inputs(issues, settings, checked)
+        return
+    if values.backend not in INSIDE_EXPERIMENT:
         return
     experiment = _real(issues, ["backend"], title(values, "backend"), settings.files.runs_root)
     if experiment is None:
@@ -639,6 +651,39 @@ def check_transferred_inputs(issues: Issues, settings: Settings, checked: Checke
                 f"{INSIDE_EXPERIMENT[values.backend]} reads only files inside {experiment} (the experiment folder): "
                 f"{title(values, name)} is outside it",
             )
+
+
+def check_shared_inputs(issues: Issues, settings: Settings, checked: Checked) -> None:
+    """A ``pioneer`` run's input folder, its links resolved, is on the shared storage (``storage.aps.filesystem_root``
+    of the remote settings; an error otherwise): the GPU nodes read its frames where they are, and frames are never
+    copied. Its other files need only be inside the roots (their own checks): ``remote.plan`` reads one on the shared
+    storage where it is and copies any other into the run. Nothing is checked while the remote settings cannot be
+    read (the target's own check says why)."""
+
+    values = checked.values
+    assert values is not None
+    name = "input_path"
+    value = getattr(values, name, None)
+    if not checked.usable(name) or not isinstance(value, str) or padded(value) or not os.path.isabs(value):
+        return
+    try:
+        remote = portal_settings(settings.remote, runs_root=settings.files.runs_root)
+        root = remote.aps_storage().root("aps") if remote is not None else None
+    except RemoteSettingsError:
+        return
+    if root is None:
+        return
+    shared = _real(issues, ["backend"], title(values, "backend"), root)
+    path = _inside(issues, settings, [name], title(values, name), value)
+    if shared is None or path is None:
+        return
+    if not path.is_relative_to(shared):
+        issues.error(
+            [name],
+            "remote_input",
+            f"{ON_SHARED_STORAGE[values.backend]} reads frames only on the shared storage {shared}, which the GPU "
+            f"nodes mount: {title(values, name)} is outside it",
+        )
 
 
 def check_author(issues: Issues, checked: Checked) -> None:

@@ -45,6 +45,11 @@ class RunRequest:
     publish_seconds: float | None = None  # a live run's live.publish_seconds; None for a batch run
     execution: Mapping[str, Any] | None = None  # a remote run's execution policy (the plan's); None on the worker
     deadline: float | None = None  # a remote run's soft time limit (time.monotonic()); start no input after it
+    # A run continued over PBS allocations (a pioneer plan's ``continuation``): that block, this allocation's number
+    # (from 1), and whether the launcher started it only to end a stopped run (``remote.stage``).
+    continuation: Mapping[str, Any] | None = None
+    allocation: int | None = None
+    finalize: bool = False
 
     @property
     def parameters(self) -> Mapping[str, Any]:
@@ -108,6 +113,15 @@ class RunOutcome:
     provenance: dict[str, Any] = field(default_factory=dict)  # versions and effective configuration
     summary: str | None = None
     n_indexed: int | None = None  # frames with at least one pattern, when known
+    # A continued run's allocation that did not end the run: ``handoff`` the limit it reached (``time_limit``,
+    # ``frame_limit``) with the run's committed work in ``checkpoint``, its next allocation to go on; ``interrupted``
+    # when a signal ended it (its committed work kept). The runner then writes no run summary.
+    handoff: str | None = None
+    interrupted: bool = False
+    checkpoint: dict[str, Any] | None = None
+    # A continued run's last allocation: folders the runner removes once the run's summary (run.json) is written (the
+    # committed segments, merged into the published files): kept until then, so an end killed before it keeps them.
+    remove_after_summary: list[str] = field(default_factory=list)
 
     @property
     def n_processed(self) -> int:

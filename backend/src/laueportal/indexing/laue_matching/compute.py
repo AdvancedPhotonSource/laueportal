@@ -24,6 +24,8 @@ for this kind, since a remote compute node has no ``laue_index``.
 from __future__ import annotations
 
 import hashlib
+import itertools
+import json
 import os
 import shutil
 import subprocess
@@ -31,7 +33,7 @@ import sys
 import tempfile
 import time
 import warnings
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -85,11 +87,20 @@ from laueportal.indexing.laue_matching.cache import (
     reuse_problem,
 )
 from laueportal.indexing.laue_matching.output import (
+    CHECKPOINT_FORMAT,
+    CHECKPOINT_RECORD,
     NATIVE_FILENAME,
+    SEGMENTS_DIRNAME,
     SOLUTION_COLUMNS,
     SPOT_COLUMNS,
+    CheckpointError,
     Segments,
     SingleOutput,
+    checkpoint_identity,
+    committed_segments,
+    merge_native_tables,
+    read_segment_failures,
+    skip_committed,
 )
 from laueportal.indexing.laue_matching.stream import (
     DaemonFailed,
@@ -104,16 +115,21 @@ from laueportal.jobs.rundir import (
     CATEGORY_NOT_RUN,
     RESULTS_FILENAME,
     FailureRecord,
+    FailureReportWriter,
     ManifestEntry,
     discard_partial,
     partial_path,
     publish_file,
+    write_json_file,
 )
 
 LAUE_MATCHING_KIND = "laue_matching_indexing"
 PROGRAM = "laue_matching"
 PARAMS_FILENAME = "params.txt"
 BACKGROUND_FILENAME = "background.bin"
+BACKGROUND_RECORD = "background.json"
+"""A continued run's record of its computed background (:class:`_Background`)."""
+BACKGROUND_FORMAT = "laue-matching-background"
 DETECTOR_INDEX = 0
 BACKGROUND_PASSES = 1
 """Median passes of a background computed from a raw frame (LaueMatching's ``NMeadianPasses``)."""
@@ -560,13 +576,39 @@ def _patterns(processed: PostProcessResult, peaks: np.ndarray) -> tuple[tuple[Pa
 
 
 class _Background:
-    """A run's background image: none for reconstructed frames, the user's file, or the first raw frame's median."""
+    """A run's background image: none for reconstructed frames, the user's file, or the first raw frame's median.
 
-    def __init__(self, parameters: Mapping[str, Any], run_directory: str) -> None:
+    ``kept`` (a run continued over allocations): the computed background is the run's, not an allocation's. The
+    allocation that computes it records it in ``background.json`` (the frame it came from and the checksum of
+    ``background.bin``), and every later allocation reads that one back (:meth:`restore`, checked) instead of
+    computing another from its own first frame."""
+
+    def __init__(self, parameters: Mapping[str, Any], run_directory: str, *, kept: bool = False) -> None:
         self.parameters = parameters
         self.computed_path = Path(run_directory) / BACKGROUND_FILENAME
+        self.record_path = Path(run_directory) / BACKGROUND_RECORD
+        self.kept = kept
         self.image: np.ndarray | None = None
         self.source: str | None = None
+        self.sha256: str | None = None
+
+    def restore(self) -> None:
+        """Read the run's computed background back, when an earlier allocation recorded one: ``CheckpointError`` when
+        ``background.bin`` is not the recorded one."""
+        if not self.kept or self.parameters.get("background_file") or not self.record_path.exists():
+            return
+        try:
+            record = json.loads(self.record_path.read_text(encoding="utf-8"))
+            digest = _file_sha256(self.computed_path)
+        except (FileNotFoundError, ValueError) as error:
+            raise CheckpointError(f"the run's background cannot be read: {error}") from None
+        if not isinstance(record, dict) or record.get("format") != BACKGROUND_FORMAT or record.get("sha256") != digest:
+            raise CheckpointError(f"{BACKGROUND_FILENAME} is not the background {BACKGROUND_RECORD} records")
+        nx, ny = int(self.parameters["nr_px_x"]), int(self.parameters["nr_px_y"])
+        if self.computed_path.stat().st_size != nx * ny * 8:
+            raise CheckpointError(f"{BACKGROUND_FILENAME} is not {nx}x{ny} float64 pixels")
+        self.image = load_background(str(self.computed_path), nx, ny)
+        self.source, self.sha256 = record.get("source"), digest
 
     def for_frame(self, entry: ManifestEntry, raw: np.ndarray) -> np.ndarray | None:
         if entry.point_id is not None:
@@ -592,6 +634,21 @@ class _Background:
                 median_passes=BACKGROUND_PASSES,
             )
             self.source = entry.source
+            if self.kept:
+                self.sha256 = _file_sha256(self.computed_path)
+                write_json_file(
+                    self.record_path,
+                    {
+                        "format": BACKGROUND_FORMAT,
+                        "version": 1,
+                        "source": entry.source,
+                        "input_id": entry.input_id,
+                        "filter_radius": radius,
+                        "median_passes": BACKGROUND_PASSES,
+                        "sha256": self.sha256,
+                    },
+                    overwrite=True,  # one an allocation wrote before it ended without committing a frame with it
+                )
         self.image = image
         return image
 
@@ -654,12 +711,75 @@ def _process_frame(
     return _FrameOutput(result, sorted_solutions, kept, spots, unique_labels, unmatched)
 
 
-def _binary_sha256(binary: Path) -> str:
+def _file_sha256(path: str | os.PathLike[str]) -> str:
     digest = hashlib.sha256()
-    with open(binary, "rb") as stream:
+    with open(path, "rb") as stream:
         while chunk := stream.read(1 << 20):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+_binary_sha256 = _file_sha256
+IDENTITY_FILES = ("geometry_file", "crystal_file", "mask_file", "background_file")
+
+
+def _identity(
+    request: RunRequest, parameters: Mapping[str, Any], files: _Files, name: str, binary: Path, params: str
+) -> dict[str, Any]:
+    """What a continued run's results depend on (``output.checkpoint_identity``): the request's parameters (its paths
+    as this allocation reads them), the manifest, the files read and their checksums, the orientation database's size,
+    the forward cache's record, size and reflections, the parameter file and the matcher. Every allocation must find
+    the same, so that no committed frame was computed with anything else. The database and the forward file (tens of
+    gigabytes) are named by size and by the cache's record, not read."""
+    info = build_info()
+    return {
+        "format": CHECKPOINT_FORMAT,
+        "version": 1,
+        "job_id": request.job_id,
+        "n_inputs": request.n_inputs,
+        "manifest_sha256": _file_sha256(request.manifest_path),
+        "parameters": dict(parameters),
+        "params_sha256": hashlib.sha256(params.encode("utf-8")).hexdigest(),
+        "files": {
+            key: {"path": str(parameters[key]), "sha256": _file_sha256(parameters[key])}
+            for key in IDENTITY_FILES
+            if parameters.get(key)
+        },
+        "orientation_database": {"path": str(files.database), "size": files.database.stat().st_size},
+        "forward_cache": {
+            "name": files.cache.name,
+            "record_sha256": _file_sha256(files.cache / f"{FORWARD_NAME}.meta.json"),
+            "forward_size": files.forward.stat().st_size,
+            "hkls_sha256": _file_sha256(files.hkls),
+        },
+        "matcher": {
+            "name": name,
+            "binary_sha256": _file_sha256(binary),
+            "laue_index_version": info.get("version"),
+            "laue_index_c_src_sha256": info.get("c_src_sha256"),
+        },
+        "software": _software(),
+    }
+
+
+IDENTITY_PACKAGES = ("lauelab", "laue-index", "numpy", "scipy", "h5py", "scikit-image", "diplib")
+"""The packages whose versions are part of a continued run's identity (with Python's and this portal code's): an
+allocation run with other software ends the run checked (``CheckpointError``), never resumes under changed science."""
+
+
+def _software() -> dict[str, str | None]:
+    """The versions of ``IDENTITY_PACKAGES``, Python, and the checksum of this module's source (the code that computes
+    every frame)."""
+    from importlib import metadata
+
+    versions: dict[str, str | None] = {"python": sys.version.split()[0]}
+    for name in IDENTITY_PACKAGES:
+        try:
+            versions[name] = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            versions[name] = None
+    versions["laue_matching_compute_sha256"] = _file_sha256(__file__)
+    return versions
 
 
 def _exclusion_mask(parameters: Mapping[str, Any]) -> np.ndarray | None:
@@ -768,17 +888,35 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
     """Index the run's frames in manifest order. On the portal's worker (no ``request.execution``): the CPU binary
     per frame, into the run's two files. On a remote target, as its execution policy says: the GPU stream daemon
     (``laue_matching_indexer: stream``), committed segments every ``segment_seconds``, and no frame started after
-    ``request.deadline`` (the allocation's soft time limit), the frames left then being not run."""
+    ``request.deadline`` (the allocation's soft time limit).
+
+    A run continued over PBS allocations (``request.continuation``, ``pioneer``) is one allocation's share of it: the
+    run's identity is checked (``output.checkpoint_identity``), its committed segments are resumed and checked
+    (``Segments.resume``, ``output.skip_committed``) and its computed background read back, and it goes on from the
+    first input no segment attempted. An allocation that reaches its time limit or its frame limit
+    (``max_frames_per_allocation``) with inputs left hands off (``RunOutcome.handoff``: nothing merged, failed or
+    published; the launcher submits the next allocation, or fails the run when nothing was committed). A signal
+    commits the open segment and ends the allocation (``RunOutcome.interrupted``) without ending the run. A stop, a
+    daemon that fails, the end of the manifest and a finalizing allocation (``request.finalize``, which the launcher
+    starts only after a stop: it attempts no input) end the run: every committed segment's failures are reported, the
+    inputs left are not run, and the segments are merged into the run's two files once. Any error raised instead ends
+    the allocation with the committed segments kept unmerged (``jobs.runner``). Without a continuation, the frames left
+    at the time limit are not run."""
     if not (HAS_DIPLIB and HAS_SKIMAGE):
         raise RuntimeError("LaueMatching needs diplib and scikit-image: without them it computes different numbers")
     parameters = request.parameters
     execution = request.execution or {}
     stream = execution.get("laue_matching_indexer") == STREAM
     segment_seconds = execution.get("segment_seconds")
+    continuation = request.continuation
+    if continuation is not None and segment_seconds is None:
+        raise RuntimeError("A run continued over allocations commits segments: its policy needs segment_seconds")
+    frame_limit = None if continuation is None else int(continuation["max_frames_per_allocation"])
+    finalize = continuation is not None and request.finalize
     deadline = request.deadline
     os.makedirs(request.run_directory, exist_ok=True)
     results_final = os.path.join(request.run_directory, RESULTS_FILENAME)
-    if os.path.exists(results_final):
+    if continuation is None and os.path.exists(results_final):
         raise FileExistsError(f"{results_final} already exists; a run never overwrites a previous run's results")
     native_final = os.path.join(request.run_directory, NATIVE_FILENAME)
     results_partial = partial_path(results_final)
@@ -805,37 +943,63 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
 
     scratch = Path(tempfile.mkdtemp(prefix=f"laue_matching_{request.job_id}_"))
     run_warnings: list[str] = []
-    succeeded = failed = n_indexed = unmatched = 0
+    succeeded = failed = n_indexed = unmatched = attempts = committed_before = 0
     stopped = time_limited = deep = False
+    limit: str | None = None
     daemon_error: str | None = None
-    remaining = iter(entries)
-    background = _Background(parameters, request.run_directory)
+    remaining: Iterator[ManifestEntry] = iter(entries)
+    background = _Background(parameters, request.run_directory, kept=continuation is not None)
     matcher: _CpuMatcher | _StreamAdapter | None = None
     sink: Segments | SingleOutput | None = None
     gpu: dict[str, Any] | None = None
     daemon_seconds: float | None = None
+    identity: str | None = None
+    ending = "final"
+    leftover: list[ManifestEntry] = []  # a continued run's inputs not run, reported as it ends
+    first_reason = rest_reason = (CATEGORY_NOT_RUN, "")
 
-    def not_run(entry: ManifestEntry, *, during: bool = False) -> FailureRecord:
+    def not_run_reason(*, during: bool = False) -> tuple[str, str]:
+        """The category and message of an input not run, as the run ends."""
         if stopped:
             message = "run stopped while this input was indexed" if during else "run stopped before this input started"
-            return FailureRecord.not_run(entry, category=CATEGORY_CANCELLED, message=message)
+            return CATEGORY_CANCELLED, message
         if time_limited:
-            message = "the allocation's time limit came " + ("while this input was indexed" if during else "first")
-            return FailureRecord.not_run(entry, category=CATEGORY_NOT_RUN, message=message)
-        return FailureRecord.not_run(entry, category=CATEGORY_NOT_RUN, message=f"not run: {daemon_error}")
+            return CATEGORY_NOT_RUN, "the allocation's time limit came " + (
+                "while this input was indexed" if during else "first"
+            )
+        return CATEGORY_NOT_RUN, f"not run: {daemon_error}"
+
+    def not_run(entry: ManifestEntry, *, during: bool = False) -> FailureRecord:
+        category, message = not_run_reason(during=during)
+        return FailureRecord.not_run(entry, category=category, message=message)
 
     def report() -> None:
         if isinstance(sink, Segments):
-            committed = sum(segment["n_failed"] for segment in sink.committed)
-            hooks.report_progress(succeeded=len(sink.frame_ids), failed=committed)
+            hooks.report_progress(succeeded=len(sink.frame_ids), failed=sink.n_failed)
         else:
             hooks.report_progress(succeeded=succeeded, failed=failed)
+
+    def limit_reached() -> str | None:
+        """Why no further input starts now: a ``stop`` (a ``signal`` on a continued run), the ``time`` limit, the
+        allocation's ``frames`` limit; None when none applies."""
+        if hooks.should_stop():
+            return "signal" if continuation is not None and hooks.shutting_down() else "stop"
+        if past_deadline():
+            return "time"
+        if frame_limit is not None and attempts >= frame_limit:
+            return "frames"
+        return None
 
     try:
         files = _resolve_files(parameters, request.run_directory, scratch)
         _prepare_cache(parameters, files, key, hooks)
-        with open(files.params, "x", encoding="utf-8") as stream_file:
-            stream_file.write(params_text(parameters, files))
+        text = params_text(parameters, files)
+        if continuation is not None and files.params.exists():
+            if files.params.read_text(encoding="utf-8") != text:
+                raise CheckpointError(f"{PARAMS_FILENAME} differs from the one this run's first allocation wrote")
+        else:
+            with open(files.params, "x", encoding="utf-8") as stream_file:
+                stream_file.write(text)
         threads = int(parameters["num_threads"])
         matcher = (
             _stream_matcher(binary, files, parameters, scratch, lambda: hooks.should_stop() or past_deadline())
@@ -846,39 +1010,58 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
         def writer(path: Path) -> Any:
             return _writer(path, parameters, geometry, crystal)
 
-        sink = (
-            Segments(Path(request.run_directory), writer, hooks, seconds=float(segment_seconds))
-            if segment_seconds is not None
-            else SingleOutput(Path(results_partial), Path(native_partial), writer, hooks)
-        )
+        if segment_seconds is not None:
+            if continuation is not None:
+                identity = checkpoint_identity(
+                    Path(request.run_directory), _identity(request, parameters, files, matcher.name, binary, text)
+                )
+            sink = Segments(
+                Path(request.run_directory),
+                writer,
+                hooks,
+                seconds=float(segment_seconds),
+                identity=identity,
+                allocation=request.allocation,
+                report_at_commit=continuation is None,
+            )
+            if continuation is not None:
+                for path in (results_final, native_final):
+                    if os.path.lexists(path):  # an earlier end of this run was killed: never trusted or replaced
+                        raise CheckpointError(f"{os.path.basename(path)} is in the output folder before the run ended")
+                committed_before = sink.resume()
+                remaining = skip_committed(remaining, sink.attempted_ids)
+                background.restore()
+                report()
+        else:
+            sink = SingleOutput(Path(results_partial), Path(native_partial), writer, hooks)
         try:
-            try:
-                started = time.monotonic()
-                matcher.start()
-                if stream:
-                    daemon_seconds = time.monotonic() - started
-                    gpu = gpu_evidence(matcher.pid())
-                    if execution.get("require_gpu", True) and not (gpu and gpu["daemon_on_gpu"]):
-                        raise RuntimeError(
-                            "The GPU stream daemon runs on no GPU that nvidia-smi lists; the run does not go on"
-                        )
-            except _StopRequested:
-                stopped = hooks.should_stop()
-                time_limited = not stopped
-            interrupted: FailureRecord | None = None
-            for entry in [] if stopped or time_limited else remaining:
-                if hooks.should_stop() or past_deadline():
-                    stopped = hooks.should_stop()
-                    time_limited = not stopped
-                    interrupted = not_run(entry)
+            interrupted: ManifestEntry | None = None
+            during = False
+            limit = "stop" if finalize else limit_reached()
+            if limit is None:
+                try:
+                    started = time.monotonic()
+                    matcher.start()
+                    if stream:
+                        daemon_seconds = time.monotonic() - started
+                        gpu = gpu_evidence(matcher.pid())
+                        if execution.get("require_gpu", True) and not (gpu and gpu["daemon_on_gpu"]):
+                            raise RuntimeError(
+                                "The GPU stream daemon runs on no GPU that nvidia-smi lists; the run does not go on"
+                            )
+                except _StopRequested:
+                    limit = limit_reached() or "time"
+            for entry in [] if limit is not None else remaining:
+                limit = limit_reached()
+                if limit is not None:
+                    interrupted = entry
                     break
+                attempts += 1
                 started_frame = time.perf_counter()
                 try:
                     output = _process_frame(entry, parameters, matcher, geometry, background, exclusion, processor)
                 except _StopRequested:
-                    stopped = hooks.should_stop()
-                    time_limited = not stopped
-                    interrupted = not_run(entry, during=True)
+                    limit, interrupted, during = limit_reached() or "time", entry, True
                     break
                 except DaemonFailed as error:
                     daemon_error = str(error)
@@ -891,7 +1074,16 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
                         FailureRecord.from_error(entry, error, context={"seconds": time.perf_counter() - started_frame})
                     )
                 else:
-                    sink.append(entry.input_id, output.result, output)
+                    depth = output.result.depth
+                    frame_deep = depth is not None and abs(depth) > DEPTH_WARNING_UM
+                    sink.append(
+                        entry.input_id,
+                        output.result,
+                        output,
+                        indexed=output.result.n_patterns > 0,
+                        unmatched=output.unmatched_spots,
+                        deep=frame_deep,
+                    )
                     columns = matcher.columns()
                     if columns is not None:
                         sink.set_columns(columns)
@@ -899,8 +1091,7 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
                     unmatched += output.unmatched_spots
                     if output.result.n_patterns > 0:
                         n_indexed += 1
-                    depth = output.result.depth
-                    deep = deep or (depth is not None and abs(depth) > DEPTH_WARNING_UM)
+                    deep = deep or frame_deep
                 finally:
                     matcher.clean()
                 if sink.due():
@@ -910,16 +1101,37 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
                     report()
             # The frames before come first in the failure report: the open segment is committed before.
             sink.commit()
-            if interrupted is not None:
-                hooks.record_failure(interrupted)
-            if stopped or time_limited or daemon_error:
-                for entry in remaining:
-                    hooks.record_failure(not_run(entry))
+            following = interrupted if interrupted is not None else next(remaining, None)
+            more = following is not None
+            if following is not None:
+                remaining = itertools.chain([following], remaining)
+            if continuation is not None and more and not daemon_error:
+                if limit == "signal":
+                    ending = "interrupted"
+                elif limit in ("time", "frames"):
+                    ending = "handoff"
+            # Stopped only with inputs left: a run whose every input was attempted ends as they did.
+            stopped = more and limit == "stop"
+            time_limited = limit == "time" and continuation is None
+            if ending == "final" and continuation is None:  # a continued run reports them as it ends
+                if interrupted is not None:
+                    hooks.record_failure(not_run(interrupted, during=during))
+                    next(remaining)  # the interrupted input, reported
+                if stopped or time_limited or daemon_error:
+                    for entry in remaining:
+                        hooks.record_failure(not_run(entry))
+            elif ending == "final":
+                leftover = list(remaining)  # not run: the run ends here
+                if leftover:
+                    first_reason = not_run_reason(during=interrupted is not None and during)
+                    rest_reason = not_run_reason()
         finally:
             matcher.close()
             sink.close()
         if isinstance(sink, Segments):
             report()
+            n_indexed, unmatched, deep = sink.n_indexed, sink.unmatched, sink.deep
+            succeeded, failed = len(sink.frame_ids), sink.n_failed
         if deep:
             run_warnings.append(
                 f"Frames deeper than {DEPTH_WARNING_UM:g} um were matched with the geometry at depth 0: their spots "
@@ -936,8 +1148,29 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
         if stream:
             provenance["gpu"] = gpu
             provenance["daemon_start_seconds"] = daemon_seconds
+        if identity is not None:
+            provenance["checkpoint_identity"] = identity
+            provenance["background_sha256"] = background.sha256
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
+    segments = sink if isinstance(sink, Segments) else None
+    if ending != "final":
+        assert segments is not None
+        outcome = RunOutcome(
+            n_succeeded=succeeded,
+            n_failed=failed,
+            warnings=run_warnings,
+            provenance=provenance,
+            n_indexed=n_indexed,
+            handoff=None if ending == "interrupted" else ("time_limit" if limit == "time" else "frame_limit"),
+            interrupted=ending == "interrupted",
+            checkpoint=segments.handoff(),
+        )
+        outcome.summary = (
+            f"allocation {request.allocation} committed {len(segments.attempted_ids) - committed_before} inputs; "
+            f"{len(segments.attempted_ids)} of {request.n_inputs} committed"
+        )
+        return outcome
     outcome = RunOutcome(
         n_succeeded=succeeded,
         n_failed=failed,
@@ -946,7 +1179,20 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
         provenance=provenance,
         n_indexed=n_indexed,
     )
-    segments = sink if isinstance(sink, Segments) else None
+    if continuation is not None:
+        assert segments is not None
+        return _end_continued(
+            request,
+            outcome,
+            segments,
+            hooks,
+            leftover,
+            first_reason,
+            rest_reason,
+            results_final=results_final,
+            native_final=native_final,
+            key=key,
+        )
     if succeeded == 0:
         discard_partial(results_final)
         discard_partial(native_final)
@@ -983,6 +1229,94 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
         f"; {n_indexed} frames indexed" if n_indexed else "; no frame indexed"
     )
     return outcome
+
+
+def _end_continued(
+    request: RunRequest,
+    outcome: RunOutcome,
+    segments: Segments,
+    hooks: RunHooks,
+    leftover: list[ManifestEntry],
+    first_reason: tuple[str, str],
+    rest_reason: tuple[str, str],
+    *,
+    results_final: str,
+    native_final: str,
+    key: Any,
+) -> RunOutcome:
+    """The end of a continued run (``output``'s docstring): merge the committed segments into partial files, validate
+    and publish them, and report the failures (every committed segment's, then each input not run: the first with
+    ``first_reason``, the rest with ``rest_reason``). The segments stay until the runner has written the summary
+    (``RunOutcome.remove_after_summary``); a merge that does not validate keeps them, and its partial file."""
+
+    def report_failures() -> None:
+        for record in segments.committed_failures():
+            hooks.record_failure(record)
+        for position, entry in enumerate(leftover):
+            category, message = first_reason if position == 0 else rest_reason
+            hooks.record_failure(FailureRecord.not_run(entry, category=category, message=message))
+
+    outcome.remove_after_summary = [str(segments.root)]
+    if not segments.frame_ids:
+        report_failures()
+        outcome.summary = "no frame was processed"
+        return outcome
+    results_partial, native_partial = partial_path(results_final), partial_path(native_final)
+    try:
+        segments.merge(results_partial, native_partial, merge_results_files)
+        summary = validate_results_file(str(results_partial), frame_ids=segments.frame_ids)
+    except (InvalidResultsFile, ValueError) as error:
+        report_failures()
+        outcome.remove_after_summary = []  # the evidence stays
+        outcome.validation_error = f"{RESULTS_FILENAME}: {error}"
+        outcome.summary = f"results file kept as {results_partial.name} for diagnosis, with its segments"
+        return outcome
+    publish_file(results_partial, results_final)
+    publish_file(native_partial, native_final)
+    outcome.artifacts["results"] = results_final
+    outcome.artifacts["native_tables"] = native_final
+    outcome.provenance["results_summary"] = {
+        "n_frames": summary.n_frames,
+        "n_peaks": summary.n_peaks,
+        "n_patterns": summary.n_patterns,
+        "n_assignments": summary.n_assignments,
+    }
+    outcome.provenance["cache_key"] = asdict(key)
+    outcome.provenance["segments"] = segments.segments()
+    outcome.summary = f"{summary.n_frames} frames, {summary.n_patterns} orientations in {RESULTS_FILENAME}" + (
+        f"; {outcome.n_indexed} frames indexed" if outcome.n_indexed else "; no frame indexed"
+    )
+    report_failures()
+    return outcome
+
+
+def salvage(output_directory: str | os.PathLike[str], destination: str | os.PathLike[str]) -> dict[str, Any]:
+    """Merge the committed segments of a continued run that ended Failed into ``destination``, a folder that must not
+    exist (the remote-execution runbook's "Salvaging a failed GPU run"): ``output.h5``, ``laue_matching.h5`` and the
+    segments' ``failures.jsonl``. Every segment is checked against its record and the run's ``checkpoint.json``
+    (``output.committed_segments``); nothing in ``output_directory`` is written, no input is computed. Returns what
+    was salvaged."""
+    output = Path(output_directory)
+    identity = _file_sha256(output / CHECKPOINT_RECORD)
+    records = committed_segments(output / SEGMENTS_DIRNAME, identity)
+    frame_ids = [frame for record in records for frame in record["frame_ids"]]
+    if not frame_ids:
+        raise CheckpointError("no committed segment holds a frame")
+    target = Path(destination)
+    target.mkdir(parents=True, exist_ok=False)
+    results, native = target / RESULTS_FILENAME, target / NATIVE_FILENAME
+    merge_results_files([r["folder"] / RESULTS_FILENAME for r in records], partial_path(results), frame_ids=frame_ids)
+    merge_native_tables([r["folder"] / NATIVE_FILENAME for r in records], partial_path(native))
+    summary = validate_results_file(str(partial_path(results)), frame_ids=frame_ids)
+    publish_file(partial_path(results), results)
+    publish_file(partial_path(native), native)
+    failures = FailureReportWriter(target / "failures.jsonl")
+    for record in records:
+        for failure in read_segment_failures(record["folder"], record):
+            failures.append(failure)
+    failures.close()
+    attempted = sum(len(record["attempted_ids"]) for record in records)
+    return {"n_attempted": attempted, "n_succeeded": len(frame_ids), "n_frames": summary.n_frames}
 
 
 register_compute_function(LAUE_MATCHING_KIND, compute_laue_matching)

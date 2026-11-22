@@ -105,6 +105,13 @@ class _Model(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
 
+MONITOR_SECONDS = 14 * 24 * 3600
+"""``dm.monitor_seconds``'s default: 14 days."""
+MAX_STREAM_IMAGES = 65535
+"""The most frames one GPU stream daemon matches (its image number is 16 bits: ``indexing.laue_matching.stream``),
+so the most one ``pioneer`` allocation attempts."""
+
+
 class DMSettings(_Model):
     """``dm``: the DM API (through its setup script, locally or over SSH) and the launcher it runs.
 
@@ -130,6 +137,10 @@ class DMSettings(_Model):
     launcher_python: StrictStr | None = None
     launcher_code: StrictStr | None = None
     launcher_config: StrictStr | None = None
+    monitor_seconds: Seconds = MONITOR_SECONDS
+    """How long DM's ``02-MONITOR`` stage follows one run: ``deploy/remote/render-workflows.py`` writes its
+    ``maxRepeats`` as this over the stage's 10 s period, so a monitor stage still running then fails and DM ends the
+    run: a ``pioneer`` run over many allocations must end within it. Render the workflows again after changing it."""
 
 
 class StorageSettings(_Model):
@@ -179,8 +190,12 @@ class ExecutionPolicy(_Model):
     segment_seconds: Seconds | None = None
     """How often a LaueMatching run commits the frames it finished (``indexing.laue_matching.output.Segments``)."""
     soft_deadline_seconds: Seconds | None = None
-    """How long after the PBS job starts a run starts no further frame, then merges and ends, so it ends before the
-    walltime kills it."""
+    """How long after the PBS job starts a run starts no further frame, then commits its frames and hands the run on to
+    its next allocation (``pioneer``), or merges and ends, so it ends before the walltime kills it."""
+    max_frames_per_allocation: WholeNumber | None = None
+    """``pioneer``: the most frames one PBS allocation attempts before it hands the run on to the next one, from 1 to
+    ``MAX_STREAM_IMAGES`` (one stream daemon's limit, also when not set). A pilot sets a few frames to make a short run
+    continue over several allocations."""
 
 
 class _Target(_Model):
@@ -216,10 +231,19 @@ class ApsTarget(_Target):
 class PioneerTarget(_Target):
     """``targets.pioneer``: LaueMatching on the APS cluster's GPU queue, submitted by the launcher as ``aps`` is
     (``qsub`` over SSH; the run directory is on storage the cluster mounts). ``data_root`` is the LaueMatching data
-    folder its jobs read (the orientation database and the installed forward caches), on that storage."""
+    folder its jobs read (the orientation database and the installed forward caches), on that storage. One run
+    continues over as many PBS allocations as it needs, one at a time (``remote.stage``): each ends at
+    ``execution.soft_deadline_seconds`` or after ``execution.max_frames_per_allocation`` frames.
+
+    ``finalize_pbs`` (required) is the PBS request of a stopped run's *finalizing* allocation: one the launcher
+    submits only to merge and publish the committed work when the allocation in PBS at the stop ended without doing
+    so. It asks for no GPU (``ngpus`` absent or 0), so a CPU queue serves it and it never waits behind the GPU queue;
+    its runner processes no input. A file without it leaves the target not configured: a finalizing allocation never
+    falls back to the GPU request."""
 
     submit_host: SSHHost | None = None
     data_root: StrictStr | None = None
+    finalize_pbs: PBSSettings | None = None
 
     def missing_keys(self) -> list[str]:
         """Also what makes it a GPU target: a GPU in its PBS request and the stream indexer, never a CPU plan."""
@@ -232,8 +256,19 @@ class PioneerTarget(_Target):
             ]
             if self.execution.laue_matching_indexer != "stream":
                 missing.append("execution.laue_matching_indexer (stream)")
+            cap = self.execution.max_frames_per_allocation
+            if cap is not None and not 1 <= int(cap) <= MAX_STREAM_IMAGES:
+                missing.append(f"execution.max_frames_per_allocation (1 to {MAX_STREAM_IMAGES})")
         if self.pbs is not None and int(self.pbs.ngpus or 0) < 1:
             missing.append("pbs.ngpus (at least 1)")
+        if self.finalize_pbs is None:
+            missing.append("finalize_pbs (the CPU request of a run's finalizing allocation)")
+        else:
+            missing += [
+                f"finalize_pbs.{key}" for key in ("queue", "walltime") if getattr(self.finalize_pbs, key) is None
+            ]
+            if int(self.finalize_pbs.ngpus or 0) != 0:
+                missing.append("finalize_pbs.ngpus (0 or absent: a finalizing allocation uses no GPU)")
         return missing
 
 
