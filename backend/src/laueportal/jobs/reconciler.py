@@ -52,7 +52,7 @@ from laueportal.core.settings import ExecutionSettings
 from laueportal.core.timeutil import utcnow
 from laueportal.indexing.models import Conversion
 from laueportal.jobs import state
-from laueportal.jobs.backends import is_remote
+from laueportal.jobs.backends import is_cache_preparation, is_remote
 from laueportal.jobs.dispatch import CONVERSION_FAILED, CONVERSION_RUNNING, CONVERT, RUN, recorded_process_alive
 from laueportal.jobs.idempotency import purge_expired
 from laueportal.jobs.models import Job
@@ -205,7 +205,7 @@ def _read_candidates(
                 # A remote run that reached its submission is the poller's; one that never did is no one's.
                 if created_before is not None and stuck_in_creation(job, created_before):
                     creating.append(candidate)
-            elif is_remote(job.backend):
+            elif is_remote(job.backend) and not is_cache_preparation(job.backend, job.submission_id, job.queue_job_id):
                 continue  # The remote poller reconciles remote runs.
             elif job.status == JobStatus.RUNNING and _stale_reason(job, stale_before) is not None:
                 if recorded_process_alive(job.process_host, job.process_pid, job.process_since_boot):

@@ -3,7 +3,8 @@
 The Queued live runs first (``jobs.live``: while one is Queued or Running, no batch item is claimed; they take the
 two live slots, ``LIVE_SLOTS``, by ``job_id``); then the queued conversions (``conversion`` rows ``queued``, the oldest
 request first); then the Queued local batch jobs (phase ``queued``) moved to the front (``moved_to_front_at``,
-the newest move first), then the rest by ``job_id``. Remote runs are never the dispatcher's. ``jobs.dispatch`` takes
+the newest move first), then the rest by ``job_id``. A Pioneer run requesting a new cache uses the batch slot to
+build it locally before its DM submission; submitted remote runs are never the dispatcher's. ``jobs.dispatch`` takes
 its next items with these queries, and the status page (``system.status``) lists the next items with
 ``queued_in_order`` and counts the live slots in use; this module imports neither the worker nor the run lifecycle, so
 the API may use it (import contract 4).
@@ -13,11 +14,11 @@ from __future__ import annotations
 
 from typing import Literal
 
-from sqlalchemy import ColumnElement, Select, not_, or_, select
+from sqlalchemy import ColumnElement, Select, and_, not_, or_, select
 from sqlalchemy.orm import Session
 
 from laueportal.indexing.models import Conversion
-from laueportal.jobs.backends import REMOTE_BACKENDS
+from laueportal.jobs.backends import CACHE_QUEUE_PREFIX, REMOTE_BACKENDS
 from laueportal.jobs.live import live_marker
 from laueportal.jobs.models import Job
 from laueportal.jobs.state import JobStatus, RunPhase
@@ -35,8 +36,16 @@ follower, or one of them alone."""
 
 
 def local_jobs() -> ColumnElement[bool]:
-    """A job the dispatcher runs: no remote target."""
-    return or_(Job.backend.is_(None), Job.backend.not_in(REMOTE_BACKENDS))
+    """A local run, or a Pioneer run building its cache before DM submission."""
+    return or_(
+        Job.backend.is_(None),
+        Job.backend.not_in(REMOTE_BACKENDS),
+        and_(
+            Job.backend == "pioneer",
+            Job.submission_id.is_(None),
+            Job.queue_job_id.startswith(CACHE_QUEUE_PREFIX, autoescape=True),
+        ),
+    )
 
 
 def queued_conversions() -> Select[int]:

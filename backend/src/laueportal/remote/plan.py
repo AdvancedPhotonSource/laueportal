@@ -365,8 +365,6 @@ def _laue_matching_files(
                 f"Input {entry.input_id} must be on the shared storage {shared}, which the GPU nodes mount"
             )
         progress()
-    if request.get("create_forward_cache"):
-        raise RemoteSettingsError("A remote LaueMatching run reads an installed forward cache; it never builds one")
     root = Path(target["data_root"])
     database = root / DATABASE_NAME
     try:

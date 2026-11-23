@@ -1,6 +1,6 @@
 // The LaueMatching form's Forward Cache: the one that fits is chosen, none makes it a new one with the
 // suggested name, and a problem with the data folder is shown as one line.
-import { useEffect } from "react"
+import { act, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -30,11 +30,13 @@ const field = {
 } as unknown as FieldSpec
 
 let values: () => Record<string, unknown>
+let setBackend: (backend: string) => void
 
 function Form({ start = {} }: { start?: Record<string, unknown> }) {
   const form = useForm({
     defaultValues: {
       forward_cache: "",
+      backend: "local",
       create_forward_cache: false,
       geometry_file: "/g.xml",
       crystal_file: "/c.xml",
@@ -46,6 +48,9 @@ function Form({ start = {} }: { start?: Record<string, unknown> }) {
   })
   useEffect(() => {
     values = () => form.getValues()
+    setBackend = (backend) => {
+      form.setValue("backend", backend)
+    }
   }, [form])
   return <ForwardCacheField field={field} control={form.control as never} />
 }
@@ -59,18 +64,16 @@ describe("ForwardCacheField", () => {
   })
   afterEach(cleanup)
 
-  it("on APS GPU offers no new cache and drops a name its folder lacks", async () => {
+  it("on Pioneer GPU offers a new cache with its suggested name", async () => {
     answer.data = { caches: [], suggested_name: "Ni_5-30", problem: null }
-    await render(
-      <Form start={{ backend: "pioneer", forward_cache: "only_on_aps" }} />
-    )
+    await render(<Form start={{ backend: "pioneer" }} />)
     await vi.waitFor(() => {
       expect(values()).toMatchObject({
-        forward_cache: "",
-        create_forward_cache: false,
+        forward_cache: "Ni_5-30",
+        create_forward_cache: true,
       })
     })
-    expect(newName()).toBeNull()
+    expect(newName()?.value).toBe("Ni_5-30")
   })
 
   it("chooses the one cache that fits", async () => {
@@ -83,6 +86,26 @@ describe("ForwardCacheField", () => {
       })
     })
     expect(newName()).toBeNull()
+  })
+
+  it("keeps a new cache's name when switching between local and Pioneer GPU", async () => {
+    answer.data = { caches: [], suggested_name: "suggested", problem: null }
+    await render(
+      <Form
+        start={{ forward_cache: "my_new_cache", create_forward_cache: true }}
+      />
+    )
+    for (const backend of ["pioneer", "local"]) {
+      act(() => {
+        setBackend(backend)
+      })
+      expect(values()).toMatchObject({
+        backend,
+        forward_cache: "my_new_cache",
+        create_forward_cache: true,
+      })
+      expect(newName()?.value).toBe("my_new_cache")
+    }
   })
 
   it("makes a new cache with the suggested name when none fits", async () => {

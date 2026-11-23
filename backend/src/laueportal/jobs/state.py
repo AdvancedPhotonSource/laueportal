@@ -17,6 +17,7 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from laueportal.core.timeutil import utcnow
+from laueportal.jobs.backends import is_cache_preparation
 from laueportal.jobs.models import Job
 
 
@@ -192,6 +193,27 @@ def heartbeat(job: Job, *, now: datetime | None = None) -> None:
     if is_terminal(job):
         raise ExecutionStateError(f"job {job.job_id} is terminal")
     job.heartbeat_at = _now(now)
+
+
+def assert_cache_preparation(job: Job) -> None:
+    """Only the worker's running, uncancelled Pioneer cache preparation may hand off to DM."""
+    if not is_cache_preparation(job.backend, job.submission_id, job.queue_job_id):
+        raise ExecutionStateError("This run is not preparing a Pioneer cache")
+    if job.status != JobStatus.RUNNING or job.phase != RunPhase.RUNNING:
+        raise ExecutionStateError("The cache preparation is no longer running")
+    if job.cancel_requested_at is not None:
+        raise ExecutionStateError("Cache preparation was cancelled")
+
+
+def finish_cache_preparation(job: Job, *, now: datetime | None = None) -> None:
+    """Make a successful cache build enqueueable in the same transaction that records its DM submission."""
+    assert_cache_preparation(job)
+    job.status = int(JobStatus.QUEUED)
+    job.phase = RunPhase.PUBLISHED
+    job.start_time = None
+    job.process_host = job.process_pid = job.process_since_boot = None
+    job.updated_at = _now(now)
+    _append_message(job, "Forward cache ready; submitting to Pioneer GPU")
 
 
 def record_progress(job: Job, *, succeeded: int, failed: int, now: datetime | None = None) -> None:

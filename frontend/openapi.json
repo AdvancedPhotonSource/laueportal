@@ -7650,7 +7650,7 @@
         "type": "string"
       },
       "RemoteReadiness": {
-        "description": "Cached, read-only checks of a remote route (ALCF, or the APS GPU queue). Online does not guarantee worker\nstartup or PBS capacity.",
+        "description": "Cached, read-only checks of a remote route (ALCF, or the Pioneer GPU queue). Online does not guarantee worker\nstartup or PBS capacity.",
         "properties": {
           "checked_at": {
             "anyOf": [
@@ -15390,7 +15390,7 @@
     },
     "/api/v1/system/gpu-status": {
       "get": {
-        "description": "The APS GPU target's queue and files (``remote.health.GPU_CHECKS``), as ``/system/remote-status`` serves the\nALCF checks: the shared result at once, refreshed at most once every five minutes; read-only, never a PBS job.\n`enabled` is false while the target is disabled.",
+        "description": "The Pioneer GPU target's queue and files (``remote.health.GPU_CHECKS``), as ``/system/remote-status`` serves the\nALCF checks: the shared result at once, refreshed at most once every five minutes; read-only, never a PBS job.\n`enabled` is false while the target is disabled.",
         "operationId": "getGpuReadiness",
         "responses": {
           "200": {
@@ -15404,7 +15404,7 @@
             "description": "Successful Response"
           }
         },
-        "summary": "APS GPU readiness",
+        "summary": "Pioneer GPU readiness",
         "tags": [
           "system"
         ]

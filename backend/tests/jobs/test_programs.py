@@ -561,7 +561,7 @@ def test_programs_offers_the_deployments_execution_targets(tmp_path, targets, of
     for program in response.json()["programs"]:
         backend = program["json_schema"]["properties"]["backend"]
         if program["kind"] == "laue_matching":  # the portal's worker, and the GPU queue when it is enabled
-            gpu = [("pioneer", "APS GPU")] if targets is not None and "pioneer" in targets else []
+            gpu = [("pioneer", "Pioneer GPU")] if targets is not None and "pioneer" in targets else []
             assert [(option["value"], option["label"]) for option in backend["x-options"]] == [("local", "APS"), *gpu]
             assert backend["default"] == "local"
             continue

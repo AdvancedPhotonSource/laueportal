@@ -809,7 +809,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     install = laue_matching_commands.add_parser(
         "install-cache",
-        help="copy forward caches (and the orientation database) into the APS GPU target's data folder",
+        help="copy forward caches (and the orientation database) into the Pioneer GPU target's data folder",
     )
     install.add_argument("names", nargs="*", metavar="NAME", help="a forward cache in [laue_matching] data_root")
     install.add_argument("--database", action="store_true", help="also the orientation database")

@@ -89,7 +89,7 @@ export const OBSERVED_TARGETS: ReadonlySet<string> = new Set([
 ])
 
 /**
- * The run monitor's Status cell: a queued or running crux or APS GPU run's phase in place of its status, when the row
+ * The run monitor's Status cell: a queued or running crux or Pioneer GPU run's phase in place of its status, when the row
  * has an observation (the job page's, `JobSummary.observation`); null otherwise, and the cell shows the run's status.
  */
 export function remoteStatus(row: RunMonitorRow): RemotePhaseView | null {

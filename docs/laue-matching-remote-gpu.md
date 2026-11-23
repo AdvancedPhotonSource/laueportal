@@ -1,8 +1,8 @@
-# LaueMatching on the APS GPU queue
+# LaueMatching on the Pioneer GPU queue
 
 A LaueMatching run can compute on the `pioneer` target, the APS cluster's GPU queue, through DM (the form's **Run on:
-APS GPU**). This page says how the run works there and what it does not do yet. The operator's procedure is in the
-[remote-execution runbook](runbooks/remote-execution.md#the-aps-gpu-target).
+Pioneer GPU**). This page says how the run works there and what it does not do yet. The operator's procedure is in the
+[remote-execution runbook](runbooks/remote-execution.md#the-pioneer-gpu-target).
 
 ## How a run works
 
@@ -20,8 +20,12 @@ APS GPU**). This page says how the run works there and what it does not do yet. 
   copied. `crux` keeps its own rule: every file inside the experiment folder.
 - **The data folder.** The target's `data_root` holds the orientation database and the installed forward caches. The
   plan checks that the run's cache there fits the run's frozen values exactly, and maps the portal's data folder to the
-  target's (`path_map`); `request.json` keeps the portal's path. A remote run never builds a cache: build it with an
-  APS run, then install it (`laueportal laue-matching install-cache`).
+  target's (`path_map`); `request.json` keeps the portal's path. With **New…**, the portal's existing worker builds
+  the cache on the portal CPU before submitting this same run to DM. This needs the local and Pioneer data folders
+  to resolve to the same shared folder. The build uses a blank internal image and processes no detector input;
+  `cache-build/` keeps its parameters, log and provenance. Stop or a failed build submits no GPU allocation. The
+  run waits in the local batch queue, builds, then returns to Queued for remote execution. A reused cache goes
+  straight to DM. Sites with separate folders can still copy a CPU cache with `laueportal laue-matching install-cache`.
 - **The indexer.** `LaueMatchingGPUStream`, the persistent daemon (`indexing.laue_matching.stream`): it loads the
   database and the cache once per allocation, then matches the frames the run sends it in manifest order. It gets a
   free port and is reached on `127.0.0.1` (laue-index 0.8.0 binds every interface); it ends with the allocation. Its

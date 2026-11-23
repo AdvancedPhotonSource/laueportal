@@ -49,7 +49,7 @@ PLAN_PROGRESS_SECONDS = 60.0
 """How often a plan being built records its progress on the job (well within ``creation_timeout_seconds``)."""
 
 
-def plan_progress(job_id: int, *, engine: Engine) -> Callable[[], None]:
+def plan_progress(job_id: int, *, engine: Engine, cache_prepared: bool = False) -> Callable[[], None]:
     """``remote.plan.build_plan``'s ``progress`` for ``job_id``: every ``PLAN_PROGRESS_SECONDS``, a short write
     transaction moves the job's last change (``updated_at``, which the reconciler's creation timeout counts from)
     to now. Raises ``ExecutionStateError`` once the job is no longer enqueueable (stopped, or failed by the
@@ -65,7 +65,10 @@ def plan_progress(job_id: int, *, engine: Engine) -> Callable[[], None]:
             job = session.get(Job, job_id)
             if job is None:
                 raise ExecutionStateError(f"job {job_id} vanished")
-            state.assert_enqueueable(job)
+            if cache_prepared:
+                state.assert_cache_preparation(job)
+            else:
+                state.assert_enqueueable(job)
             job.updated_at = utcnow()
         last = time.monotonic()
 
@@ -95,6 +98,7 @@ def submit_run(
     settings: RemoteSettings | None,
     client: Any = None,
     sources: SourceCheck | None = None,
+    cache_prepared: bool = False,
 ) -> str:
     """Submit a published remote run to DM; returns DM's processing job ID.
 
@@ -115,10 +119,17 @@ def submit_run(
         job = session.get(Job, job_id)
         if job is None:
             raise ValueError(f"Job {job_id} does not exist")
-        state.assert_enqueueable(job)
+        if cache_prepared:
+            state.assert_cache_preparation(job)
+        else:
+            state.assert_enqueueable(job)
         require_backend(job.backend, settings)
         plan = save_plan(
-            job, settings, submission_id, progress=plan_progress(job_id, engine=engine), source_check=sources
+            job,
+            settings,
+            submission_id,
+            progress=plan_progress(job_id, engine=engine, cache_prepared=cache_prepared),
+            source_check=sources,
         )
     try:
         with Session(engine) as session, session.begin():
@@ -126,6 +137,8 @@ def submit_run(
             job = session.get(Job, job_id)
             if job is None:
                 raise ExecutionStateError(f"job {job_id} vanished")
+            if cache_prepared:
+                state.finish_cache_preparation(job)
             state.assert_enqueueable(job)
             job.submission_id = submission_id
             job.external_state = SUBMITTING

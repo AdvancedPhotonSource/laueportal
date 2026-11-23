@@ -199,7 +199,9 @@ record failed waits at its go line, holding the slot, until a cycle records it a
 exits unrun, below). A job process arms its own timeout (`execution.job_timeout_seconds`; a conversion's is one hour)
 once told to go: SIGALRM fails the run "exceeded the configured limit", and a job process still alive
 `execution.shutdown_grace_seconds` later (also counted from its go line) is killed with its group. A live run has
-neither (a live slot's). Remote runs are never the dispatcher's, and the live rules leave them as they are.
+neither (a live slot's). A Pioneer run requesting a new cache first uses the local batch slot to build it. The same
+job is then handed to DM, with a submission identity committed before the DM call; the remote poller owns it from
+then on. Submitted remote runs are never the dispatcher's, and the live rules leave them as they are.
 
 The remote poller (`remote/poller.py`'s `RemotePoller`) runs only with `[remote] enabled`, never in a burst (remote
 settings that cannot be used leave it off, logged, and the other threads run), with an engine of its own. It takes

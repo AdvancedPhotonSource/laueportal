@@ -345,6 +345,26 @@ def test_a_new_cache_needs_a_free_name(tmp_path, run):
     assert calls(tmp_path) == 0
 
 
+@pytest.mark.slow
+def test_pioneer_preparation_builds_a_real_cpu_cache_without_reading_a_detector_frame(tmp_path, monkeypatch):
+    root = tmp_path / "cache"
+    root.mkdir()
+    values = parameters(root, create_forward_cache=True, backend="pioneer")
+    np.tile(np.eye(3), (2, 1, 1)).astype(np.float64).tofile(root / cache.DATABASE_NAME)
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    request = RunRequest(
+        1, laue_compute.LAUE_MATCHING_KIND, "I1", str(run_dir), "unused", {"request": values}, 2, 1, None
+    )
+    monkeypatch.setattr(laue_compute, "read_frame", lambda *a, **kw: pytest.fail("Cache building read a frame"))
+    outcome = laue_compute.build_forward_cache(request, Hooks())
+    assert outcome.n_processed == 0 and not outcome.stopped
+    assert cache.reuse_problem(root / NAME, cache.key_from_parameters(values)) is None
+    assert not (run_dir / "output.h5").exists()
+    assert (run_dir / "cache-build/build.json").is_file()
+    assert not (run_dir / "cache-build/frame.bin").exists()
+
+
 def test_a_new_cache_writes_its_reflections_and_starts_the_build(tmp_path, run, monkeypatch):
     data_root = tmp_path / "data"
     write_cache(data_root, parameters(data_root), name="other")
@@ -531,7 +551,7 @@ def test_the_form_offers_the_gpu_target_only_when_enabled_and_refuses_the_portal
     assert schema["properties"]["backend"]["x-options"] == [{"value": "local", "label": "APS"}]
     assert programs.execution_targets(offering(place, "pioneer"), "laue_matching") == [
         {"value": "local", "label": "APS"},
-        {"value": "pioneer", "label": "APS GPU"},
+        {"value": "pioneer", "label": "Pioneer GPU"},
     ]
     assert programs.execution_targets(offering(place, "pioneer", "aps"), "lauego") == [{"value": "aps", "label": "APS"}]
     refused = checked(place, place.settings, backend="pioneer")

@@ -16,7 +16,7 @@ from typing import Any
 from laueportal.core.settings import Settings
 from laueportal.files.inputs import WorkflowValidationError
 from laueportal.files.probe import NotResponding, bounded, open_check
-from laueportal.files.roots import PathNotAllowed, resolve_inside_roots
+from laueportal.files.roots import PathNotAllowed, real_path, resolve_inside_roots
 from laueportal.indexing.laue_matching.cache import (
     DATABASE_NAME,
     FORWARD_NAME,
@@ -33,10 +33,7 @@ from laueportal.jobs.validation import Checked, Issues
 NOT_SET = "The LaueMatching data folder ([laue_matching] data_root) is not set on this portal"
 GPU = "pioneer"
 """The target whose runs read the data folder of its own settings (``targets.pioneer.data_root``)."""
-NO_GPU_FOLDER = "The APS GPU target's LaueMatching data folder (targets.pioneer.data_root) is not set"
-GPU_BUILDS_NO_CACHE = (
-    "An APS GPU run reads an installed forward cache: build a new one with an APS run, then install it"
-)
+NO_GPU_FOLDER = "The Pioneer GPU target's LaueMatching data folder (targets.pioneer.data_root) is not set"
 
 
 def data_root(settings: Settings, backend: str | None = None) -> Path | None:
@@ -132,9 +129,6 @@ def check_laue_matching(issues: Issues, settings: Settings, checked: Checked, pa
     if checked.usable("elo", "ehi") and params.elo >= params.ehi:
         issues.error(["ehi"], "energy_range", "Max Energy must be above Min Energy")
     gpu = checked.usable("backend") and params.backend == GPU
-    if gpu and checked.usable("create_forward_cache") and params.create_forward_cache:
-        issues.error(["forward_cache"], "gpu_builds_no_cache", GPU_BUILDS_NO_CACHE)
-        return
     try:
         root = data_root(settings, params.backend if gpu else None)
     except WorkflowValidationError as error:
@@ -143,6 +137,23 @@ def check_laue_matching(issues: Issues, settings: Settings, checked: Checked, pa
     if root is None:
         issues.error(["forward_cache"], "not_configured", NO_GPU_FOLDER if gpu else NOT_SET)
         return
+    if gpu and params.create_forward_cache:
+        local = settings.laue_matching.data_root
+        try:
+            same_folder = local is not None and real_path(local) == real_path(root)
+        except NotResponding:
+            issues.error(["forward_cache"], "not_responding", "The LaueMatching data folder is not responding")
+            return
+        except (OSError, ValueError, PathNotAllowed):
+            issues.error(["forward_cache"], "unreadable", "The local cache folder cannot be resolved")
+            return
+        if not same_folder:
+            issues.error(
+                ["forward_cache"],
+                "cache_folders_differ",
+                "A new Pioneer GPU cache is built locally: the local and Pioneer cache folders must be the same",
+            )
+            return
     try:
         n_orientations = _database_orientations(root)
     except NotResponding:
@@ -175,7 +186,11 @@ def check_laue_matching(issues: Issues, settings: Settings, checked: Checked, pa
                 issues.warning(
                     ["forward_cache"],
                     "cache_build",
-                    f"The first frame builds forward cache {name}, which can take many minutes",
+                    (
+                        f"Forward cache {name} is built locally before GPU submission, which can take many minutes"
+                        if gpu
+                        else f"The first frame builds forward cache {name}, which can take many minutes"
+                    ),
                 )
             return
         if not exists:

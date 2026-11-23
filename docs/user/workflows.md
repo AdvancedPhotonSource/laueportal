@@ -67,8 +67,9 @@ of 100 million orientations, so it can find several grains in one frame.
 - The geometry has no depth term: frames more than about 100 µm from depth 0 have spots displaced by about half a
   pixel or more, and the portal warns about them.
 - Raw frames use your **Background File**, or the median of the run's first frame. Reconstructed frames use none.
-- **Run on: APS GPU** (when it is set up) indexes on the APS cluster's GPU queue. It reads only a forward cache that
-  was installed there: build a new cache with an APS run first. Its frames must be on the beamline's shared storage;
+- **Run on: Pioneer GPU** (when it is set up) indexes on the APS cluster's GPU queue. Choose a matching cache, or
+  **New…**: the portal builds it locally before submitting the GPU run, when both targets share a cache folder.
+  Stop during cache creation cancels the run before any GPU job is submitted. Its frames must be on the beamline's shared storage;
   a geometry, crystal, mask or background file elsewhere is copied into the run when it is submitted. A large run
   continues over several of the queue's one-hour allocations as one run: between them it shows Running, "Waiting for
   next PBS allocation", its frame count never goes back, and each frame is indexed once. After **Stop** no further
@@ -224,7 +225,7 @@ Index), as any other's.
 
 ## Manage the queue
 
-The Local dot shows the portal worker's state, and the APS GPU queue's when that target is set up: hover for each. When ALCF is enabled, its dot opens a connectivity panel; hovering
+The Local dot shows the portal worker's state, and the Pioneer GPU queue's when that target is set up: hover for each. When ALCF is enabled, its dot opens a connectivity panel; hovering
 shows a compact summary and last-check time. The panel lists DM, Globus,
 APS/Eagle storage and the Crux endpoint, with the last-check time and Refresh. Amber can mean Login needed or
 stale/partial checks; red means a service is unavailable or the endpoint reports offline. Checks are shared and

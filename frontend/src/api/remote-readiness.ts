@@ -13,7 +13,7 @@ export async function getRemoteReadinessWithin(signal: AbortSignal) {
   )
 }
 
-/** The APS GPU target's readiness, bounded as `getRemoteReadinessWithin`. */
+/** The Pioneer GPU target's readiness, bounded as `getRemoteReadinessWithin`. */
 export async function getGpuReadinessWithin(signal: AbortSignal) {
   return within(signal, async (inner) =>
     GetGpuReadinessResponse.parse(await getGpuReadiness({ signal: inner }))

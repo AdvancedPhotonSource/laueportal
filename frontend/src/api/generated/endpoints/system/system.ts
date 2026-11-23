@@ -159,10 +159,10 @@ export const getGetGpuReadinessUrl = () => {
 }
 
 /**
- * The APS GPU target's queue and files (``remote.health.GPU_CHECKS``), as ``/system/remote-status`` serves the
+ * The Pioneer GPU target's queue and files (``remote.health.GPU_CHECKS``), as ``/system/remote-status`` serves the
  * ALCF checks: the shared result at once, refreshed at most once every five minutes; read-only, never a PBS job.
  * `enabled` is false while the target is disabled.
- * @summary APS GPU readiness
+ * @summary Pioneer GPU readiness
  */
 export const getGpuReadiness = async ( options?: Parameters<typeof apiFetch>[1]): Promise<RemoteReadiness> => {
 
@@ -233,7 +233,7 @@ export function useGetGpuReadiness<TData = Awaited<ReturnType<typeof getGpuReadi
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary APS GPU readiness
+ * @summary Pioneer GPU readiness
  */
 
 export function useGetGpuReadiness<TData = Awaited<ReturnType<typeof getGpuReadiness>>, TError = ErrorType<unknown>>(

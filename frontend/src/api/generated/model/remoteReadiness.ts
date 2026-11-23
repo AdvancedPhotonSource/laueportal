@@ -8,7 +8,7 @@ import type { RemoteCheck } from './remoteCheck';
 import type { RemoteReadinessState } from './remoteReadinessState';
 
 /**
- * Cached, read-only checks of a remote route (ALCF, or the APS GPU queue). Online does not guarantee worker
+ * Cached, read-only checks of a remote route (ALCF, or the Pioneer GPU queue). Online does not guarantee worker
  * startup or PBS capacity.
  */
 export interface RemoteReadiness {

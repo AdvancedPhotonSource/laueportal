@@ -187,8 +187,9 @@ def test_a_daemon_on_no_gpu_is_refused(gpu_run, monkeypatch):
 
 
 def test_a_gpu_run_never_builds_a_forward_cache(gpu_run, tmp_path):
-    with pytest.raises(RuntimeError, match="never builds one"):
+    with pytest.raises(RuntimeError, match="forward.bin is missing"):
         gpu_run(1, values=parameters(tmp_path / "data", create_forward_cache=True, forward_cache="new"))
+    assert not (tmp_path / "data/new/forward.bin").exists()
 
 
 def test_the_daemon_is_found_by_name_and_never_through_laue_matching_bin(tmp_path, monkeypatch):

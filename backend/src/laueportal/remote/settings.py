@@ -487,7 +487,7 @@ def collection_path(storage: StorageSettings, path: str | os.PathLike[str]) -> s
 class BackendOption(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    label: Literal["APS", "ALCF", "APS GPU"]
+    label: Literal["APS", "ALCF", "Pioneer GPU"]
     value: Literal["local", "aps", "crux", "pioneer"]
 
 
@@ -498,12 +498,12 @@ LAUE_MATCHING = "laue_matching"
 def available_backends(settings: RemoteSettings | None, program: str | None = None) -> list[BackendOption]:
     """The form's choices for ``program`` (a ``jobs.programs`` kind). LaueGo and wire: one APS choice, ``local``
     (the portal's worker) until the ``aps`` target is enabled; ALCF when the ``crux`` target is. LaueMatching: APS
-    (``local``), and APS GPU when the ``pioneer`` target is."""
+    (``local``), and Pioneer GPU when the ``pioneer`` target is."""
     targets = settings.targets if settings is not None and settings.enabled else TargetSections()
     if program == LAUE_MATCHING:
         options = [BackendOption(label="APS", value="local")]
         if targets.pioneer is not None and targets.pioneer.enabled:
-            options.append(BackendOption(label="APS GPU", value="pioneer"))
+            options.append(BackendOption(label="Pioneer GPU", value="pioneer"))
         return options
     aps_backend = "aps" if targets.aps is not None and targets.aps.enabled else "local"
     options = [BackendOption(label="APS", value=aps_backend)]

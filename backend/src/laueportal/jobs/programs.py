@@ -125,7 +125,7 @@ def execution_targets(settings: Settings, kind: AnyProgramKind | None = None) ->
     """The execution targets this deployment offers ``kind``'s runs, each ``{"value", "label"}``, in order
     (``remote.settings.available_backends``): for LaueGo and wire, one "APS" choice, ``local`` until the DM ``aps``
     target is enabled, then ``aps``, and "ALCF" (``crux``) when that target is enabled; for LaueMatching, "APS"
-    (``local``) and "APS GPU" (``pioneer``) when that target is enabled. A 503 problem when remote execution is enabled but
+    (``local``) and "Pioneer GPU" (``pioneer``) when that target is enabled. A 503 problem when remote execution is enabled but
     its settings cannot be used (``laueportal remote poll`` says why; the reason may quote the file, so it is not
     sent)."""
     try:

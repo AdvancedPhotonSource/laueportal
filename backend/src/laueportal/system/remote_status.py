@@ -34,7 +34,7 @@ STALE_AFTER = INTERVAL * 2
 
 class RemoteStatus:
     """The readiness of one remote route: ``crux`` (DM and the ALCF route, ``remote.health.CHECKS``) or ``pioneer``
-    (the APS GPU queue and its files, ``GPU_CHECKS``), each probed only while its target is enabled."""
+    (the Pioneer GPU queue and its files, ``GPU_CHECKS``), each probed only while its target is enabled."""
 
     def __init__(
         self, settings: RemoteSection, *, target: str = "crux", clock: Callable[[], float] = time.monotonic

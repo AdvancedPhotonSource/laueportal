@@ -24,6 +24,8 @@ GLOBUS = "globus"
 TRANSPORTS: dict[str, str] = {"aps": SHARED, "crux": GLOBUS, "pioneer": SHARED}
 """How each remote target is reached. The launcher, the plan and the PBS script branch on this, never on a target's
 name, so a new target is added here and in its settings."""
+CACHE_QUEUE_PREFIX = "cache_"
+"""The worker's queue identity while a Pioneer run builds a new cache locally."""
 
 
 def is_remote(backend: str | None) -> bool:
@@ -37,3 +39,8 @@ def transport(backend: str | None) -> str:
     if backend is None or backend not in TRANSPORTS:
         raise ValueError(f"Unknown remote execution target {backend!r}")
     return TRANSPORTS[backend]
+
+
+def is_cache_preparation(backend: str | None, submission_id: str | None, queue_id: str | None) -> bool:
+    """A Pioneer run waiting for its local cache build, before it has a DM submission identity."""
+    return backend == "pioneer" and submission_id is None and (queue_id or "").startswith(CACHE_QUEUE_PREFIX)

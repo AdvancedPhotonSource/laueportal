@@ -66,7 +66,7 @@ function gpuReadiness(state: "ok" | "unavailable"): RemoteReadiness {
 }
 
 /**
- * Render the indicators (their links need a router) with fetch answering the health check, and the APS GPU
+ * Render the indicators (their links need a router) with fetch answering the health check, and the Pioneer GPU
  * readiness (`gpu`; disabled when not given). The health query has its own retry rule (`retryHealth`: the app's,
  * retried after 1 and 2 s), whatever the client's default. The mock returned counts the health checks only.
  */
@@ -283,7 +283,7 @@ describe("HealthIndicators", () => {
     })
   })
 
-  it("merges the APS GPU target: a dot while it is available, its pill when it is not", async () => {
+  it("merges the Pioneer GPU target: a dot while it is available, its pill when it is not", async () => {
     vi.useFakeTimers()
     const ok = () => Promise.resolve(Response.json(HEALTH_OK))
     await renderIndicators(ok, gpuReadiness("ok"))
@@ -294,9 +294,9 @@ describe("HealthIndicators", () => {
     await renderIndicators(ok, gpuReadiness("unavailable"))
     await act(() => vi.advanceTimersByTimeAsync(100))
     expect(indicator()).toMatchObject({
-      name: "APS GPU unavailable",
+      name: "Pioneer GPU unavailable",
       tone: "error",
-      words: "APS GPU unavailable",
+      words: "Pioneer GPU unavailable",
     })
   })
 

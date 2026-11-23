@@ -20,10 +20,10 @@ from laueportal.core.settings import ExecutionSettings
 from laueportal.core.timeutil import utcnow
 from laueportal.indexing.models import IndexingRun
 from laueportal.jobs import state
-from laueportal.jobs.backends import is_remote
+from laueportal.jobs.backends import CACHE_QUEUE_PREFIX, is_remote
 from laueportal.jobs.live import LiveSessionOpen, live_queue_id, open_live_runs
 from laueportal.jobs.models import Job
-from laueportal.jobs.rundir import verify_manifest
+from laueportal.jobs.rundir import read_request, verify_manifest
 from laueportal.reconstruction.models import ReconstructionRun
 
 if TYPE_CHECKING:
@@ -111,20 +111,28 @@ def enqueue_run(
     which a remote run refuses (its scheduler orders it). A job whose ``backend`` is remote (``aps``, ``crux``) goes to
     DM through ``remote.submission.submit_run`` with the ``remote`` settings (``remote.settings.portal_settings``;
     ``None`` when remote execution is disabled, which refuses it) and returns DM's job ID; ``sources`` is the portal's
-    check of the files it reads (``remote.submission.source_check``), which a ``pioneer`` run requires.
+    check of the files it reads (``remote.submission.source_check``), which a ``pioneer`` run requires. A Pioneer
+    request for a new cache is first queued on the worker as ``cache_<job_id>``; its executor builds the cache and
+    hands the same run to DM, with no detector input processed locally.
     """
 
     with Session(engine) as session:
         job = session.get(Job, job_id)
         backend = job.backend if job is not None else None
-    if is_remote(backend):
+        request_path = job.request_path if job is not None else None
+    build_cache = (
+        backend == "pioneer"
+        and request_path is not None
+        and read_request(request_path)["request"].get("create_forward_cache") is True
+    )
+    if is_remote(backend) and not build_cache:
         if at_front:
             raise ValueError("DM jobs cannot be moved ahead of scheduler jobs")
         from laueportal.remote.submission import submit_run  # the DM client is never loaded for local runs
 
         return submit_run(job_id, engine=engine, settings=remote, client=dm_client, sources=sources)
 
-    queue_id = run_queue_id(job_id)
+    queue_id = f"{CACHE_QUEUE_PREFIX}{int(job_id)}" if build_cache else run_queue_id(job_id)
     with Session(engine) as session, session.begin():
         job = session.get(Job, job_id)
         if job is None:
@@ -132,6 +140,11 @@ def enqueue_run(
         state.assert_enqueueable(job)
         verify_manifest(job.manifest_path or "", expected_digest=job.manifest_digest or "", expected_count=job.n_inputs)
         state.mark_queued(job, queue_id)
+        if build_cache:
+            if remote is None or not remote.enabled:
+                raise ValueError("Remote execution is not enabled")
+            remote.target_document("pioneer")
+            state.append_message(job, "Waiting to build forward cache locally before Pioneer GPU submission")
         if at_front:
             job.moved_to_front_at = utcnow()
     logger.info("Queued run %s", job_id)

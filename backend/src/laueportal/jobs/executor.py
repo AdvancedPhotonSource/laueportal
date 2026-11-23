@@ -548,6 +548,7 @@ def execute_run(
 
     outcome: RunOutcome | None = None
     error: BaseException | None = None
+    preparing_cache = request.parameters.get("backend") == "pioneer" and request.parameters.get("create_forward_cache")
     try:
         if live is not None:
             assert live_settings is not None
@@ -559,6 +560,10 @@ def execute_run(
                 live.follower = follower
                 live.before_seal = follower.close
             outcome = get_live_compute_function(request.kind)(request, live)
+        elif preparing_cache:
+            from laueportal.indexing.laue_matching.compute import build_forward_cache
+
+            outcome = build_forward_cache(request, hooks)
         else:
             compute = get_compute_function(request.kind)
             outcome = compute(request, read_manifest(request.manifest_path), hooks)
@@ -590,35 +595,48 @@ def execute_run(
             failure_report = None
             if error is None:
                 error = close_error
-        processed = (recorder.succeeded, recorder.failed)
-        n_inputs = request.n_inputs if live is None else live.n_inputs
-        if live is None:
-            decision = _decide(request, outcome, error, monitor.stop_reason, policy, processed)
+    if preparing_cache and error is None and outcome is not None:
+        monitor.poll()
+        outcome.stopped = outcome.stopped or monitor.stop_requested
+        if not outcome.stopped:
+            try:
+                _submit_prepared_cache(job_id, engine=engine)
+                return {"job_id": job_id, "status": "Queued", "message": "Forward cache ready; handed to DM"}
+            except Exception as submit_error:
+                monitor.poll()
+                if isinstance(submit_error, state.ExecutionStateError) and monitor.stop_requested:
+                    outcome.stopped = True
+                else:
+                    error = submit_error
+    processed = (recorder.succeeded, recorder.failed)
+    n_inputs = request.n_inputs if live is None else live.n_inputs
+    if live is None:
+        decision = _decide(request, outcome, error, monitor.stop_reason, policy, processed)
+    else:
+        decision = _decide_live(n_inputs, outcome, error, monitor.stop_reason, live.sealed, processed)
+    finished_at = utcnow()
+    try:
+        _write_run_summary(
+            request,
+            decision,
+            outcome,
+            started_at=started_at,
+            finished_at=finished_at,
+            processed=processed,
+            failure_report=failure_report,
+            policy=policy,
+            hook_messages=hooks.messages,
+            n_inputs=n_inputs,
+            live=live is not None,
+        )
+    except Exception as summary_error:
+        if decision.status == JobStatus.FINISHED:
+            decision = _Decision(JobStatus.FAILED, f"Run summary could not be written: {summary_error}")
         else:
-            decision = _decide_live(n_inputs, outcome, error, monitor.stop_reason, live.sealed, processed)
-        finished_at = utcnow()
-        try:
-            _write_run_summary(
-                request,
-                decision,
-                outcome,
-                started_at=started_at,
-                finished_at=finished_at,
-                processed=processed,
-                failure_report=failure_report,
-                policy=policy,
-                hook_messages=hooks.messages,
-                n_inputs=n_inputs,
-                live=live is not None,
-            )
-        except Exception as summary_error:
-            if decision.status == JobStatus.FINISHED:
-                decision = _Decision(JobStatus.FAILED, f"Run summary could not be written: {summary_error}")
-            else:
-                hooks.log(f"run summary could not be written: {summary_error}")
-        scan_points = None if live is None else live.scan_points
-        _finalize(engine, job_id, decision, processed, failure_report, finished_at, outcome, scan_points)
-        logger.info("Run %s finished in %.1f s: %s", job_id, time.monotonic() - started_clock, decision.message)
+            hooks.log(f"run summary could not be written: {summary_error}")
+    scan_points = None if live is None else live.scan_points
+    _finalize(engine, job_id, decision, processed, failure_report, finished_at, outcome, scan_points)
+    logger.info("Run %s finished in %.1f s: %s", job_id, time.monotonic() - started_clock, decision.message)
     if error is not None:
         raise error
     return {
@@ -628,6 +646,24 @@ def execute_run(
         "n_succeeded": processed[0],
         "n_failed": processed[1],
     }
+
+
+def _submit_prepared_cache(job_id: int, *, engine: Engine) -> None:
+    """Hand the same run to DM. A lost reply stays with the remote poller once its submission was recorded."""
+    from laueportal.remote.settings import portal_settings
+    from laueportal.remote.submission import source_check, submit_run
+
+    settings = get_settings()
+    remote = portal_settings(settings.remote, runs_root=settings.files.runs_root)
+    try:
+        submit_run(job_id, engine=engine, settings=remote, sources=source_check(settings), cache_prepared=True)
+    except Exception:
+        with Session(engine) as session:
+            job = session.get(Job, job_id)
+            if job is not None and job.submission_id is not None:
+                logger.warning("Job %s: cache ready; DM submission reply needs reconciliation", job_id)
+                return
+        raise
 
 
 def _finalize(

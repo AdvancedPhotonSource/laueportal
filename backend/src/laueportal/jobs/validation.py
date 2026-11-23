@@ -94,7 +94,7 @@ LIVE_STAND_INS: dict[str, Any] = {**STAND_INS, "filename_prefixes": ["%d"]}
 INSIDE_EXPERIMENT = {"crux": "An ALCF run"}
 """The targets whose runs read only files inside the experiment folder (Globus transfers a ``crux`` run's from
 there), and how a message names their run."""
-ON_SHARED_STORAGE = {"pioneer": "An APS GPU run"}
+ON_SHARED_STORAGE = {"pioneer": "A Pioneer GPU run"}
 """The targets whose runs read their frames on the shared storage (``bdp.yaml``'s ``storage.aps.filesystem_root``,
 which the portal, the launcher and the GPU nodes mount at the same path), and how a message names their run. Their
 geometry, crystal, mask and background files may be anywhere inside the roots: one that is not on the shared storage

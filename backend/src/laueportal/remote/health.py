@@ -1,7 +1,7 @@
 """Read-only launcher-side readiness checks. No task, workflow or function registration, and no PBS job.
 
 Run with the launcher's Python: ``python -m laueportal.remote.health --config <bdp.yaml> [--target pioneer]``. The
-default checks DM and the ALCF route (``CHECKS``); ``--target pioneer`` the APS GPU queue and its files
+default checks DM and the ALCF route (``CHECKS``); ``--target pioneer`` the Pioneer GPU queue and its files
 (``GPU_CHECKS``): ``qstat -Q`` of its queue over the SSH route ``qsub`` takes, and the analysis Python, the code and
 the LaueMatching data folder on the shared storage the launcher host mounts.
 Only a small, fixed vocabulary leaves this process; SDK errors can contain authorization

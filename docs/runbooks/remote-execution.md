@@ -218,7 +218,7 @@ nothing useful. Restore the run directory's permissions by hand with DM's toolin
 registered `dm.workflow` with DM's administrative tooling (an administrator does it; nothing registers it here). Until
 then the registered workflow has no `03-PERMISSIONS` and its check stage is still `03-CHECK`, which works as before.
 A workflow registered before `dm.monitor_seconds` existed follows a run for 48 hours (`maxRepeats: 17280`): render
-and register it again before enabling `pioneer`, whose runs continue over several days ("The APS GPU target").
+and register it again before enabling `pioneer`, whose runs continue over several days ("The Pioneer GPU target").
 
 ## Connectivity monitor
 
@@ -614,9 +614,9 @@ the inbox copies stay for a later clean-up to read, and the poller says so once 
 above): render and register the clean-up workflow (`render-workflows.py` writes `workflow-bdp-cleanup.json` when
 `dm.cleanup_workflow` is set), then set the key in the portal's `bdp.yaml` and restart the worker.
 
-## The APS GPU target
+## The Pioneer GPU target
 
-The `pioneer` target runs LaueMatching on the APS cluster's GPU queue (the form's **Run on: APS GPU**, offered for
+The `pioneer` target runs LaueMatching on the APS cluster's GPU queue (the form's **Run on: Pioneer GPU**, offered for
 LaueMatching only and only while `targets.pioneer.enabled`). It is submitted, followed and stopped as an `aps` run (the
 launcher's `qsub`, `qstat`, `qselect` and `qdel` over SSH to `submit_host`), through the main DM workflow
 (`dm.workflow`): one run continues over as many sequential PBS allocations as it needs, which the launcher's
@@ -675,9 +675,13 @@ use, with a few CPUs, the memory the merge needs and a walltime of a couple of h
 make a few-frame run continue over several allocations with `max_frames_per_allocation` (a few frames) or a short
 `soft_deadline_seconds`, then return to these values while no run is active.
 
-**Installing caches.** A GPU run reads an installed cache and never builds one. Build a cache with an APS run (the
-form's **New…**), then copy it, and once the orientation database, into the target's data folder, as the portal's
-account with the portal's settings:
+**Creating and installing caches.** Set `[laue_matching] data_root` and `targets.pioneer.data_root` to the same
+shared folder to enable **New…** on a Pioneer GPU run. The existing portal worker builds the cache locally in its
+batch slot, using the run's configured CPU threads and no detector input, then submits that same run to DM. The
+request and manifest stay unchanged; `cache-build/` holds the build's parameters, log and provenance. Stop or failure
+during preparation ends the run without submitting a GPU job. A worker that dies is reconciled as a local run.
+
+With separate folders, build with an APS run and install the cache and orientation database as the portal account:
 
 ```bash
 laueportal laue-matching install-cache --database <cache name>...
@@ -687,9 +691,9 @@ Each file is copied under a hidden name, checked against the source's sha256 and
 database already installed is accepted only when its bytes are the source's; a different one is never replaced
 (exit 1). An interrupted install leaves `.<name>.install.lock` in the data folder: remove it once no install runs.
 
-**Readiness.** While the target is enabled, the navbar's Local indicator includes it: the dot turns into an "APS GPU"
+**Readiness.** While the target is enabled, the navbar's Local indicator includes it: the dot turns into an "Pioneer GPU"
 pill when the queue is disabled or stopped, or the analysis Python, the code or the orientation database is missing,
-and its tooltip shows the worker's and the APS GPU's state on their own lines. The check
+and its tooltip shows the worker's and the Pioneer GPU's state on their own lines. The check
 (`python -m laueportal.remote.health --target pioneer`, run with the launcher's Python on the launcher host) reads
 `qstat -Q -f` of the queue over the SSH route `qsub` takes and checks the files; it submits no job, runs at most every
 five minutes, and does not depend on the Globus checks.

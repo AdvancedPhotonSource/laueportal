@@ -381,7 +381,7 @@ def test_laue_matching_is_offered_the_gpu_target_and_never_aps_or_crux(aps):
     settings = _targets(aps, True, pioneer=True)
     assert [(option.label, option.value) for option in available_backends(settings, "laue_matching")] == [
         ("APS", "local"),
-        ("APS GPU", "pioneer"),
+        ("Pioneer GPU", "pioneer"),
     ]
     assert "pioneer" not in {option.value for option in available_backends(settings)}
     require_backend("pioneer", settings)

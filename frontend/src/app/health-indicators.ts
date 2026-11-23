@@ -115,7 +115,7 @@ export function shellHealth(query: HealthQuery): ShellHealth {
   return { kind: "live", view: workerView(query.data) }
 }
 
-/** The APS GPU target's readiness as the Local indicator shows it (`readinessView` of its checks). */
+/** The Pioneer GPU target's readiness as the Local indicator shows it (`readinessView` of its checks). */
 export interface GpuView {
   tone: "ok" | "warning" | "error" | "unknown"
   label: string
@@ -124,8 +124,8 @@ export interface GpuView {
 }
 
 /**
- * The Local indicator with the APS GPU target merged in: the worker's own problem shows first; with the worker
- * running, an APS GPU problem becomes the pill ("APS GPU unavailable"). Checking or unknown leaves the dot.
+ * The Local indicator with the Pioneer GPU target merged in: the worker's own problem shows first; with the worker
+ * running, an Pioneer GPU problem becomes the pill ("Pioneer GPU unavailable"). Checking or unknown leaves the dot.
  */
 export function withGpu(shell: ShellHealth, gpu: GpuView | null): ShellHealth {
   if (
@@ -141,8 +141,8 @@ export function withGpu(shell: ShellHealth, gpu: GpuView | null): ShellHealth {
     view: {
       form: "pill",
       tone: gpu.tone,
-      state: `APS GPU: ${words}`,
-      subject: "APS GPU",
+      state: `Pioneer GPU: ${words}`,
+      subject: "Pioneer GPU",
       words,
       note: gpu.issue,
     },

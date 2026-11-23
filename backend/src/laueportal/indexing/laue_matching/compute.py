@@ -327,7 +327,48 @@ def _prepare_cache(parameters: Mapping[str, Any], files: _Files, key: CacheKey, 
     files.cache.mkdir(parents=True, exist_ok=True)
     if not files.hkls.is_file():
         _generate_hkls(parameters, files)
-    hooks.log(f"Building forward cache {files.cache.name} with the first frame")
+    if parameters.get("backend") != "pioneer":
+        hooks.log(f"Building forward cache {files.cache.name} with the first frame")
+
+
+def build_forward_cache(request: RunRequest, hooks: RunHooks) -> RunOutcome:
+    """Build a Pioneer run's cache on the portal CPU, without reading or counting any detector input.
+
+    The CPU binary needs an image argument even for its forward simulation. An empty, sparse image supplies it;
+    its matching output is discarded. The native writer locks and atomically publishes the cache and its record.
+    """
+    if hooks.should_stop():
+        return RunOutcome(0, 0, stopped=True)
+    parameters = request.parameters
+    directory = Path(request.run_directory) / "cache-build"
+    directory.mkdir()
+    files = _resolve_files(parameters, str(directory), directory)
+    key = key_from_parameters(parameters)
+    _prepare_cache(parameters, files, key, hooks)
+    files.params.write_text(params_text(parameters, files).replace("DoFwd 0\n", "DoFwd 1\n"))
+    image = directory / "frame.bin"
+    with image.open("xb") as handle:
+        handle.truncate(int(parameters["nr_px_x"]) * int(parameters["nr_px_y"]) * 8)
+    binary = laue_indexer.require_binary("CPU")
+    threads = int(parameters["num_threads"])
+    hooks.log(f"Building forward cache {files.cache.name} locally with {threads} threads")
+    try:
+        _run_binary(binary, files, threads, hooks)
+    except _StopRequested:
+        return RunOutcome(0, 0, stopped=True)
+    finally:
+        image.unlink(missing_ok=True)
+    problem = reuse_problem(files.cache, key)
+    if problem is not None:
+        raise RuntimeError(f"The local cache build did not produce a usable cache: {problem}")
+    record = {
+        "cache": str(files.cache),
+        "threads": threads,
+        "binary": str(binary),
+        **library_provenance("LaueMatchingCPU cache build"),
+    }
+    write_json_file(directory / "build.json", record)
+    return RunOutcome(0, 0, provenance={"cache_build": record})
 
 
 def _frame_input(entry: ManifestEntry) -> str | ScanFrame:
@@ -922,8 +963,6 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
     results_partial = partial_path(results_final)
     native_partial = partial_path(native_final)
     key = key_from_parameters(parameters)
-    if stream and parameters["create_forward_cache"]:
-        raise RuntimeError("A GPU run reads an installed forward cache; it never builds one")
     binary = stream_binary(laue_indexer.require_binary) if stream else laue_indexer.require_binary("CPU")
     geometry = load_geometry(str(parameters["geometry_file"]))
     crystal = load_crystal(str(parameters["crystal_file"]))
@@ -992,7 +1031,9 @@ def compute_laue_matching(request: RunRequest, entries: Iterable[ManifestEntry],
 
     try:
         files = _resolve_files(parameters, request.run_directory, scratch)
-        _prepare_cache(parameters, files, key, hooks)
+        # A GPU allocation reuses the cache that this run's local preparation already built.
+        cache_parameters = {**parameters, "create_forward_cache": False} if stream else parameters
+        _prepare_cache(cache_parameters, files, key, hooks)
         text = params_text(parameters, files)
         if continuation is not None and files.params.exists():
             if files.params.read_text(encoding="utf-8") != text:

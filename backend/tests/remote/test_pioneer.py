@@ -239,9 +239,15 @@ def _execution() -> dict[str, Any]:
     return dict(bdp_settings(Layout(Path("/x")))["targets"]["pioneer"]["execution"])
 
 
-def test_the_runner_indexes_on_the_daemon_and_the_poller_publishes_the_run(tmp_path, monkeypatch):
+@pytest.mark.parametrize("created_locally", [False, True])
+def test_the_runner_indexes_on_the_daemon_and_the_poller_publishes_the_run(tmp_path, monkeypatch, created_locally):
     layout, engine, settings, run = setup(tmp_path)
     view = job_view(engine, run.job_id)
+    if created_locally:
+        request_path = Path(view.request_path)
+        document = json.loads(request_path.read_text())
+        document["request"]["create_forward_cache"] = True
+        request_path.write_text(json.dumps(document))
     built = plan.save_plan(view, settings, SUBMISSION, source_check=check(layout))
     daemon = fake_daemon(tmp_path, stand_in(tmp_path))
     monkeypatch.delenv("LAUEMATCHING_BIN", raising=False)

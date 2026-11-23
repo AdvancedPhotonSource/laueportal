@@ -90,7 +90,7 @@ from laueportal.core.db import DatabaseErrors, begin_write
 from laueportal.core.timeutil import utcnow
 from laueportal.indexing.models import Conversion
 from laueportal.jobs import state
-from laueportal.jobs.backends import is_remote
+from laueportal.jobs.backends import is_cache_preparation, is_remote
 from laueportal.jobs.lifecycle import SHUTDOWN_SIGNAL, sweep_process_group
 from laueportal.jobs.live import has_live_marker, live_marker, open_live_runs
 from laueportal.jobs.liveness import ProcessRecord, process_record, recorded_process_alive
@@ -230,7 +230,12 @@ def claim_run(engine: Engine, job_id: int) -> bool:
     with Session(engine) as session, session.begin():
         begin_write(session)
         job = session.get(Job, job_id)
-        if job is None or job.status != JobStatus.QUEUED or job.phase != RunPhase.QUEUED or is_remote(job.backend):
+        if (
+            job is None
+            or job.status != JobStatus.QUEUED
+            or job.phase != RunPhase.QUEUED
+            or (is_remote(job.backend) and not is_cache_preparation(job.backend, job.submission_id, job.queue_job_id))
+        ):
             return False
         if job.cancel_requested_at is not None:
             state.finalize(job, status=JobStatus.CANCELLED, message="Cancelled before the run started")
@@ -240,6 +245,8 @@ def claim_run(engine: Engine, job_id: int) -> bool:
             logger.info("Job %s waits: a live run is open", job_id)
             return False
         state.mark_running(job)
+        if is_cache_preparation(job.backend, job.submission_id, job.queue_job_id):
+            state.append_message(job, "Building forward cache locally")
         job.process_host = job.process_pid = job.process_since_boot = None
     return True
 

@@ -33,7 +33,7 @@ import {
 } from "./health-indicators"
 
 /** The dot alone: filled in the quiet success colour while the worker runs, a muted ring while checking. */
-/** The APS GPU target's state, while it is enabled (an answer said so); null otherwise. */
+/** The Pioneer GPU target's state, while it is enabled (an answer said so); null otherwise. */
 function gpuView(
   data: RemoteReadiness | undefined,
   failed: boolean
@@ -105,12 +105,12 @@ export function HealthIndicators() {
   })
   const gpu = gpuView(gpuQuery.data, gpuQuery.isError)
   const shell = withGpu(shellHealth(health), gpu)
-  // The split the one indicator merges: the worker's state and the APS GPU target's, each on its line.
+  // The split the one indicator merges: the worker's state and the Pioneer GPU target's, each on its line.
   const split =
     shell.kind === "live" && health.data
       ? [
           workerView(health.data).state,
-          gpu && `APS GPU: ${gpu.label.toLowerCase()}`,
+          gpu && `Pioneer GPU: ${gpu.label.toLowerCase()}`,
         ].filter((line): line is string => !!line && line !== shell.view.state)
       : []
 
